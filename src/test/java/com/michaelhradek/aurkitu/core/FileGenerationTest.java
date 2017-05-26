@@ -53,6 +53,8 @@ public class FileGenerationTest {
     fg.writeSchema(schema);
     schema.setName("test");
     fg.writeSchema(schema);
+
+    // TODO Rigorous testing
   }
 
 }
