@@ -60,7 +60,7 @@ public class Processor {
     Schema schema = new Schema();
 
     for (Class<? extends Annotation> source : sources) {
-      classes.addAll(AnnotationParser.findAnnotatedClasses(Config.SEARCH_PATH, source));
+      classes.addAll(AnnotationParser.findAnnotatedClasses(source));
     }
 
     for (Class<?> clazz : classes) {

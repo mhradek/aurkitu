@@ -42,7 +42,7 @@ public class AnnotationParserTest {
    */
   @Test
   public void testFindAnnotatedClasses() {
-    Set<Class<?>> annotated = AnnotationParser.findAnnotatedClasses(".*", FlatBufferTable.class);
+    Set<Class<?>> annotated = AnnotationParser.findAnnotatedClasses(FlatBufferTable.class);
     Assert.assertEquals(false, annotated.isEmpty());
     Assert.assertEquals(3, annotated.size());
 
