@@ -2,4 +2,7 @@ language: java
 
 jdk: oraclejdk8
 
+env:
+  CODECLIMATE_REPO_TOKEN: bdc5fa37671345fcdd3683d6d62e33347e2701d33543a5d67527008b7b6e8a11
+
 script: mvn test -B
