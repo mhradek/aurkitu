@@ -13,12 +13,12 @@ Aurkitu is the Basque word for for the English phrase "to find". This project is
 This is a very early proof-of-concept currently being developed in spare time.
 
 ## roadmap
-[] handle core types
-[] handle options, deprecation, and default values
-[] validate dependencies
-[] implement as plugin and test against a sample project
-[] test with flatc
-[] release to maven
+- [] handle core types
+- [] handle options, deprecation, and default values
+- [] validate dependencies
+- [] implement as plugin and test against a sample project
+- [] test with flatc
+- [] release to maven
 
 ## integration
 To be determine.  The goal is to use as a Maven styled plugin.
