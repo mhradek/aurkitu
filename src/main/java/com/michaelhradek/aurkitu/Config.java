@@ -20,7 +20,7 @@ public class Config {
   /**
    * 
    */
-  public static final String SEARCdH_PATH = ".*";
+  public static final String FILE_EXTENSION = "fbs";
 
   /**
    * 

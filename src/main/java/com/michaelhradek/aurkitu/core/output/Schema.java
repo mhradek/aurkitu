@@ -20,6 +20,7 @@ import lombok.Setter;
 @Setter
 public class Schema {
 
+  String name;
   String namespace;
   String rootType;
   List<EnumDeclaration> enums;
