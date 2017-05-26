@@ -3,8 +3,6 @@
  */
 package com.michaelhradek.aurkitu;
 
-import static org.junit.Assert.fail;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -30,7 +28,8 @@ public class ApplicationTest {
 
   @Test
   public void test() {
-    fail("Not yet implemented");
+    // FIXME Implement any required tests.
+    // fail("Not yet implemented");
   }
 
 }

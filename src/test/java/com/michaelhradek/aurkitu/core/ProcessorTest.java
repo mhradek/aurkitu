@@ -3,7 +3,7 @@
  */
 package com.michaelhradek.aurkitu.core;
 
-import static org.junit.Assert.fail;
+import java.lang.reflect.Field;
 
 import org.junit.After;
 import org.junit.Before;
@@ -16,6 +16,7 @@ import com.michaelhradek.aurkitu.core.output.EnumDeclaration;
 import com.michaelhradek.aurkitu.core.output.FieldType;
 import com.michaelhradek.aurkitu.core.output.Schema;
 import com.michaelhradek.aurkitu.core.output.TypeDeclaration;
+import com.michaelhradek.aurkitu.core.output.TypeDeclaration.Property;
 import com.michaelhradek.aurkitu.test.SampleClassReferenced;
 import com.michaelhradek.aurkitu.test.SampleClassStruct;
 import com.michaelhradek.aurkitu.test.SampleClassTable;
@@ -130,7 +131,7 @@ public class ProcessorTest {
 
       if (type.getName().equals(SampleClassReferenced.class.getSimpleName())) {
         Assert.assertEquals(2, type.properties.size());
-
+        // More tests here
 
         if (Config.DEBUG) {
           System.out.println(type.toString());
@@ -140,6 +141,7 @@ public class ProcessorTest {
 
       if (type.getName().equals(SampleClassStruct.class.getSimpleName())) {
         Assert.assertEquals(3, type.properties.size());
+        // More tests here
 
         if (Config.DEBUG) {
           System.out.println(type.toString());
@@ -154,10 +156,59 @@ public class ProcessorTest {
   /**
    * Test method for
    * {@link com.michaelhradek.aurkitu.core.Processor#getPropertyForField(java.lang.reflect.Field)}.
+   * 
+   * @throws SecurityException
+   * @throws NoSuchFieldException
    */
   @Test
-  public void testGetPropertyForField() {
-    fail("Not yet implemented");
+  public void testGetPropertyForField() throws NoSuchFieldException, SecurityException {
+    Processor processor = new Processor();
+
+    Field field = SampleClassTable.class.getDeclaredField("id");
+    Property prop = processor.getPropertyForField(field);
+    Assert.assertEquals("id", prop.name);
+    Assert.assertEquals(FieldType.LONG, prop.type);
+    Assert.assertEquals(true, prop.options.isEmpty());
+
+    field = SampleClassTable.class.getDeclaredField("name");
+    prop = processor.getPropertyForField(field);
+    Assert.assertEquals("name", prop.name);
+    Assert.assertEquals(FieldType.STRING, prop.type);
+    Assert.assertEquals(true, prop.options.isEmpty());
+
+    field = SampleClassTable.class.getDeclaredField("level");
+    prop = processor.getPropertyForField(field);
+    Assert.assertEquals("level", prop.name);
+    Assert.assertEquals(FieldType.SHORT, prop.type);
+    Assert.assertEquals(true, prop.options.isEmpty());
+
+    field = SampleClassTable.class.getDeclaredField("currency");
+    prop = processor.getPropertyForField(field);
+    Assert.assertEquals("currency", prop.name);
+    Assert.assertEquals(FieldType.INT, prop.type);
+    Assert.assertEquals(true, prop.options.isEmpty());
+
+    field = SampleClassTable.class.getDeclaredField("tokens");
+    prop = processor.getPropertyForField(field);
+    Assert.assertEquals("tokens", prop.name);
+    Assert.assertEquals(FieldType.ARRAY, prop.type);
+    Assert.assertEquals(false, prop.options.isEmpty());
+    Assert.assertEquals(true, prop.options.containsKey(FieldType.ARRAY.toString()));
+    Assert.assertEquals("string", prop.options.get(FieldType.ARRAY.toString()));
+
+    field = SampleClassTable.class.getDeclaredField("deleted");
+    prop = processor.getPropertyForField(field);
+    Assert.assertEquals("deleted", prop.name);
+    Assert.assertEquals(FieldType.BOOL, prop.type);
+
+    // FIXME This should be false; boolean has a defualt value assigned to it
+    Assert.assertEquals(true, prop.options.isEmpty());
+
+    field = SampleClassTable.class.getDeclaredField("energy");
+    prop = processor.getPropertyForField(field);
+    Assert.assertEquals("energy", prop.name);
+    Assert.assertEquals(FieldType.BYTE, prop.type);
+    Assert.assertEquals(true, prop.options.isEmpty());
   }
 
 }
