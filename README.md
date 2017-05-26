@@ -4,13 +4,24 @@
 [![Code Climate](https://codeclimate.com/github/mhradek/aurkitu.svg)](https://codeclimate.com/github/mhradek/aurkitu)
 
 
-Aurkitu is the Basque word for for the English phrase "to find". This project is intended to assist in the automatic generation of FlatBuffer IDL/schemas from Java source.
+Aurkitu is the Basque word for for the English phrase "to find". This project is intended to assist in the automatic generation of FlatBuffer IDL/schemas from Java source. 
 
 * FlatBuffers: https://google.github.io/flatbuffers/
 * Building schemas with Maven: https://github.com/davidmoten/flatbuffers
 
 ## please note 
 This is a very early proof-of-concept currently being developed in spare time.
+
+## roadmap
+[] handle core types
+[] handle options, deprecation, and default values
+[] validate dependencies
+[] implement as plugin and test against a sample project
+[] test with flatc
+[] release to maven
+
+## integration
+To be determine.  The goal is to use as a Maven styled plugin.
 
 ## usage
 Through the use of annotations:
