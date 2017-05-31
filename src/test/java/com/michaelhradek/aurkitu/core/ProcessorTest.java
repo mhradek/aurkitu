@@ -54,6 +54,11 @@ public class ProcessorTest {
     Assert.assertEquals(2, processor.getSources().size());
 
     Schema schema = processor.buildSchema();
+    schema.setNamespace(
+        processor.getClass().getPackage().getName().toString().replace("core", "flatbuffers"));
+    schema.addAttribute("Priority");
+    schema.addAttribute("ConsiderThis");
+    schema.addInclude("AnotherFile.fbs");
 
     Assert.assertEquals(5, processor.getClasses().size());
     Assert.assertEquals(3, schema.getTypes().size());
@@ -131,7 +136,7 @@ public class ProcessorTest {
 
       if (type.getName().equals(SampleClassReferenced.class.getSimpleName())) {
         Assert.assertEquals(2, type.properties.size());
-        // More tests here
+        // TODO More tests here
 
         if (Config.DEBUG) {
           System.out.println(type.toString());
@@ -141,7 +146,7 @@ public class ProcessorTest {
 
       if (type.getName().equals(SampleClassStruct.class.getSimpleName())) {
         Assert.assertEquals(3, type.properties.size());
-        // More tests here
+        // TODO More tests here
 
         if (Config.DEBUG) {
           System.out.println(type.toString());
