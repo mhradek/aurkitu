@@ -66,6 +66,8 @@ public class ProcessorTest {
 
     Assert.assertEquals("SampleClassTable", schema.getRootType());
 
+    // TODO Test multiple root types
+
     if (Config.DEBUG) {
       System.out.println(schema.toString());
     }

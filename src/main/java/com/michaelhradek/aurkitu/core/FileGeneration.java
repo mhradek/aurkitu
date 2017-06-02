@@ -27,7 +27,7 @@ public class FileGeneration {
     this.outputDirectory = outputDirectory;
   }
 
-  void writeSchema(Schema schema) throws IOException {
+  public void writeSchema(Schema schema) throws IOException {
 
     if (!outputDirectory.exists()) {
       logger.log(Level.FINE, "File does not exist; creating directories");
@@ -35,7 +35,7 @@ public class FileGeneration {
     }
 
     String fileName = "." + Config.FILE_EXTENSION;
-    if (schema.getName() == null) {
+    if (schema.getName() == null || schema.getName().length() < 1) {
       fileName = System.currentTimeMillis() + fileName;
     } else {
       fileName = schema.getName() + fileName;

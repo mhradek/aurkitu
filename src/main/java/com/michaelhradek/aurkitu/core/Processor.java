@@ -37,7 +37,7 @@ public class Processor {
   private List<Class<? extends Annotation>> sources;
   private Set<Class<?>> classes;
 
-  Processor() {
+  public Processor() {
     sources = new ArrayList<Class<? extends Annotation>>();
     classes = new HashSet<Class<?>>();
   }
@@ -63,6 +63,7 @@ public class Processor {
       classes.addAll(AnnotationParser.findAnnotatedClasses(source));
     }
 
+    int rootTypeCount = 0;
     for (Class<?> clazz : classes) {
       if (clazz.isEnum()) {
         schema.addEnumDeclaration(buildEnumDeclaration(clazz));
@@ -72,6 +73,11 @@ public class Processor {
       if (clazz instanceof Class) {
         TypeDeclaration temp = buildTypeDeclaration(clazz);
         if (temp.isRoot()) {
+          rootTypeCount++;
+          if (rootTypeCount > 1) {
+            throw new IllegalArgumentException("Only one rootType declaration is allowed");
+          }
+
           schema.setRootType(temp.getName());
         }
 
