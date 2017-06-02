@@ -5,14 +5,12 @@ package com.michaelhradek.aurkitu.core;
 
 import java.lang.annotation.Annotation;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import org.reflections.Reflections;
 import org.reflections.util.ClasspathHelper;
 import org.reflections.util.ConfigurationBuilder;
 
-import com.michaelhradek.aurkitu.Config;
+import com.michaelhradek.aurkitu.Application;
 
 /**
  * @author m.hradek
@@ -20,8 +18,6 @@ import com.michaelhradek.aurkitu.Config;
  * 
  */
 public class AnnotationParser {
-
-  private static final Logger log = Config.getLogger(AnnotationParser.class);
 
   /**
    * 
@@ -56,7 +52,7 @@ public class AnnotationParser {
     Set<Class<?>> classes = reflections.getTypesAnnotatedWith(input);
     for (Class<?> clazz : classes) {
       String prefix = "Find: " + input.getName();
-      log.log(Level.FINE, prefix + " -> Found annotated class: " + clazz.getName());
+      Application.getLogger().debug(prefix + " -> Found annotated class: " + clazz.getName());
     }
 
     return classes;

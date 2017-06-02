@@ -6,9 +6,8 @@ package com.michaelhradek.aurkitu.core;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
+import com.michaelhradek.aurkitu.Application;
 import com.michaelhradek.aurkitu.Config;
 import com.michaelhradek.aurkitu.core.output.Schema;
 
@@ -19,8 +18,6 @@ import com.michaelhradek.aurkitu.core.output.Schema;
  */
 public class FileGeneration {
 
-  private Logger logger = Config.getLogger(getClass());
-
   private File outputDirectory;
 
   public FileGeneration(File outputDirectory) {
@@ -30,7 +27,7 @@ public class FileGeneration {
   public void writeSchema(Schema schema) throws IOException {
 
     if (!outputDirectory.exists()) {
-      logger.log(Level.FINE, "File does not exist; creating directories");
+      Application.getLogger().debug("File does not exist; creating directories");
       outputDirectory.mkdirs();
     }
 
@@ -48,14 +45,14 @@ public class FileGeneration {
       writer = new FileWriter(touch);
       writer.write(schema.toString());
     } catch (IOException e) {
-      logger.log(Level.FINE, "Error creating file: " + touch + e.getMessage());
+      Application.getLogger().error("Error creating file: " + touch, e);
       throw new IOException(e);
     } finally {
       if (writer != null) {
         try {
           writer.close();
         } catch (IOException e) {
-          logger.log(Level.FINE, "Unable to close writer. " + e.getMessage());
+          Application.getLogger().error("Unable to close writer.", e);
         }
       }
     }

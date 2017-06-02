@@ -9,7 +9,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.michaelhradek.aurkitu.Config;
+import com.michaelhradek.aurkitu.Application;
 import com.michaelhradek.aurkitu.annotations.FlatBufferEnum;
 import com.michaelhradek.aurkitu.annotations.FlatBufferTable;
 import com.michaelhradek.aurkitu.core.output.EnumDeclaration;
@@ -67,10 +67,7 @@ public class ProcessorTest {
     Assert.assertEquals("SampleClassTable", schema.getRootType());
 
     // TODO Test multiple root types
-
-    if (Config.DEBUG) {
-      System.out.println(schema.toString());
-    }
+    Application.getLogger().debug(schema.toString());
   }
 
   /**
@@ -93,18 +90,14 @@ public class ProcessorTest {
       if (enumD.getName().equals(SampleEnumByte.class.getSimpleName())) {
         Assert.assertEquals(FieldType.BYTE, enumD.getType());
 
-        if (Config.DEBUG) {
-          System.out.println(enumD.toString());
-        }
+        Application.getLogger().debug(enumD.toString());
         continue;
       }
 
       if (enumD.getName().equals(SampleEnumNull.class.getSimpleName())) {
         Assert.assertEquals(null, enumD.getType());
 
-        if (Config.DEBUG) {
-          System.out.println(enumD.toString());
-        }
+        Application.getLogger().debug(enumD.toString());
         continue;
       }
     }
@@ -130,9 +123,7 @@ public class ProcessorTest {
       if (type.getName().equals(SampleClassTable.class.getSimpleName())) {
         Assert.assertEquals(8, type.properties.size());
 
-        if (Config.DEBUG) {
-          System.out.println(type.toString());
-        }
+        Application.getLogger().debug(type.toString());
         continue;
       }
 
@@ -140,9 +131,7 @@ public class ProcessorTest {
         Assert.assertEquals(2, type.properties.size());
         // TODO More tests here
 
-        if (Config.DEBUG) {
-          System.out.println(type.toString());
-        }
+        Application.getLogger().debug(type.toString());
         continue;
       }
 
@@ -150,9 +139,7 @@ public class ProcessorTest {
         Assert.assertEquals(3, type.properties.size());
         // TODO More tests here
 
-        if (Config.DEBUG) {
-          System.out.println(type.toString());
-        }
+        Application.getLogger().debug(type.toString());
         continue;
       }
 

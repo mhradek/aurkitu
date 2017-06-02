@@ -7,7 +7,7 @@
   <version>0.0.1-SNAPSHOT</version>
   <packaging>maven-plugin</packaging>
 
-  <name>aurkitu Maven Plugin</name>
+  <name>Aurkitu Maven Plugin</name>
 
   <url>http://aurkitu.michaelhradek.com</url>
 

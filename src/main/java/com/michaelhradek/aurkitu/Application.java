@@ -9,6 +9,7 @@ import java.io.IOException;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
@@ -59,5 +60,13 @@ public class Application extends AbstractMojo {
     } catch (IOException e) {
       getLog().error("Unable to write schemas to disk", e);
     }
+  }
+
+  /**
+   * 
+   * @return
+   */
+  public static Log getLogger() {
+    return new Application().getLog();
   }
 }

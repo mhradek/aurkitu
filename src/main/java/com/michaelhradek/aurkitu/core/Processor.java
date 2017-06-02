@@ -10,10 +10,8 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
-import com.michaelhradek.aurkitu.Config;
+import com.michaelhradek.aurkitu.Application;
 import com.michaelhradek.aurkitu.annotations.FlatBufferEnum;
 import com.michaelhradek.aurkitu.annotations.FlatBufferIgnore;
 import com.michaelhradek.aurkitu.annotations.FlatBufferTable;
@@ -31,8 +29,6 @@ import lombok.Getter;
  */
 @Getter
 public class Processor {
-
-  private Logger logger = Config.getLogger(getClass());
 
   private List<Class<? extends Annotation>> sources;
   private Set<Class<?>> classes;
@@ -95,7 +91,7 @@ public class Processor {
    * @return
    */
   EnumDeclaration buildEnumDeclaration(Class<?> clazz) {
-    logger.log(Level.FINE, "Building Enum: " + clazz.getName());
+    Application.getLogger().debug("Building Enum: " + clazz.getName());
 
     EnumDeclaration enumD = new EnumDeclaration();
     enumD.setName(clazz.getSimpleName());
@@ -103,19 +99,20 @@ public class Processor {
     Annotation annotation = clazz.getAnnotation(FlatBufferEnum.class);
     FlatBufferEnum myAnnotation = (FlatBufferEnum) annotation;
     if (annotation instanceof FlatBufferEnum) {
-      logger.log(Level.FINE, "Enum structure: " + myAnnotation.value());
+      Application.getLogger().debug("Enum structure: " + myAnnotation.value());
       enumD.setStructure(myAnnotation.value());
-      logger.log(Level.FINE, "Enum type: " + myAnnotation.enumType());
+      Application.getLogger().debug("Enum type: " + myAnnotation.enumType());
       if (myAnnotation.enumType() != FieldType.STRING) {
         enumD.setType(myAnnotation.enumType());
       }
     } else {
-      logger.log(Level.FINE, "Not FlatBufferEnum (likely inner class); Generic enum created");
+      Application.getLogger()
+          .debug("Not FlatBufferEnum (likely inner class); Generic enum created");
     }
 
     Object[] constants = clazz.getEnumConstants();
     for (Object constant : constants) {
-      logger.log(Level.FINE, "Adding value to Enum: " + constant.toString());
+      Application.getLogger().debug("Adding value to Enum: " + constant.toString());
       enumD.addValue(constant.toString());
 
       /**
@@ -135,7 +132,7 @@ public class Processor {
    * @return
    */
   TypeDeclaration buildTypeDeclaration(Class<?> clazz) {
-    logger.log(Level.FINE, "Building Type: " + clazz.getName());
+    Application.getLogger().debug("Building Type: " + clazz.getName());
 
     TypeDeclaration type = new TypeDeclaration();
     type.setName(clazz.getSimpleName());
@@ -143,23 +140,24 @@ public class Processor {
     Annotation annotation = clazz.getAnnotation(FlatBufferTable.class);
     FlatBufferTable myAnnotation = (FlatBufferTable) annotation;
     if (annotation instanceof FlatBufferTable) {
-      logger.log(Level.FINE, "Declared root: " + myAnnotation.rootType());
+      Application.getLogger().debug("Declared root: " + myAnnotation.rootType());
       type.setRoot(myAnnotation.rootType());
-      logger.log(Level.FINE, "Table structure: " + myAnnotation.value());
+      Application.getLogger().debug("Table structure: " + myAnnotation.value());
       type.setStructure(myAnnotation.value());
     } else {
-      logger.log(Level.FINE, "Not FlatBufferTable (likely inner class); Generic table created");
+      Application.getLogger()
+          .debug("Not FlatBufferTable (likely inner class); Generic table created");
     }
 
     Field[] fields = clazz.getDeclaredFields();
     for (Field field : fields) {
       if (field.getAnnotation(FlatBufferIgnore.class) != null) {
-        logger.log(Level.FINE, "Ignoring property: " + field.getName());
+        Application.getLogger().debug("Ignoring property: " + field.getName());
         continue;
       }
 
       type.addProperty(getPropertyForField(field));
-      logger.log(Level.FINE, "Adding property to Type: " + field.getName());
+      Application.getLogger().debug("Adding property to Type: " + field.getName());
     }
 
     return type;
@@ -206,8 +204,8 @@ public class Processor {
 
       String name = listTypeClass.getSimpleName();
       if (isLowerCaseType(listTypeClass)) {
-        logger.log(Level.FINE,
-            "Array paramter is primative, wrapper, or String: " + field.getName());
+        Application.getLogger()
+            .debug("Array paramter is primative, wrapper, or String: " + field.getName());
         name = name.toLowerCase();
       }
 
