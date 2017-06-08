@@ -11,13 +11,15 @@ import static java.lang.annotation.RetentionPolicy.CLASS;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
+import com.michaelhradek.aurkitu.core.output.FieldType;
+
 @Retention(CLASS)
 @Target({FIELD, PARAMETER, LOCAL_VARIABLE})
 /**
  * @author m.hradek
  * @date May 24, 2017
- *   
+ * 
  */
 public @interface FlatBufferFieldOptions {
-
+  FieldType fieldType();
 }

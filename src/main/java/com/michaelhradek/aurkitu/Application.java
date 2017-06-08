@@ -48,7 +48,7 @@ public class Application extends AbstractMojo {
     getLog().info("execute: " + Application.MOJO_NAME);
 
     Processor processor =
-        new Processor().withSource(FlatBufferTable.class).withSource(FlatBufferEnum.class);
+        new Processor().withSourceAnnotation(FlatBufferTable.class).withSourceAnnotation(FlatBufferEnum.class);
 
     Schema schema = processor.buildSchema();
     schema.setNamespace(namespace);

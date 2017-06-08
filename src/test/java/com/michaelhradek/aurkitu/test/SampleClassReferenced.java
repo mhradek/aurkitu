@@ -13,13 +13,18 @@ import com.michaelhradek.aurkitu.annotations.FlatBufferTable;
  * 
  */
 @FlatBufferTable
-public class SampleClassReferenced {
+public class SampleClassReferenced extends SampleClassAbstract {
 
   protected long id;
   protected List<SampleClassTable> baggage;
 
+  enum SampleClassTableInnerEnumInt {
+    DAGGER, SHORT_SWORD, SWORD, GREAT_SWORD
+  }
+
   public class InnerClass {
     public boolean processed;
+    public SampleClassTableInnerEnumInt weaponType;
   }
 
   public static class InnerClassStatic {

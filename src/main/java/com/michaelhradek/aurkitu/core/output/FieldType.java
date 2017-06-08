@@ -9,7 +9,15 @@ package com.michaelhradek.aurkitu.core.output;
  * 
  */
 public enum FieldType {
-  BOOL, BYTE, UBYTE, SHORT, USHORT, INT, UINT, FLOAT, LONG, ULONG, DOUBLE, STRING, IDENT, ARRAY;
+  BOOL(boolean.class), BYTE(byte.class), UBYTE(byte.class), SHORT(short.class), USHORT(
+      short.class), INT(int.class), UINT(int.class), FLOAT(float.class), LONG(long.class), ULONG(
+          long.class), DOUBLE(double.class), STRING(String.class), IDENT(null), ARRAY(null);
+
+  public Class<?> targetClass;
+
+  FieldType(Class<?> targetClass) {
+    this.targetClass = targetClass;
+  }
 
   @Override
   public String toString() {

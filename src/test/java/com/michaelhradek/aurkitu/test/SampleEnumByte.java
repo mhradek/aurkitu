@@ -4,6 +4,7 @@
 package com.michaelhradek.aurkitu.test;
 
 import com.michaelhradek.aurkitu.annotations.FlatBufferEnum;
+import com.michaelhradek.aurkitu.annotations.FlatBufferEnumTypeField;
 import com.michaelhradek.aurkitu.core.output.FieldType;
 
 /**
@@ -15,6 +16,7 @@ import com.michaelhradek.aurkitu.core.output.FieldType;
 public enum SampleEnumByte {
   EnvironmentAlpha((byte) 1), EnvironmentBeta((byte) 2), EnvironmentGamma((byte) 3);
 
+  @FlatBufferEnumTypeField
   byte id;
 
   SampleEnumByte(byte id) {

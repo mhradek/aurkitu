@@ -43,9 +43,9 @@ public class FileGenerationTest {
    */
   @Test
   public void testWriteSchema() throws IOException {
-    Processor processor =
-        new Processor().withSource(FlatBufferTable.class).withSource(FlatBufferEnum.class);
-    Assert.assertEquals(2, processor.getSources().size());
+    Processor processor = new Processor().withSourceAnnotation(FlatBufferTable.class)
+        .withSourceAnnotation(FlatBufferEnum.class);
+    Assert.assertEquals(2, processor.getSourceAnnotations().size());
 
     Schema schema = processor.buildSchema();
 

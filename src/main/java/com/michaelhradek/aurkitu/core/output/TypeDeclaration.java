@@ -70,6 +70,8 @@ public class TypeDeclaration {
         builder.append("[");
         builder.append(property.options.get(FieldType.ARRAY.toString()));
         builder.append("]");
+      } else if (property.type == FieldType.IDENT) {
+        builder.append(property.options.get(FieldType.IDENT.toString()));
       } else {
         builder.append(property.type.toString());
       }
@@ -78,6 +80,11 @@ public class TypeDeclaration {
         for (Entry<String, String> option : property.options.entrySet()) {
           if (option.getKey().equalsIgnoreCase(FieldType.ARRAY.toString())) {
             // Already grabbed this if we handled arrays above
+            continue;
+          }
+
+          if (option.getKey().equalsIgnoreCase(FieldType.IDENT.toString())) {
+            // Already grabbed this if we handled indent above
             continue;
           }
 

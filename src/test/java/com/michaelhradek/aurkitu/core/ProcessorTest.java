@@ -49,9 +49,9 @@ public class ProcessorTest {
    */
   @Test
   public void testBuildSchema() {
-    Processor processor =
-        new Processor().withSource(FlatBufferTable.class).withSource(FlatBufferEnum.class);
-    Assert.assertEquals(2, processor.getSources().size());
+    Processor processor = new Processor().withSourceAnnotation(FlatBufferTable.class)
+        .withSourceAnnotation(FlatBufferEnum.class);
+    Assert.assertEquals(2, processor.getSourceAnnotations().size());
 
     Schema schema = processor.buildSchema();
     schema.setNamespace(
@@ -60,9 +60,9 @@ public class ProcessorTest {
     schema.addAttribute("ConsiderThis");
     schema.addInclude("AnotherFile.fbs");
 
-    Assert.assertEquals(5, processor.getClasses().size());
-    Assert.assertEquals(3, schema.getTypes().size());
-    Assert.assertEquals(2, schema.getEnums().size());
+    Assert.assertEquals(5, processor.getTargetClasses().size());
+    Assert.assertEquals(5, schema.getTypes().size());
+    Assert.assertEquals(3, schema.getEnums().size());
 
     Assert.assertEquals("SampleClassTable", schema.getRootType());
 
@@ -76,11 +76,11 @@ public class ProcessorTest {
    */
   @Test
   public void testBuildEnumDeclaration() {
-    Processor processor = new Processor().withSource(FlatBufferEnum.class);
-    Assert.assertEquals(1, processor.getSources().size());
+    Processor processor = new Processor().withSourceAnnotation(FlatBufferEnum.class);
+    Assert.assertEquals(1, processor.getSourceAnnotations().size());
     Schema schema = processor.buildSchema();
 
-    Assert.assertEquals(2, processor.getClasses().size());
+    Assert.assertEquals(2, processor.getTargetClasses().size());
     Assert.assertEquals(0, schema.getTypes().size());
     Assert.assertEquals(2, schema.getEnums().size());
 
@@ -109,13 +109,13 @@ public class ProcessorTest {
    */
   @Test
   public void testBuildTypeDeclaration() {
-    Processor processor = new Processor().withSource(FlatBufferTable.class);
-    Assert.assertEquals(1, processor.getSources().size());
+    Processor processor = new Processor().withSourceAnnotation(FlatBufferTable.class);
+    Assert.assertEquals(1, processor.getSourceAnnotations().size());
     Schema schema = processor.buildSchema();
 
-    Assert.assertEquals(3, processor.getClasses().size());
-    Assert.assertEquals(3, schema.getTypes().size());
-    Assert.assertEquals(0, schema.getEnums().size());
+    Assert.assertEquals(3, processor.getTargetClasses().size());
+    Assert.assertEquals(5, schema.getTypes().size());
+    Assert.assertEquals(1, schema.getEnums().size());
 
     Assert.assertEquals("SampleClassTable", schema.getRootType());
 
@@ -128,7 +128,7 @@ public class ProcessorTest {
       }
 
       if (type.getName().equals(SampleClassReferenced.class.getSimpleName())) {
-        Assert.assertEquals(2, type.properties.size());
+        Assert.assertEquals(3, type.properties.size());
         // TODO More tests here
 
         Application.getLogger().debug(type.toString());
@@ -137,6 +137,22 @@ public class ProcessorTest {
 
       if (type.getName().equals(SampleClassStruct.class.getSimpleName())) {
         Assert.assertEquals(3, type.properties.size());
+        // TODO More tests here
+
+        Application.getLogger().debug(type.toString());
+        continue;
+      }
+
+      if (type.getName().equals(SampleClassReferenced.InnerClassStatic.class.getSimpleName())) {
+        Assert.assertEquals(1, type.properties.size());
+        // TODO More tests here
+
+        Application.getLogger().debug(type.toString());
+        continue;
+      }
+
+      if (type.getName().equals(SampleClassReferenced.InnerClass.class.getSimpleName())) {
+        Assert.assertEquals(2, type.properties.size());
         // TODO More tests here
 
         Application.getLogger().debug(type.toString());
