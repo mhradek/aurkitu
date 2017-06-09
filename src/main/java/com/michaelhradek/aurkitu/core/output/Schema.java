@@ -3,6 +3,10 @@
  */
 package com.michaelhradek.aurkitu.core.output;
 
+import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -71,6 +75,8 @@ public class Schema {
   public String toString() {
     StringBuilder builder = new StringBuilder(Config.SCHEMA_INTRO_COMMENT);
     builder.append(System.lineSeparator());
+    builder.append("// @version: AURKITU-SCHEMA-VERSION-ghjtyu567FHGFD");
+    builder.append(System.lineSeparator());
     builder.append(System.lineSeparator());
 
     if (includes.size() > 0) {
@@ -119,6 +125,16 @@ public class Schema {
       builder.append(System.lineSeparator());
     }
 
-    return builder.toString();
+    String result = builder.toString();
+    byte[] bytesOfResult = result.getBytes(StandardCharsets.UTF_8);
+
+    MessageDigest md = null;
+    try {
+      md = MessageDigest.getInstance("MD5");
+    } catch (NoSuchAlgorithmException e) {
+      e.printStackTrace();
+    }
+    String digest = String.format("%040x", new BigInteger(1, md.digest(bytesOfResult)));
+    return result.replace("AURKITU-SCHEMA-VERSION-ghjtyu567FHGFD", digest);
   }
 }
