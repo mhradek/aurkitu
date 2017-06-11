@@ -44,15 +44,23 @@ public class Application extends AbstractMojo {
   @Parameter(property = Application.MOJO_NAME + ".schema-name")
   private String schemaName;
 
+  @Parameter(property = Application.MOJO_NAME + ".schema-file-identifier", defaultValue = "")
+  private String fileIdentifier;
+
+  @Parameter(property = Application.MOJO_NAME + ".flatc-extention", defaultValue = "")
+  private String fileExtension;
+
   public void execute() throws MojoExecutionException, MojoFailureException {
     getLog().info("execute: " + Application.MOJO_NAME);
 
-    Processor processor =
-        new Processor().withSourceAnnotation(FlatBufferTable.class).withSourceAnnotation(FlatBufferEnum.class);
+    Processor processor = new Processor().withSourceAnnotation(FlatBufferTable.class)
+        .withSourceAnnotation(FlatBufferEnum.class);
 
     Schema schema = processor.buildSchema();
     schema.setNamespace(namespace);
     schema.setName(schemaName);
+    schema.setFileExtension(fileExtension);
+    schema.setFileIdentifier(fileIdentifier);
 
     FileGeneration fg = new FileGeneration(outputDirectory);
     try {

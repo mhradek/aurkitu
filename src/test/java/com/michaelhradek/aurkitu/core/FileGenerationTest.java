@@ -48,6 +48,7 @@ public class FileGenerationTest {
     Assert.assertEquals(2, processor.getSourceAnnotations().size());
 
     Schema schema = processor.buildSchema();
+    schema.setGenerateVersion(true);
 
     FileGeneration fg = new FileGeneration(new File("target/aurkito"));
     fg.writeSchema(schema);
