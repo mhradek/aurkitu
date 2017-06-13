@@ -120,7 +120,7 @@ public class Schema {
     builder.append(System.lineSeparator());
 
     if (generateVersion) {
-      builder.append("// @version: AURKITU-SCHEMA-VERSION-ghjtyu567FHGFD");
+      builder.append(Config.SCHEMA_VERSION_COMMENT);
       builder.append(System.lineSeparator());
     }
     builder.append(System.lineSeparator());
@@ -218,7 +218,7 @@ public class Schema {
     String result = builder.toString();
 
     if (generateVersion) {
-      return result.replace("AURKITU-SCHEMA-VERSION-ghjtyu567FHGFD",
+      return result.replace(Config.SCHEMA_VERSION_PLACEHOLDER,
           Integer.toHexString(result.hashCode()));
     }
 
