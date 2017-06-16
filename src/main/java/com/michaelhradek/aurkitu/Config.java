@@ -8,7 +8,12 @@ package com.michaelhradek.aurkitu;
  * @date May 22, 2017
  * 
  */
-public class Config {
+public final class Config {
+
+  /**
+   * Only use on your local dev box.
+   */
+  public static final boolean DEBUG = false;
 
   /**
    * 

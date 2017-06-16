@@ -9,7 +9,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.michaelhradek.aurkitu.Application;
+import com.michaelhradek.aurkitu.Config;
 import com.michaelhradek.aurkitu.annotations.FlatBufferEnum;
 import com.michaelhradek.aurkitu.annotations.FlatBufferTable;
 import com.michaelhradek.aurkitu.core.output.EnumDeclaration;
@@ -67,7 +67,9 @@ public class ProcessorTest {
     Assert.assertEquals("SampleClassTable", schema.getRootType());
 
     // TODO Test multiple root types
-    Application.getLogger().debug(schema.toString());
+    if (Config.DEBUG) {
+      System.out.println(schema.toString());
+    }
   }
 
   /**
@@ -90,14 +92,20 @@ public class ProcessorTest {
       if (enumD.getName().equals(SampleEnumByte.class.getSimpleName())) {
         Assert.assertEquals(FieldType.BYTE, enumD.getType());
 
-        Application.getLogger().debug(enumD.toString());
+        if (Config.DEBUG) {
+          System.out.println(enumD.toString());
+        }
+
         continue;
       }
 
       if (enumD.getName().equals(SampleEnumNull.class.getSimpleName())) {
         Assert.assertEquals(null, enumD.getType());
 
-        Application.getLogger().debug(enumD.toString());
+        if (Config.DEBUG) {
+          System.out.println(enumD.toString());
+        }
+
         continue;
       }
     }
@@ -123,7 +131,10 @@ public class ProcessorTest {
       if (type.getName().equals(SampleClassTable.class.getSimpleName())) {
         Assert.assertEquals(8, type.properties.size());
 
-        Application.getLogger().debug(type.toString());
+        if (Config.DEBUG) {
+          System.out.println(type.toString());
+        }
+
         continue;
       }
 
@@ -131,7 +142,10 @@ public class ProcessorTest {
         Assert.assertEquals(3, type.properties.size());
         // TODO More tests here
 
-        Application.getLogger().debug(type.toString());
+        if (Config.DEBUG) {
+          System.out.println(type.toString());
+        }
+
         continue;
       }
 
@@ -139,7 +153,10 @@ public class ProcessorTest {
         Assert.assertEquals(3, type.properties.size());
         // TODO More tests here
 
-        Application.getLogger().debug(type.toString());
+        if (Config.DEBUG) {
+          System.out.println(type.toString());
+        }
+
         continue;
       }
 
@@ -147,7 +164,10 @@ public class ProcessorTest {
         Assert.assertEquals(1, type.properties.size());
         // TODO More tests here
 
-        Application.getLogger().debug(type.toString());
+        if (Config.DEBUG) {
+          System.out.println(type.toString());
+        }
+
         continue;
       }
 
@@ -155,7 +175,10 @@ public class ProcessorTest {
         Assert.assertEquals(2, type.properties.size());
         // TODO More tests here
 
-        Application.getLogger().debug(type.toString());
+        if (Config.DEBUG) {
+          System.out.println(type.toString());
+        }
+
         continue;
       }
 
