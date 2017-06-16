@@ -8,8 +8,22 @@
   <packaging>maven-plugin</packaging>
 
   <name>Aurkitu Maven Plugin</name>
-
+  <description>Maven plugin for parsing annotated code into IDL formatted schema files.</description>
   <url>http://aurkitu.michaelhradek.com</url>
+  
+  <developers>
+    <developer>
+      <name>Michael Hradek</name>
+    </developer>
+  </developers>
+
+  <licenses>
+    <license>
+      <name>The MIT License (MIT)</name>
+      <url>http://opensource.org/licenses/MIT</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
