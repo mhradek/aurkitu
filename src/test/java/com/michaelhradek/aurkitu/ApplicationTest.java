@@ -33,39 +33,23 @@ public class ApplicationTest extends AbstractMojoTestCase {
    * @throws Exception
    */
   @Test
-  public void testBasic() throws Exception {
+  public void testBasicRead() throws Exception {
     File testPom = new File(getBasedir(), "src/test/resources/plugin-basic/pom.xml");
     Assert.assertEquals(true, testPom.exists());
     Assert.assertEquals(true, testPom.isFile());
 
     Application mojo = (Application) lookupMojo(Application.MOJO_GOAL, testPom);
     Assert.assertNotNull(mojo);
-    mojo.execute();
   }
 
   @Test
-  public void testNoConfig() throws Exception {
-    /**
-     * DISABLED Need to work on getting defaults to work within the test harness.
-     * https://stackoverflow.com/questions/31528763/how-to-populate-parameter-defaultvalue-in-maven-abstractmojotestcase/36064396
-     * 
-     * @Rule public MojoRule mojoRule = new MojoRule();
-     * 
-     * @Test public void noSource() throws Exception { MyPlugin plugin = (MyPlugin)
-     *       mojoRule.lookupConfiguredMojo(loadPom("testpom1"), "myGoal"); plugin.execute();
-     * 
-     *       assertThat(plugin.getSomeInformation()).isEmpty(); }
-     * 
-     *       public File loadPom(String folderName) { return new File("src/test/resources/",
-     *       folderName); }
-     * 
-     *
-     *       File testPom = new File(getBasedir(), "src/test/resources/plugin-no-config/pom.xml");
-     *       Assert.assertEquals(true, testPom.exists()); Assert.assertEquals(true,
-     *       testPom.isFile());
-     * 
-     *       Application mojo = (Application) lookupMojo(Application.MOJO_GOAL, testPom);
-     *       Assert.assertNotNull(mojo); mojo.execute(); /
-     **/
+  public void testBasicConfig() throws Exception {
+    // Application mojo =
+    // (Application) mojoRule.lookupConfiguredMojo(loadPom("plugin-basic"), Application.MOJO_GOAL);
+    // mojo.execute();
+  }
+
+  public File loadPom(String folderName) {
+    return new File("src/test/resources/", folderName);
   }
 }
