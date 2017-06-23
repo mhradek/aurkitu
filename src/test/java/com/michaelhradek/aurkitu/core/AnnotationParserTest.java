@@ -50,8 +50,11 @@ public class AnnotationParserTest {
     Assert.assertEquals(true, annotated.contains(SampleClassTable.class));
     Assert.assertEquals(false, annotated.contains(SampleEnumByte.class));
     Assert.assertEquals(false, annotated.contains(SampleEnumNull.class));
+  }
 
-    annotated = AnnotationParser.findAnnotatedClasses(".*", BogusAnnotation.class);
+  @Test
+  public void testFindAnnotatedClassesWithPath() {
+    Set<Class<?>> annotated = AnnotationParser.findAnnotatedClasses(".*", BogusAnnotation.class);
     Assert.assertEquals(true, annotated.isEmpty());
   }
 }

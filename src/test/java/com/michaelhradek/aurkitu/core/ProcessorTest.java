@@ -6,6 +6,7 @@ package com.michaelhradek.aurkitu.core;
 import java.lang.reflect.Field;
 
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -22,8 +23,6 @@ import com.michaelhradek.aurkitu.test.SampleClassStruct;
 import com.michaelhradek.aurkitu.test.SampleClassTable;
 import com.michaelhradek.aurkitu.test.SampleEnumByte;
 import com.michaelhradek.aurkitu.test.SampleEnumNull;
-
-import junit.framework.Assert;
 
 /**
  * @author m.hradek

@@ -25,10 +25,12 @@ import com.michaelhradek.aurkitu.core.output.Schema;
  * @date May 18, 2017
  * 
  */
-@Mojo(name = Application.MOJO_NAME, defaultPhase = LifecyclePhase.PROCESS_SOURCES)
+@Mojo(name = Application.MOJO_GOAL, defaultPhase = LifecyclePhase.PROCESS_SOURCES)
 public class Application extends AbstractMojo {
 
-  public static final String MOJO_NAME = "create-flatbuffer-schema";
+  public static final String MOJO_NAME = "aurkitu-maven-plugin";
+
+  public static final String MOJO_GOAL = "build-schema";
 
   @Parameter(property = Application.MOJO_NAME + ".ouput-dir",
       defaultValue = "${project.build.directory}/aurkitu/schemas")
@@ -41,7 +43,7 @@ public class Application extends AbstractMojo {
       defaultValue = "generated.flatbuffers")
   private String namespace;
 
-  @Parameter(property = Application.MOJO_NAME + ".schema-name")
+  @Parameter(property = Application.MOJO_NAME + ".schema-name", required = true)
   private String schemaName;
 
   @Parameter(property = Application.MOJO_NAME + ".schema-file-identifier", defaultValue = "")
@@ -61,6 +63,12 @@ public class Application extends AbstractMojo {
     schema.setName(schemaName);
     schema.setFileExtension(fileExtension);
     schema.setFileIdentifier(fileIdentifier);
+
+    if (outputDirectory == null) {
+      Application.getLogger().debug("outputDirectory is NULL");
+    } else {
+      Application.getLogger().debug("outputDirectory is: " + outputDirectory);
+    }
 
     FileGeneration fg = new FileGeneration(outputDirectory);
     try {

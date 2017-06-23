@@ -11,14 +11,18 @@ import com.michaelhradek.aurkitu.Application;
 import com.michaelhradek.aurkitu.Config;
 import com.michaelhradek.aurkitu.core.output.Schema;
 
+import lombok.Getter;
+
 /**
  * @author m.hradek
  * @date May 22, 2017
  * 
  */
+@Getter
 public class FileGeneration {
 
   private File outputDirectory;
+  private String fileName;
 
   public FileGeneration(File outputDirectory) {
     this.outputDirectory = outputDirectory;
@@ -31,7 +35,7 @@ public class FileGeneration {
       outputDirectory.mkdirs();
     }
 
-    String fileName = "." + Config.FILE_EXTENSION;
+    fileName = "." + Config.FILE_EXTENSION;
     if (schema.getName() == null || schema.getName().length() < 1) {
       fileName = System.currentTimeMillis() + fileName;
     } else {

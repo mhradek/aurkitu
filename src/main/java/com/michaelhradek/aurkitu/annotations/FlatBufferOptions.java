@@ -10,14 +10,9 @@ import java.lang.annotation.RetentionPolicy;
  * @author m.hradek
  * @date May 17, 2017
  * 
+ *       Current unused
  */
 @Retention(RetentionPolicy.RUNTIME)
 public @interface FlatBufferOptions {
-  boolean rootType() default false;
 
-  TableStructureType value() default TableStructureType.TABLE;
-
-  public enum TableStructureType {
-    TABLE, STRUCT
-  }
 }
