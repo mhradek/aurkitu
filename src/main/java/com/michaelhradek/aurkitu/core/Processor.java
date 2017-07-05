@@ -320,7 +320,7 @@ public class Processor {
       Class<?> listTypeClass = (Class<?>) listType.getActualTypeArguments()[0];
 
       String name = listTypeClass.getSimpleName();
-      if (isLowerCaseType(listTypeClass)) {
+      if (Utilities.isLowerCaseType(listTypeClass)) {
         Application.getLogger()
             .debug("Array parameter is primative, wrapper, or String: " + field.getName());
         name = name.toLowerCase();
@@ -366,17 +366,5 @@ public class Processor {
 
     property.options.put(FieldType.IDENT.toString(), identName);
     return property;
-  }
-
-  /**
-   * 
-   * @param type
-   * @return
-   */
-  private boolean isLowerCaseType(Class<?> type) {
-    return (type.isPrimitive() && type != void.class) || type == Double.class || type == Float.class
-        || type == Long.class || type == Integer.class || type == Short.class
-        || type == Character.class || type == Byte.class || type == Boolean.class
-        || type == String.class;
   }
 }

@@ -21,6 +21,7 @@ import com.michaelhradek.aurkitu.core.output.TypeDeclaration.Property;
 import com.michaelhradek.aurkitu.test.SampleClassReferenced;
 import com.michaelhradek.aurkitu.test.SampleClassStruct;
 import com.michaelhradek.aurkitu.test.SampleClassTable;
+import com.michaelhradek.aurkitu.test.SampleClassTableWithUndefined;
 import com.michaelhradek.aurkitu.test.SampleEnumByte;
 import com.michaelhradek.aurkitu.test.SampleEnumNull;
 
@@ -59,8 +60,8 @@ public class ProcessorTest {
     schema.addAttribute("ConsiderThis");
     schema.addInclude("AnotherFile.fbs");
 
-    Assert.assertEquals(5, processor.getTargetClasses().size());
-    Assert.assertEquals(5, schema.getTypes().size());
+    Assert.assertEquals(6, processor.getTargetClasses().size());
+    Assert.assertEquals(6, schema.getTypes().size());
     Assert.assertEquals(3, schema.getEnums().size());
 
     Assert.assertEquals("SampleClassTable", schema.getRootType());
@@ -120,8 +121,8 @@ public class ProcessorTest {
     Assert.assertEquals(1, processor.getSourceAnnotations().size());
     Schema schema = processor.buildSchema();
 
-    Assert.assertEquals(3, processor.getTargetClasses().size());
-    Assert.assertEquals(5, schema.getTypes().size());
+    Assert.assertEquals(4, processor.getTargetClasses().size());
+    Assert.assertEquals(6, schema.getTypes().size());
     Assert.assertEquals(1, schema.getEnums().size());
 
     Assert.assertEquals("SampleClassTable", schema.getRootType());
@@ -172,6 +173,17 @@ public class ProcessorTest {
 
       if (type.getName().equals(SampleClassReferenced.InnerClass.class.getSimpleName())) {
         Assert.assertEquals(2, type.properties.size());
+        // TODO More tests here
+
+        if (Config.DEBUG) {
+          System.out.println(type.toString());
+        }
+
+        continue;
+      }
+
+      if (type.getName().equals(SampleClassTableWithUndefined.class.getSimpleName())) {
+        Assert.assertEquals(3, type.properties.size());
         // TODO More tests here
 
         if (Config.DEBUG) {

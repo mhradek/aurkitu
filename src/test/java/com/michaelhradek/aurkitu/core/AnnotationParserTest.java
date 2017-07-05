@@ -44,7 +44,7 @@ public class AnnotationParserTest {
   public void testFindAnnotatedClasses() {
     Set<Class<?>> annotated = AnnotationParser.findAnnotatedClasses(FlatBufferTable.class);
     Assert.assertEquals(false, annotated.isEmpty());
-    Assert.assertEquals(3, annotated.size());
+    Assert.assertEquals(4, annotated.size());
 
     Assert.assertEquals(true, annotated.contains(SampleClassReferenced.class));
     Assert.assertEquals(true, annotated.contains(SampleClassTable.class));

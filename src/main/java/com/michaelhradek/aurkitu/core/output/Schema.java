@@ -34,6 +34,7 @@ public class Schema {
   List<Constant<Integer>> integerConstants;
   List<Constant<Float>> floatConstants;
   boolean generateVersion;
+  boolean isValidSchema;
 
   public Schema() {
     enums = new ArrayList<EnumDeclaration>();
@@ -92,12 +93,20 @@ public class Schema {
     floatConstants.add(input);
   }
 
+  /**
+   *
+   * @param <T>
+   */
   public static class Constant<T extends Number> {
     public String name;
     public T value;
     public Map<String, String> options = new HashMap<String, String>();
   }
 
+  /**
+   * 
+   * @param input
+   */
   public void setFileIdentifier(String input) {
     if (input == null || input.length() != 4) {
       return;
@@ -106,6 +115,10 @@ public class Schema {
     fileIdentifier = input.toUpperCase();
   }
 
+  /**
+   * 
+   * @param input
+   */
   public void setFileExtension(String input) {
     if (input == null || input.length() < 1) {
       return;

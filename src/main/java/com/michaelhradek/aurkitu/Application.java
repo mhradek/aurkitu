@@ -18,6 +18,7 @@ import com.michaelhradek.aurkitu.annotations.FlatBufferEnum;
 import com.michaelhradek.aurkitu.annotations.FlatBufferTable;
 import com.michaelhradek.aurkitu.core.FileGeneration;
 import com.michaelhradek.aurkitu.core.Processor;
+import com.michaelhradek.aurkitu.core.Validator;
 import com.michaelhradek.aurkitu.core.output.Schema;
 
 /**
@@ -43,6 +44,9 @@ public class Application extends AbstractMojo {
       defaultValue = "generated.flatbuffers")
   private String namespace;
 
+  @Parameter(property = Application.MOJO_NAME + ".validate-schema", defaultValue = "true")
+  private Boolean validateSchema;
+
   @Parameter(property = Application.MOJO_NAME + ".schema-name", required = true)
   private String schemaName;
 
@@ -63,6 +67,13 @@ public class Application extends AbstractMojo {
     schema.setName(schemaName);
     schema.setFileExtension(fileExtension);
     schema.setFileIdentifier(fileIdentifier);
+
+    if (validateSchema) {
+      Validator validator = new Validator().withSchema(schema);
+      validator.validateSchema();
+      schema.setValidSchema(validator.getErrors().isEmpty());
+      Application.getLogger().info(validator.getErrorComments());
+    }
 
     if (outputDirectory == null) {
       Application.getLogger().debug("outputDirectory is NULL");
