@@ -12,7 +12,7 @@ Aurkitu is the Basque word for for the English phrase "to find". This project is
 This is a very early proof-of-concept currently being developed in spare time.
 
 ## roadmap
-- [*] handle core types
+- [x] handle core types
 - [ ] handle options, deprecation, and default values
 - [ ] validate dependencies (optional)
 - [ ] implement as plugin and test against a sample project
