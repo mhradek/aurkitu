@@ -1,7 +1,7 @@
 # aurkitu 
 
 [![Build Status](https://travis-ci.org/mhradek/aurkitu.svg?branch=master)](https://travis-ci.org/mhradek/aurkitu)
-<!-- [![Coverage Status](https://coveralls.io/repos/github/mhradek/aurkitu/badge.svg?branch=master)](https://coveralls.io/github/mhradek/aurkitu?branch=master) -->
+[![codecov](https://codecov.io/gh/mhradek/aurkitu/branch/master/graph/badge.svg)](https://codecov.io/gh/mhradek/aurkitu)
 
 Aurkitu is the Basque word for for the English phrase "to find". This project is intended to assist in the automatic generation of FlatBuffer IDL/schemas from Java source. But isn't this backwards? Shouldn't the schema generate the models for both client and service? Unfortunately, when using models which are stored in cloud based storage mechanisms (e.g. AWS Dynamo DB) requires that table definitions, keys, and other attirubtes to be declared within the model. Hence with this project the aim is to allow the server implementation to remain as the master version of these models making the schema, flatbuffers, and client code as auxillery. 
 
