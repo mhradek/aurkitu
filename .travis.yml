@@ -6,3 +6,4 @@ script: mvn test -B
 
 after_success:
   - mvn clean cobertura:cobertura coveralls:report
+  - bash <(curl -s https://codecov.io/bash)
