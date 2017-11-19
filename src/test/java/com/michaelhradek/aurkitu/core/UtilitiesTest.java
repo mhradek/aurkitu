@@ -1,5 +1,6 @@
 package com.michaelhradek.aurkitu.core;
 
+import com.michaelhradek.aurkitu.core.output.Schema;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -34,5 +35,9 @@ public class UtilitiesTest {
 
         String primString = "Test string";
         Assert.assertTrue(Utilities.isLowerCaseType(primString.getClass()));
+
+        Schema schema = new Schema();
+        Assert.assertFalse(Utilities.isLowerCaseType(schema.getClass()));
     }
 }
+
