@@ -30,24 +30,29 @@ public class ApplicationTest extends AbstractMojoTestCase {
   public MojoRule mojoRule = new MojoRule();
 
   /**
-   * @throws Exception
+   * @throws Exception Unable to locate file.
    */
   @Test
   public void testBasicRead() throws Exception {
     File testPom = new File(getBasedir(), "src/test/resources/plugin-basic/pom.xml");
-    Assert.assertEquals(true, testPom.exists());
-    Assert.assertEquals(true, testPom.isFile());
+    Assert.assertTrue(testPom.exists());
+    Assert.assertTrue(testPom.isFile());
+    assertNotNull(testPom);
 
-    Application mojo = (Application) lookupMojo(Application.MOJO_GOAL, testPom);
-    Assert.assertNotNull(mojo);
+    Application mojo = new Application();
+    mojo = (Application) configureMojo(
+            mojo, extractPluginConfiguration(Application.MOJO_NAME, testPom
+            ));
+
+    assertNotNull(mojo);
+    mojo.execute();
   }
 
-  @Test
-  public void testBasicConfig() throws Exception {
-    // Application mojo =
-    // (Application) mojoRule.lookupConfiguredMojo(loadPom("plugin-basic"), Application.MOJO_GOAL);
-    // mojo.execute();
-  }
+//  @Test
+//  public void testBasicConfig() throws Exception {
+//    Application mojo = (Application) mojoRule.lookupConfiguredMojo(loadPom("plugin-basic"), Application.MOJO_GOAL);
+//    mojo.execute();
+//  }
 
   public File loadPom(String folderName) {
     return new File("src/test/resources/", folderName);
