@@ -1,5 +1,5 @@
 /**
- * 
+ *
  */
 package com.michaelhradek.aurkitu.core;
 
@@ -19,42 +19,42 @@ import com.michaelhradek.aurkitu.test.SampleEnumNull;
 
 /**
  * @author m.hradek
- * @date May 24, 2017
- * 
  */
 public class AnnotationParserTest {
 
-  /**
-   * @throws java.lang.Exception
-   */
-  @Before
-  public void setUp() throws Exception {}
+    /**
+     * @throws java.lang.Exception
+     */
+    @Before
+    public void setUp() throws Exception {
+    }
 
-  /**
-   * @throws java.lang.Exception
-   */
-  @After
-  public void tearDown() throws Exception {}
+    /**
+     * @throws java.lang.Exception
+     */
+    @After
+    public void tearDown() throws Exception {
+    }
 
-  /**
-   * Test method for
-   * {@link com.michaelhradek.aurkitu.core.AnnotationParser#findAnnotatedClasses(java.lang.Class)}.
-   */
-  @Test
-  public void testFindAnnotatedClasses() {
-    Set<Class<?>> annotated = AnnotationParser.findAnnotatedClasses(FlatBufferTable.class);
-    Assert.assertEquals(false, annotated.isEmpty());
-    Assert.assertEquals(4, annotated.size());
+    /**
+     * Test method for
+     * {@link com.michaelhradek.aurkitu.core.AnnotationParser#findAnnotatedClasses(java.lang.Class)}.
+     */
+    @Test
+    public void testFindAnnotatedClasses() {
+        Set<Class<?>> annotated = AnnotationParser.findAnnotatedClasses(FlatBufferTable.class);
+        Assert.assertEquals(false, annotated.isEmpty());
+        Assert.assertEquals(4, annotated.size());
 
-    Assert.assertEquals(true, annotated.contains(SampleClassReferenced.class));
-    Assert.assertEquals(true, annotated.contains(SampleClassTable.class));
-    Assert.assertEquals(false, annotated.contains(SampleEnumByte.class));
-    Assert.assertEquals(false, annotated.contains(SampleEnumNull.class));
-  }
+        Assert.assertEquals(true, annotated.contains(SampleClassReferenced.class));
+        Assert.assertEquals(true, annotated.contains(SampleClassTable.class));
+        Assert.assertEquals(false, annotated.contains(SampleEnumByte.class));
+        Assert.assertEquals(false, annotated.contains(SampleEnumNull.class));
+    }
 
-  @Test
-  public void testFindAnnotatedClassesWithPath() {
-    Set<Class<?>> annotated = AnnotationParser.findAnnotatedClasses(".*", BogusAnnotation.class);
-    Assert.assertEquals(true, annotated.isEmpty());
-  }
+    @Test
+    public void testFindAnnotatedClassesWithPath() {
+        Set<Class<?>> annotated = AnnotationParser.findAnnotatedClasses(".*", BogusAnnotation.class);
+        Assert.assertEquals(true, annotated.isEmpty());
+    }
 }

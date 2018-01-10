@@ -1,5 +1,5 @@
 /**
- * 
+ *
  */
 package com.michaelhradek.aurkitu.test;
 
@@ -16,7 +16,7 @@ import java.lang.annotation.Target;
 /**
  * @author m.hradek
  * @date May 24, 2017
- *   
+ *
  */
 public @interface BogusAnnotation {
 

@@ -1,5 +1,5 @@
 /**
- * 
+ *
  */
 package com.michaelhradek.aurkitu.test;
 
@@ -9,25 +9,23 @@ import com.michaelhradek.aurkitu.annotations.FlatBufferTable;
 
 /**
  * @author m.hradek
- * @date May 22, 2017
- * 
  */
 @FlatBufferTable
 public class SampleClassReferenced extends SampleClassAbstract {
 
-  protected long id;
-  protected List<SampleClassTable> baggage;
+    protected long id;
+    protected List<SampleClassTable> baggage;
 
-  enum SampleClassTableInnerEnumInt {
-    DAGGER, SHORT_SWORD, SWORD, GREAT_SWORD
-  }
+    enum SampleClassTableInnerEnumInt {
+        DAGGER, SHORT_SWORD, SWORD, GREAT_SWORD
+    }
 
-  public class InnerClass {
-    public boolean processed;
-    public SampleClassTableInnerEnumInt weaponType;
-  }
+    public class InnerClass {
+        public boolean processed;
+        public SampleClassTableInnerEnumInt weaponType;
+    }
 
-  public static class InnerClassStatic {
-    public boolean virulant;
-  }
+    public static class InnerClassStatic {
+        public boolean virulant;
+    }
 }

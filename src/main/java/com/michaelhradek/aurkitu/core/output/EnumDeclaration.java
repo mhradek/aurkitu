@@ -1,5 +1,5 @@
 /**
- * 
+ *
  */
 package com.michaelhradek.aurkitu.core.output;
 
@@ -13,57 +13,54 @@ import lombok.Setter;
 
 /**
  * @author m.hradek
- * @date May 23, 2017
- * 
  */
 @Getter
 @Setter
 public class EnumDeclaration {
 
-  public String name;
-  public EnumStructureType structure;
-  public FieldType type;
-  public List<String> values = new ArrayList<String>();
+    public String name;
+    public EnumStructureType structure;
+    public FieldType type;
+    public List<String> values = new ArrayList<String>();
 
-  public EnumDeclaration(EnumStructureType structure) {
-    this.structure = structure;
-  }
-
-  public EnumDeclaration() {
-    this.structure = EnumStructureType.ENUM;
-  }
-
-  /**
-   * 
-   * @param value
-   */
-  public void addValue(String value) {
-    values.add(value);
-  }
-
-  @Override
-  public String toString() {
-    StringBuilder builder = new StringBuilder(structure.name().toLowerCase());
-    builder.append(" ");
-    builder.append(name);
-    if (type != null) {
-      builder.append(" : ");
-      builder.append(type.toString());
+    public EnumDeclaration(EnumStructureType structure) {
+        this.structure = structure;
     }
 
-    builder.append(" { ");
-
-    for (String value : values) {
-      builder.append(value);
-      builder.append(", ");
+    public EnumDeclaration() {
+        this.structure = EnumStructureType.ENUM;
     }
 
-    builder.deleteCharAt(builder.lastIndexOf(","));
+    /**
+     * @param value Add a value to the List of values the schema will need to include
+     */
+    public void addValue(String value) {
+        values.add(value);
+    }
 
-    builder.append("}");
-    builder.append(System.lineSeparator());
-    builder.append(System.lineSeparator());
+    @Override
+    public String toString() {
+        StringBuilder builder = new StringBuilder(structure.name().toLowerCase());
+        builder.append(" ");
+        builder.append(name);
+        if (type != null) {
+            builder.append(" : ");
+            builder.append(type.toString());
+        }
 
-    return builder.toString();
-  }
+        builder.append(" { ");
+
+        for (String value : values) {
+            builder.append(value);
+            builder.append(", ");
+        }
+
+        builder.deleteCharAt(builder.lastIndexOf(","));
+
+        builder.append("}");
+        builder.append(System.lineSeparator());
+        builder.append(System.lineSeparator());
+
+        return builder.toString();
+    }
 }

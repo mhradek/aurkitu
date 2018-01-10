@@ -1,5 +1,5 @@
 /**
- * 
+ *
  */
 package com.michaelhradek.aurkitu.annotations;
 
@@ -15,8 +15,7 @@ import java.lang.annotation.Target;
 @Target({FIELD, PARAMETER, LOCAL_VARIABLE})
 /**
  * @author m.hradek
- * @date May 24, 2017
- * 
+ *
  */
 public @interface FlatBufferIgnore {
 

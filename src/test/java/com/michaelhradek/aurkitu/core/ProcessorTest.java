@@ -1,5 +1,5 @@
 /**
- * 
+ *
  */
 package com.michaelhradek.aurkitu.core;
 
@@ -27,232 +27,232 @@ import com.michaelhradek.aurkitu.test.SampleEnumNull;
 
 /**
  * @author m.hradek
- * @date May 24, 2017
- * 
  */
 public class ProcessorTest {
 
-  /**
-   * @throws java.lang.Exception
-   */
-  @Before
-  public void setUp() throws Exception {}
-
-  /**
-   * @throws java.lang.Exception
-   */
-  @After
-  public void tearDown() throws Exception {}
-
-  /**
-   * Test method for {@link com.michaelhradek.aurkitu.core.Processor#buildSchema()}.
-   */
-  @Test
-  public void testBuildSchema() {
-    Processor processor = new Processor().withSourceAnnotation(FlatBufferTable.class)
-        .withSourceAnnotation(FlatBufferEnum.class);
-    Assert.assertEquals(2, processor.getSourceAnnotations().size());
-
-    Schema schema = processor.buildSchema();
-    schema.setNamespace(
-        processor.getClass().getPackage().getName().toString().replace("core", "flatbuffers"));
-    schema.addAttribute("Priority");
-    schema.addAttribute("ConsiderThis");
-    schema.addInclude("AnotherFile.fbs");
-
-    Assert.assertEquals(6, processor.getTargetClasses().size());
-    Assert.assertEquals(6, schema.getTypes().size());
-    Assert.assertEquals(3, schema.getEnums().size());
-
-    Assert.assertEquals("SampleClassTable", schema.getRootType());
-
-    // TODO Test multiple root types
-    if (Config.DEBUG) {
-      System.out.println(schema.toString());
+    /**
+     * @throws java.lang.Exception
+     */
+    @Before
+    public void setUp() throws Exception {
     }
-  }
 
-  /**
-   * Test method for
-   * {@link com.michaelhradek.aurkitu.core.Processor#buildEnumDeclaration(java.lang.Class)}.
-   */
-  @Test
-  public void testBuildEnumDeclaration() {
-    Processor processor = new Processor().withSourceAnnotation(FlatBufferEnum.class);
-    Assert.assertEquals(1, processor.getSourceAnnotations().size());
-    Schema schema = processor.buildSchema();
-
-    Assert.assertEquals(2, processor.getTargetClasses().size());
-    Assert.assertEquals(0, schema.getTypes().size());
-    Assert.assertEquals(2, schema.getEnums().size());
-
-    Assert.assertEquals(null, schema.getRootType());
-
-    for (EnumDeclaration enumD : schema.getEnums()) {
-      if (enumD.getName().equals(SampleEnumByte.class.getSimpleName())) {
-        Assert.assertEquals(FieldType.BYTE, enumD.getType());
-
-        if (Config.DEBUG) {
-          System.out.println(enumD.toString());
-        }
-
-        continue;
-      }
-
-      if (enumD.getName().equals(SampleEnumNull.class.getSimpleName())) {
-        Assert.assertEquals(null, enumD.getType());
-
-        if (Config.DEBUG) {
-          System.out.println(enumD.toString());
-        }
-
-        continue;
-      }
+    /**
+     * @throws java.lang.Exception
+     */
+    @After
+    public void tearDown() throws Exception {
     }
-  }
 
-  /**
-   * Test method for
-   * {@link com.michaelhradek.aurkitu.core.Processor#buildTypeDeclaration(java.lang.Class)}.
-   */
-  @Test
-  public void testBuildTypeDeclaration() {
-    Processor processor = new Processor().withSourceAnnotation(FlatBufferTable.class);
-    Assert.assertEquals(1, processor.getSourceAnnotations().size());
-    Schema schema = processor.buildSchema();
+    /**
+     * Test method for {@link com.michaelhradek.aurkitu.core.Processor#buildSchema()}.
+     */
+    @Test
+    public void testBuildSchema() {
+        Processor processor = new Processor().withSourceAnnotation(FlatBufferTable.class)
+                .withSourceAnnotation(FlatBufferEnum.class);
+        Assert.assertEquals(2, processor.getSourceAnnotations().size());
 
-    Assert.assertEquals(4, processor.getTargetClasses().size());
-    Assert.assertEquals(6, schema.getTypes().size());
-    Assert.assertEquals(1, schema.getEnums().size());
+        Schema schema = processor.buildSchema();
+        schema.setNamespace(
+                processor.getClass().getPackage().getName().toString().replace("core", "flatbuffers"));
+        schema.addAttribute("Priority");
+        schema.addAttribute("ConsiderThis");
+        schema.addInclude("AnotherFile.fbs");
 
-    Assert.assertEquals("SampleClassTable", schema.getRootType());
+        Assert.assertEquals(6, processor.getTargetClasses().size());
+        Assert.assertEquals(6, schema.getTypes().size());
+        Assert.assertEquals(3, schema.getEnums().size());
 
-    for (TypeDeclaration type : schema.getTypes()) {
-      if (type.getName().equals(SampleClassTable.class.getSimpleName())) {
-        Assert.assertEquals(8, type.properties.size());
+        Assert.assertEquals("SampleClassTable", schema.getRootType());
 
+        // TODO Test multiple root types
         if (Config.DEBUG) {
-          System.out.println(type.toString());
+            System.out.println(schema.toString());
         }
-
-        continue;
-      }
-
-      if (type.getName().equals(SampleClassReferenced.class.getSimpleName())) {
-        Assert.assertEquals(3, type.properties.size());
-        // TODO More tests here
-
-        if (Config.DEBUG) {
-          System.out.println(type.toString());
-        }
-
-        continue;
-      }
-
-      if (type.getName().equals(SampleClassStruct.class.getSimpleName())) {
-        Assert.assertEquals(3, type.properties.size());
-        // TODO More tests here
-
-        if (Config.DEBUG) {
-          System.out.println(type.toString());
-        }
-
-        continue;
-      }
-
-      if (type.getName().equals(SampleClassReferenced.InnerClassStatic.class.getSimpleName())) {
-        Assert.assertEquals(1, type.properties.size());
-        // TODO More tests here
-
-        if (Config.DEBUG) {
-          System.out.println(type.toString());
-        }
-
-        continue;
-      }
-
-      if (type.getName().equals(SampleClassReferenced.InnerClass.class.getSimpleName())) {
-        Assert.assertEquals(2, type.properties.size());
-        // TODO More tests here
-
-        if (Config.DEBUG) {
-          System.out.println(type.toString());
-        }
-
-        continue;
-      }
-
-      if (type.getName().equals(SampleClassTableWithUndefined.class.getSimpleName())) {
-        Assert.assertEquals(3, type.properties.size());
-        // TODO More tests here
-
-        if (Config.DEBUG) {
-          System.out.println(type.toString());
-        }
-
-        continue;
-      }
-
-      Assert.fail("Unaccounted class: " + type.getName());
     }
-  }
 
-  /**
-   * Test method for
-   * {@link com.michaelhradek.aurkitu.core.Processor#getPropertyForField(java.lang.reflect.Field)}.
-   * 
-   * @throws SecurityException
-   * @throws NoSuchFieldException
-   */
-  @Test
-  public void testGetPropertyForField() throws NoSuchFieldException, SecurityException {
-    Processor processor = new Processor();
+    /**
+     * Test method for
+     * {@link com.michaelhradek.aurkitu.core.Processor#buildEnumDeclaration(java.lang.Class)}.
+     */
+    @Test
+    public void testBuildEnumDeclaration() {
+        Processor processor = new Processor().withSourceAnnotation(FlatBufferEnum.class);
+        Assert.assertEquals(1, processor.getSourceAnnotations().size());
+        Schema schema = processor.buildSchema();
 
-    Field field = SampleClassTable.class.getDeclaredField("id");
-    Property prop = processor.getPropertyForField(field);
-    Assert.assertEquals("id", prop.name);
-    Assert.assertEquals(FieldType.LONG, prop.type);
-    Assert.assertEquals(true, prop.options.isEmpty());
+        Assert.assertEquals(2, processor.getTargetClasses().size());
+        Assert.assertEquals(0, schema.getTypes().size());
+        Assert.assertEquals(2, schema.getEnums().size());
 
-    field = SampleClassTable.class.getDeclaredField("name");
-    prop = processor.getPropertyForField(field);
-    Assert.assertEquals("name", prop.name);
-    Assert.assertEquals(FieldType.STRING, prop.type);
-    Assert.assertEquals(true, prop.options.isEmpty());
+        Assert.assertEquals(null, schema.getRootType());
 
-    field = SampleClassTable.class.getDeclaredField("level");
-    prop = processor.getPropertyForField(field);
-    Assert.assertEquals("level", prop.name);
-    Assert.assertEquals(FieldType.SHORT, prop.type);
-    Assert.assertEquals(true, prop.options.isEmpty());
+        for (EnumDeclaration enumD : schema.getEnums()) {
+            if (enumD.getName().equals(SampleEnumByte.class.getSimpleName())) {
+                Assert.assertEquals(FieldType.BYTE, enumD.getType());
 
-    field = SampleClassTable.class.getDeclaredField("currency");
-    prop = processor.getPropertyForField(field);
-    Assert.assertEquals("currency", prop.name);
-    Assert.assertEquals(FieldType.INT, prop.type);
-    Assert.assertEquals(true, prop.options.isEmpty());
+                if (Config.DEBUG) {
+                    System.out.println(enumD.toString());
+                }
 
-    field = SampleClassTable.class.getDeclaredField("tokens");
-    prop = processor.getPropertyForField(field);
-    Assert.assertEquals("tokens", prop.name);
-    Assert.assertEquals(FieldType.ARRAY, prop.type);
-    Assert.assertEquals(false, prop.options.isEmpty());
-    Assert.assertEquals(true, prop.options.containsKey(FieldType.ARRAY.toString()));
-    Assert.assertEquals("string", prop.options.get(FieldType.ARRAY.toString()));
+                continue;
+            }
 
-    field = SampleClassTable.class.getDeclaredField("deleted");
-    prop = processor.getPropertyForField(field);
-    Assert.assertEquals("deleted", prop.name);
-    Assert.assertEquals(FieldType.BOOL, prop.type);
+            if (enumD.getName().equals(SampleEnumNull.class.getSimpleName())) {
+                Assert.assertEquals(null, enumD.getType());
 
-    // FIXME This should be false; boolean has a defualt value assigned to it
-    Assert.assertEquals(true, prop.options.isEmpty());
+                if (Config.DEBUG) {
+                    System.out.println(enumD.toString());
+                }
 
-    field = SampleClassTable.class.getDeclaredField("energy");
-    prop = processor.getPropertyForField(field);
-    Assert.assertEquals("energy", prop.name);
-    Assert.assertEquals(FieldType.BYTE, prop.type);
-    Assert.assertEquals(true, prop.options.isEmpty());
-  }
+                continue;
+            }
+        }
+    }
+
+    /**
+     * Test method for
+     * {@link com.michaelhradek.aurkitu.core.Processor#buildTypeDeclaration(java.lang.Class)}.
+     */
+    @Test
+    public void testBuildTypeDeclaration() {
+        Processor processor = new Processor().withSourceAnnotation(FlatBufferTable.class);
+        Assert.assertEquals(1, processor.getSourceAnnotations().size());
+        Schema schema = processor.buildSchema();
+
+        Assert.assertEquals(4, processor.getTargetClasses().size());
+        Assert.assertEquals(6, schema.getTypes().size());
+        Assert.assertEquals(1, schema.getEnums().size());
+
+        Assert.assertEquals("SampleClassTable", schema.getRootType());
+
+        for (TypeDeclaration type : schema.getTypes()) {
+            if (type.getName().equals(SampleClassTable.class.getSimpleName())) {
+                Assert.assertEquals(8, type.properties.size());
+
+                if (Config.DEBUG) {
+                    System.out.println(type.toString());
+                }
+
+                continue;
+            }
+
+            if (type.getName().equals(SampleClassReferenced.class.getSimpleName())) {
+                Assert.assertEquals(3, type.properties.size());
+                // TODO More tests here
+
+                if (Config.DEBUG) {
+                    System.out.println(type.toString());
+                }
+
+                continue;
+            }
+
+            if (type.getName().equals(SampleClassStruct.class.getSimpleName())) {
+                Assert.assertEquals(3, type.properties.size());
+                // TODO More tests here
+
+                if (Config.DEBUG) {
+                    System.out.println(type.toString());
+                }
+
+                continue;
+            }
+
+            if (type.getName().equals(SampleClassReferenced.InnerClassStatic.class.getSimpleName())) {
+                Assert.assertEquals(1, type.properties.size());
+                // TODO More tests here
+
+                if (Config.DEBUG) {
+                    System.out.println(type.toString());
+                }
+
+                continue;
+            }
+
+            if (type.getName().equals(SampleClassReferenced.InnerClass.class.getSimpleName())) {
+                Assert.assertEquals(2, type.properties.size());
+                // TODO More tests here
+
+                if (Config.DEBUG) {
+                    System.out.println(type.toString());
+                }
+
+                continue;
+            }
+
+            if (type.getName().equals(SampleClassTableWithUndefined.class.getSimpleName())) {
+                Assert.assertEquals(3, type.properties.size());
+                // TODO More tests here
+
+                if (Config.DEBUG) {
+                    System.out.println(type.toString());
+                }
+
+                continue;
+            }
+
+            Assert.fail("Unaccounted class: " + type.getName());
+        }
+    }
+
+    /**
+     * Test method for
+     * {@link com.michaelhradek.aurkitu.core.Processor#getPropertyForField(java.lang.reflect.Field)}.
+     *
+     * @throws SecurityException
+     * @throws NoSuchFieldException
+     */
+    @Test
+    public void testGetPropertyForField() throws NoSuchFieldException, SecurityException {
+        Processor processor = new Processor();
+
+        Field field = SampleClassTable.class.getDeclaredField("id");
+        Property prop = processor.getPropertyForField(field);
+        Assert.assertEquals("id", prop.name);
+        Assert.assertEquals(FieldType.LONG, prop.type);
+        Assert.assertEquals(true, prop.options.isEmpty());
+
+        field = SampleClassTable.class.getDeclaredField("name");
+        prop = processor.getPropertyForField(field);
+        Assert.assertEquals("name", prop.name);
+        Assert.assertEquals(FieldType.STRING, prop.type);
+        Assert.assertEquals(true, prop.options.isEmpty());
+
+        field = SampleClassTable.class.getDeclaredField("level");
+        prop = processor.getPropertyForField(field);
+        Assert.assertEquals("level", prop.name);
+        Assert.assertEquals(FieldType.SHORT, prop.type);
+        Assert.assertEquals(true, prop.options.isEmpty());
+
+        field = SampleClassTable.class.getDeclaredField("currency");
+        prop = processor.getPropertyForField(field);
+        Assert.assertEquals("currency", prop.name);
+        Assert.assertEquals(FieldType.INT, prop.type);
+        Assert.assertEquals(true, prop.options.isEmpty());
+
+        field = SampleClassTable.class.getDeclaredField("tokens");
+        prop = processor.getPropertyForField(field);
+        Assert.assertEquals("tokens", prop.name);
+        Assert.assertEquals(FieldType.ARRAY, prop.type);
+        Assert.assertEquals(false, prop.options.isEmpty());
+        Assert.assertEquals(true, prop.options.containsKey(FieldType.ARRAY.toString()));
+        Assert.assertEquals("string", prop.options.get(FieldType.ARRAY.toString()));
+
+        field = SampleClassTable.class.getDeclaredField("deleted");
+        prop = processor.getPropertyForField(field);
+        Assert.assertEquals("deleted", prop.name);
+        Assert.assertEquals(FieldType.BOOL, prop.type);
+
+        // FIXME This should be false; boolean has a defualt value assigned to it
+        Assert.assertEquals(true, prop.options.isEmpty());
+
+        field = SampleClassTable.class.getDeclaredField("energy");
+        prop = processor.getPropertyForField(field);
+        Assert.assertEquals("energy", prop.name);
+        Assert.assertEquals(FieldType.BYTE, prop.type);
+        Assert.assertEquals(true, prop.options.isEmpty());
+    }
 
 }

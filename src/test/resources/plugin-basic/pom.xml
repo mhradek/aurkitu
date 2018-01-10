@@ -1,68 +1,68 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" 
-xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
-	<modelVersion>4.0.0</modelVersion>
-	
-	<groupId>com.michaelhradek.aurkitu.test</groupId>
-	<artifactId>plugin-basic</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
-	<packaging>jar</packaging>
-	
-	<name>Basic Aurkitu test</name>
-	<description>A simple test</description>
-	
-	<properties>
-		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<jersey.version>1.12</jersey.version>
-	</properties>
-	
-	<dependencies>
-		<dependency>
-			<groupId>com.sun.jersey</groupId>
-			<artifactId>jersey-servlet</artifactId>
-			<version>${jersey.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>com.sun.jersey</groupId>
-			<artifactId>jersey-core</artifactId>
-			<version>${jersey.version}</version>
-		</dependency>
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.michaelhradek.aurkitu.test</groupId>
+    <artifactId>plugin-basic</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
+    <name>Basic Aurkitu test</name>
+    <description>A simple test</description>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <jersey.version>1.12</jersey.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.sun.jersey</groupId>
+            <artifactId>jersey-servlet</artifactId>
+            <version>${jersey.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.sun.jersey</groupId>
+            <artifactId>jersey-core</artifactId>
+            <version>${jersey.version}</version>
+        </dependency>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <version>3.8.1</version>
             <scope>test</scope>
         </dependency>
-	</dependencies>
-	
-	<build>
-		<plugins>
-			<plugin>
-				<artifactId>maven-compiler-plugin</artifactId>
-				<configuration>
-					<source>1.6</source>
-					<target>1.6</target>
-				</configuration>
-			</plugin>
-			
-			<plugin>
-				<groupId>com.michaelhradek</groupId>
-				<artifactId>aurkitu-maven-plugin</artifactId>
-				<version>1.0.0</version>
-				<configuration>
-					<schemaName>test-schema</schemaName>
-					<outputDirectory>target/test-dir</outputDirectory>
-					<validateSchema>true</validateSchema>
-				</configuration>
-				<executions>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.6</source>
+                    <target>1.6</target>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>com.michaelhradek</groupId>
+                <artifactId>aurkitu-maven-plugin</artifactId>
+                <version>1.0.0</version>
+                <configuration>
+                    <schemaName>test-schema</schemaName>
+                    <outputDirectory>target/test-dir</outputDirectory>
+                    <validateSchema>true</validateSchema>
+                </configuration>
+                <executions>
                     <execution>
                         <goals>
                             <goal>build-schema</goal>
                         </goals>
                     </execution>
                 </executions>
-			</plugin>
-		</plugins>
-	</build>
+            </plugin>
+        </plugins>
+    </build>
 </project>

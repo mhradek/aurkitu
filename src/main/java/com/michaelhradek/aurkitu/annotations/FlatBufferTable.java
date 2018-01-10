@@ -1,5 +1,5 @@
 /**
- * 
+ *
  */
 package com.michaelhradek.aurkitu.annotations;
 
@@ -8,16 +8,14 @@ import java.lang.annotation.RetentionPolicy;
 
 /**
  * @author m.hradek
- * @date May 17, 2017
- * 
  */
 @Retention(RetentionPolicy.RUNTIME)
 public @interface FlatBufferTable {
-  boolean rootType() default false;
+    boolean rootType() default false;
 
-  TableStructureType value() default TableStructureType.TABLE;
+    TableStructureType value() default TableStructureType.TABLE;
 
-  public enum TableStructureType {
-    TABLE, STRUCT
-  }
+    public enum TableStructureType {
+        TABLE, STRUCT
+    }
 }

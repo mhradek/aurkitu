@@ -1,5 +1,5 @@
 /**
- * 
+ *
  */
 package com.michaelhradek.aurkitu.core;
 
@@ -14,47 +14,42 @@ import com.michaelhradek.aurkitu.Application;
 
 /**
  * @author m.hradek
- * @date May 22, 2017
- * 
  */
 public class AnnotationParser {
 
-  /**
-   * 
-   * @param input
-   * @return
-   */
-  public static Set<Class<?>> findAnnotatedClasses(Class<? extends Annotation> input) {
-    Reflections reflections =
-        new Reflections(new ConfigurationBuilder().setUrls(ClasspathHelper.forJavaClassPath()));
+    /**
+     * @param input A list of Aurkitu annotations.
+     * @return A list of classes which are annotated with the above annotations.
+     */
+    public static Set<Class<?>> findAnnotatedClasses(Class<? extends Annotation> input) {
+        Reflections reflections =
+                new Reflections(new ConfigurationBuilder().setUrls(ClasspathHelper.forJavaClassPath()));
 
-    return findAnnotatedClasses(reflections, input);
-  }
-
-  /**
-   * 
-   * @param path
-   * @param input
-   * @return
-   */
-  public static Set<Class<?>> findAnnotatedClasses(String path, Class<? extends Annotation> input) {
-    return findAnnotatedClasses(new Reflections(path), input);
-  }
-
-  /**
-   * 
-   * @param reflections
-   * @param input
-   * @return
-   */
-  private static Set<Class<?>> findAnnotatedClasses(Reflections reflections,
-      Class<? extends Annotation> input) {
-    Set<Class<?>> classes = reflections.getTypesAnnotatedWith(input);
-    for (Class<?> clazz : classes) {
-      String prefix = "Find: " + input.getName();
-      Application.getLogger().debug(prefix + " -> Found annotated class: " + clazz.getName());
+        return findAnnotatedClasses(reflections, input);
     }
 
-    return classes;
-  }
+    /**
+     * @param path The path to traverse.
+     * @param input A list of Aurkitu annotations.
+     * @return A list of classes which are annotated with the above annotations.
+     */
+    public static Set<Class<?>> findAnnotatedClasses(String path, Class<? extends Annotation> input) {
+        return findAnnotatedClasses(new Reflections(path), input);
+    }
+
+    /**
+     * @param reflections Reflections to traverse.
+     * @param input A list of Aurkitu annotations.
+     * @return A list of classes which are annotated with the above annotations.
+     */
+    private static Set<Class<?>> findAnnotatedClasses(Reflections reflections,
+                                                      Class<? extends Annotation> input) {
+        Set<Class<?>> classes = reflections.getTypesAnnotatedWith(input);
+        for (Class<?> clazz : classes) {
+            String prefix = "Find: " + input.getName();
+            Application.getLogger().debug(prefix + " -> Found annotated class: " + clazz.getName());
+        }
+
+        return classes;
+    }
 }

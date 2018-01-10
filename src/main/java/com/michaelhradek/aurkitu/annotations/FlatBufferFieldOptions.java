@@ -1,5 +1,5 @@
 /**
- * 
+ *
  */
 package com.michaelhradek.aurkitu.annotations;
 
@@ -17,8 +17,7 @@ import com.michaelhradek.aurkitu.core.output.FieldType;
 @Target({FIELD, PARAMETER, LOCAL_VARIABLE})
 /**
  * @author m.hradek
- * @date May 24, 2017
- * 
+ *
  */
 public @interface FlatBufferFieldOptions {
   FieldType fieldType();
