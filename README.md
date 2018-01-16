@@ -24,7 +24,7 @@ Add the following to your dependencies within your `pom.xml`:
 ```
 <dependency>
     <groupId>com.michaelhradek</groupId>
-    <artifactId>aurkitu</artifactId>
+    <artifactId>aurkitu-maven-plugin</artifactId>
     <version>0.0.1</version>
 </dependency>
 ```
