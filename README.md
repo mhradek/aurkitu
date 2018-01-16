@@ -20,13 +20,33 @@ This is a very early proof-of-concept currently being developed in spare time.
 - [ ] release to maven
 
 ## integration
-Maven:
+Add the following to your dependencies within your `pom.xml`:
 ```
 <dependency>
     <groupId>com.michaelhradek</groupId>
     <artifactId>aurkitu</artifactId>
     <version>0.0.1</version>
 </dependency>
+```
+Followed by the following to the `plugins` of your `build` specifications:
+```
+<plugin>
+    <groupId>com.michaelhradek</groupId>
+    <artifactId>aurkitu-maven-plugin</artifactId>
+    <version>1.0.0</version>
+    <configuration>
+        <schemaName>test-schema</schemaName>
+        <outputDirectory>target/test-dir</outputDirectory>
+        <validateSchema>true</validateSchema>
+    </configuration>
+    <executions>
+        <execution>
+            <goals>
+                <goal>build-schema</goal>
+            </goals>
+        </execution>
+    </executions>
+</plugin>
 ```
 
 ## usage
