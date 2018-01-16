@@ -33,7 +33,6 @@ Followed by the following to the `plugins` of your `build` specifications:
 <plugin>
     <groupId>com.michaelhradek</groupId>
     <artifactId>aurkitu-maven-plugin</artifactId>
-    <version>1.0.0</version>
     <configuration>
         <schemaName>test-schema</schemaName>
         <outputDirectory>target/test-dir</outputDirectory>
