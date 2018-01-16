@@ -20,7 +20,14 @@ This is a very early proof-of-concept currently being developed in spare time.
 - [ ] release to maven
 
 ## integration
-To be determined.  The goal is to use as a Maven-styled plugin.
+Maven:
+```
+<dependency>
+    <groupId>com.michaelhradek</groupId>
+    <artifactId>aurkitu</artifactId>
+    <version>0.0.1</version>
+</dependency>
+```
 
 ## usage
 Through the use of annotations:
