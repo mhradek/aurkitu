@@ -28,25 +28,6 @@ Add the following to your dependencies within your `pom.xml`:
     <version>0.0.1</version>
 </dependency>
 ```
-Followed by the following to the `plugins` of your `build` specifications:
-```
-<plugin>
-    <groupId>com.michaelhradek</groupId>
-    <artifactId>aurkitu-maven-plugin</artifactId>
-    <configuration>
-        <schemaName>test-schema</schemaName>
-        <outputDirectory>target/test-dir</outputDirectory>
-        <validateSchema>true</validateSchema>
-    </configuration>
-    <executions>
-        <execution>
-            <goals>
-                <goal>build-schema</goal>
-            </goals>
-        </execution>
-    </executions>
-</plugin>
-```
 
 ## usage
 Through the use of annotations:
@@ -133,3 +114,27 @@ struct SampleClassStruct {
 
 root_type: SampleClassTable;
 ```
+
+## Generating a schema
+The goal will to eventually be able to use the Maven plugin portion. However, until the issues surrounding that are resolved/implemented, the generating of the schema file will need to be done in code during compile time. For example:
+```
+Processor processor = new Processor().withSourceAnnotation(FlatBufferTable.class)
+        .withSourceAnnotation(FlatBufferEnum.class);
+
+Schema schema = processor.buildSchema();
+schema.setNamespace("com.yournamespace");
+schema.setName("my-schema-file-name");
+
+if (validateSchema) {
+    Validator validator = new Validator().withSchema(schema);
+    validator.validateSchema();
+    schema.setValidSchema(validator.getErrors().isEmpty());
+}
+
+FileGeneration fg = new FileGeneration(outputDirectory);
+try {
+    fg.writeSchema(schema);
+} catch (IOException e) {
+    // Log
+}
+```        
