@@ -115,7 +115,7 @@ struct SampleClassStruct {
 root_type: SampleClassTable;
 ```
 
-## Generating a schema
+## generating a schema
 The goal will to eventually be able to use the Maven plugin portion. However, until the issues surrounding that are resolved/implemented, the generating of the schema file will need to be done in code during compile time. For example:
 ```
 Processor processor = new Processor().withSourceAnnotation(FlatBufferTable.class)
