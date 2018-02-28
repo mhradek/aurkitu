@@ -28,7 +28,25 @@ Add the following to your dependencies within your `pom.xml`:
     <version>0.0.1</version>
 </dependency>
 ```
-
+Followed by the following to the `plugins` of your `build` specifications:
+```
+<plugin>
+    <groupId>com.michaelhradek</groupId>
+    <artifactId>aurkitu-maven-plugin</artifactId>
+    <configuration>
+        <schemaName>test-schema</schemaName>
+        <outputDirectory>target/test-dir</outputDirectory>
+        <validateSchema>true</validateSchema>
+    </configuration>
+    <executions>
+        <execution>
+            <goals>
+                <goal>build-schema</goal>
+            </goals>
+        </execution>
+    </executions>
+</plugin>
+```
 ## usage
 Through the use of annotations:
 ```
