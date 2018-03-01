@@ -17,7 +17,7 @@ This is a very early proof-of-concept currently being developed in spare time.
 - [ ] validate dependencies (optional)
 - [ ] implement as plugin and test against a sample project
 - [ ] test with flatc
-- [ ] release to maven
+- [x] release to maven
 
 ## integration
 Add the following to your dependencies within your `pom.xml`:
@@ -25,7 +25,7 @@ Add the following to your dependencies within your `pom.xml`:
 <dependency>
     <groupId>com.michaelhradek</groupId>
     <artifactId>aurkitu-maven-plugin</artifactId>
-    <version>0.0.1</version>
+    <version>0.0.2</version>
 </dependency>
 ```
 Followed by the following to the `plugins` of your `build` specifications:
@@ -131,28 +131,4 @@ struct SampleClassStruct {
 }
 
 root_type: SampleClassTable;
-```
-
-## generating a schema
-The goal will to eventually be able to use the Maven plugin portion. However, until the issues surrounding that are resolved/implemented, the generating of the schema file will need to be done in code during compile time. For example:
-```
-Processor processor = new Processor().withSourceAnnotation(FlatBufferTable.class)
-        .withSourceAnnotation(FlatBufferEnum.class);
-
-Schema schema = processor.buildSchema();
-schema.setNamespace("com.yournamespace");
-schema.setName("my-schema-file-name");
-
-if (validateSchema) {
-    Validator validator = new Validator().withSchema(schema);
-    validator.validateSchema();
-    schema.setValidSchema(validator.getErrors().isEmpty());
-}
-
-FileGeneration fg = new FileGeneration(outputDirectory);
-try {
-    fg.writeSchema(schema);
-} catch (IOException e) {
-    // Log
-}
-```        
+```      
