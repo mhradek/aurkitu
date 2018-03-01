@@ -3,6 +3,7 @@
  */
 package com.michaelhradek.aurkitu.core;
 
+import java.io.File;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
@@ -24,6 +25,8 @@ import com.michaelhradek.aurkitu.core.output.Schema;
 import com.michaelhradek.aurkitu.core.output.TypeDeclaration;
 
 import lombok.Getter;
+import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.project.MavenProject;
 
 /**
  * @author m.hradek
@@ -33,6 +36,7 @@ public class Processor {
 
     private List<Class<? extends Annotation>> sourceAnnotations;
     private Set<Class<?>> targetClasses;
+    private MavenProject mavenProject;
 
     public Processor() {
         sourceAnnotations = new ArrayList<Class<? extends Annotation>>();
@@ -49,13 +53,26 @@ public class Processor {
     }
 
     /**
+     *
+     * @param mavenProject The Maven Project component
+     * @return an instance of the Processor object
+     */
+    public Processor withMavenProject(MavenProject mavenProject) {
+        this.mavenProject = mavenProject;
+        return this;
+    }
+
+    /**
      * @return a completed schema
      */
-    public Schema buildSchema() {
+    public Schema buildSchema() throws MojoExecutionException {
         Schema schema = new Schema();
 
         for (Class<? extends Annotation> source : sourceAnnotations) {
-            targetClasses.addAll(AnnotationParser.findAnnotatedClasses(source));
+            if(mavenProject == null)
+                targetClasses.addAll(AnnotationParser.findAnnotatedClasses(source));
+            else
+                targetClasses.addAll(AnnotationParser.findAnnotatedClasses(mavenProject, source));
         }
 
         int rootTypeCount = 0;

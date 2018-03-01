@@ -5,6 +5,7 @@ package com.michaelhradek.aurkitu.core;
 
 import java.lang.reflect.Field;
 
+import org.apache.maven.plugin.MojoExecutionException;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -48,7 +49,7 @@ public class ProcessorTest {
      * Test method for {@link com.michaelhradek.aurkitu.core.Processor#buildSchema()}.
      */
     @Test
-    public void testBuildSchema() {
+    public void testBuildSchema() throws MojoExecutionException {
         Processor processor = new Processor().withSourceAnnotation(FlatBufferTable.class)
                 .withSourceAnnotation(FlatBufferEnum.class);
         Assert.assertEquals(2, processor.getSourceAnnotations().size());
@@ -77,7 +78,7 @@ public class ProcessorTest {
      * {@link com.michaelhradek.aurkitu.core.Processor#buildEnumDeclaration(java.lang.Class)}.
      */
     @Test
-    public void testBuildEnumDeclaration() {
+    public void testBuildEnumDeclaration() throws MojoExecutionException {
         Processor processor = new Processor().withSourceAnnotation(FlatBufferEnum.class);
         Assert.assertEquals(1, processor.getSourceAnnotations().size());
         Schema schema = processor.buildSchema();
@@ -116,7 +117,7 @@ public class ProcessorTest {
      * {@link com.michaelhradek.aurkitu.core.Processor#buildTypeDeclaration(java.lang.Class)}.
      */
     @Test
-    public void testBuildTypeDeclaration() {
+    public void testBuildTypeDeclaration() throws MojoExecutionException {
         Processor processor = new Processor().withSourceAnnotation(FlatBufferTable.class);
         Assert.assertEquals(1, processor.getSourceAnnotations().size());
         Schema schema = processor.buildSchema();

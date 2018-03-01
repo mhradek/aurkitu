@@ -1,5 +1,6 @@
 package com.michaelhradek.aurkitu.core;
 
+import org.apache.maven.plugin.MojoExecutionException;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -11,7 +12,7 @@ import com.michaelhradek.aurkitu.core.output.Schema;
 public class ValidatorTest {
 
     @Test
-    public void testValidateSchema() {
+    public void testValidateSchema() throws MojoExecutionException {
         Processor processor = new Processor().withSourceAnnotation(FlatBufferTable.class)
                 .withSourceAnnotation(FlatBufferEnum.class);
 

@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.maven.plugin.MojoExecutionException;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -48,7 +49,7 @@ public class FileGenerationTest {
      * @throws IOException
      */
     @Test
-    public void testWriteSchema() throws IOException {
+    public void testWriteSchema() throws IOException, MojoExecutionException {
         Processor processor = new Processor().withSourceAnnotation(FlatBufferTable.class)
                 .withSourceAnnotation(FlatBufferEnum.class);
         Assert.assertEquals(2, processor.getSourceAnnotations().size());
