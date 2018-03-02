@@ -130,7 +130,7 @@ public class ProcessorTest {
 
         for (TypeDeclaration type : schema.getTypes()) {
             if (type.getName().equals(SampleClassTable.class.getSimpleName())) {
-                Assert.assertEquals(8, type.properties.size());
+                Assert.assertEquals(9, type.properties.size());
 
                 if (Config.DEBUG) {
                     System.out.println(type.toString());

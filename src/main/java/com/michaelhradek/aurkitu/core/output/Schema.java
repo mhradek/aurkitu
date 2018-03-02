@@ -128,18 +128,19 @@ public class Schema {
         }
         builder.append(System.lineSeparator());
 
-        if (includes.size() > 0) {
+        if (includes != null && includes.size() > 0) {
             for (String include : includes) {
                 builder.append("include ");
                 builder.append(include);
-                builder.append(";");
+                if(!include.endsWith(";"))
+                    builder.append(";");
                 builder.append(System.lineSeparator());
             }
 
             builder.append(System.lineSeparator());
         }
 
-        if (attributes.size() > 0) {
+        if (attributes != null && attributes.size() > 0) {
             for (String attribute : attributes) {
                 builder.append("attribute \"");
                 builder.append(attribute);
@@ -180,7 +181,8 @@ public class Schema {
         if (namespace != null) {
             builder.append("namespace: ");
             builder.append(namespace);
-            builder.append(";");
+            if(!namespace.endsWith(";"))
+                builder.append(";");
             builder.append(System.lineSeparator());
             builder.append(System.lineSeparator());
         }

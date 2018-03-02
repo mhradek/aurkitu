@@ -17,10 +17,15 @@ import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;
 import org.reflections.Reflections;
+import org.reflections.scanners.FieldAnnotationsScanner;
+import org.reflections.scanners.SubTypesScanner;
+import org.reflections.scanners.TypeAnnotationsScanner;
+import org.reflections.scanners.TypeElementsScanner;
 import org.reflections.util.ClasspathHelper;
 import org.reflections.util.ConfigurationBuilder;
 
 import com.michaelhradek.aurkitu.Application;
+import sun.reflect.Reflection;
 
 /**
  * @author m.hradek
@@ -32,7 +37,7 @@ public class AnnotationParser {
      * @param mavenProject The MavenProject
      * @param input A list of Aurkitu annotations.
      * @return A list of classes which are annotated with the above annotations.
-     * @throws MojoExecutionException
+     * @throws MojoExecutionException when there is a MalformedURLException in the classpathElements
      */
     public static Set<Class<?>> findAnnotatedClasses(MavenProject mavenProject, Class<? extends Annotation> input) throws MojoExecutionException {
         List<String> classpathElements = null;
@@ -41,6 +46,7 @@ public class AnnotationParser {
             classpathElements = mavenProject.getCompileClasspathElements();
             List<URL> projectClasspathList = new ArrayList<URL>();
             for (String element : classpathElements) {
+                Application.getLogger().debug("Considering compile classpath element (via MavenProject): " + element);
                 try {
                     projectClasspathList.add(new File(element).toURI().toURL());
                 } catch (MalformedURLException e) {
@@ -48,8 +54,16 @@ public class AnnotationParser {
                 }
             }
 
-            URLClassLoader loader = new URLClassLoader(projectClasspathList.toArray(new URL[0]));
-            return findAnnotatedClasses(new Reflections(loader), input);
+            URLClassLoader urlClassLoader = new URLClassLoader(projectClasspathList.toArray(new URL[]{}));
+            Reflections reflections = new Reflections(
+                    new ConfigurationBuilder().setUrls(
+                            ClasspathHelper.forClassLoader(urlClassLoader)
+                    ).addClassLoader(urlClassLoader).setScanners(new TypeAnnotationsScanner(), new TypeElementsScanner(),
+                            new FieldAnnotationsScanner(), new TypeAnnotationsScanner(), new SubTypesScanner()
+                    )
+            );
+
+            return findAnnotatedClasses(reflections, input);
 
         } catch (DependencyResolutionRequiredException e) {
             throw new MojoExecutionException("Dependency resolution failed", e);

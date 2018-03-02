@@ -22,6 +22,7 @@ public class SampleClassTable {
     protected List<String> tokens;
     protected boolean deleted = false;
     protected byte energy;
+    protected Double weight;
 
     @FlatBufferIgnore
     protected String ignore;

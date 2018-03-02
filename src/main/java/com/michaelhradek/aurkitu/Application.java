@@ -5,6 +5,7 @@ package com.michaelhradek.aurkitu;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -48,6 +49,9 @@ public class Application extends AbstractMojo {
             defaultValue = "generated.flatbuffers")
     private String schemaNamespace;
 
+    @Parameter(property = Application.MOJO_NAME + ".schema-includes")
+    private List<String> schemaIncludes;
+
     @Parameter(property = Application.MOJO_NAME + ".validate-schema", defaultValue = "true")
     private Boolean validateSchema;
 
@@ -63,6 +67,19 @@ public class Application extends AbstractMojo {
     public void execute() throws MojoExecutionException, MojoFailureException {
         getLog().info("execute: " + Application.MOJO_NAME);
 
+        if(project != null) {
+            getLog().info(" MavenProject (ArtifactId): " + project.getArtifactId());
+            getLog().info(" MavenProject (GroupId): " + project.getGroupId());
+        }
+
+        getLog().info(" schemaNamespace: " + schemaNamespace);
+        getLog().info(" schemaName: " + schemaName);
+        getLog().info(" fileExtension: " + fileExtension);
+        getLog().info(" fileIdentifier: " + fileIdentifier);
+        getLog().info(" outputDirectory: " + outputDirectory.getAbsolutePath());
+        getLog().info(" searchPath: " + searchPath);
+        getLog().info(" validateSchema: " + validateSchema);
+
         Processor processor = new Processor().withSourceAnnotation(FlatBufferTable.class)
                 .withSourceAnnotation(FlatBufferEnum.class).withMavenProject(project);
 
@@ -71,6 +88,7 @@ public class Application extends AbstractMojo {
         schema.setName(schemaName);
         schema.setFileExtension(fileExtension);
         schema.setFileIdentifier(fileIdentifier);
+        schema.setIncludes(schemaIncludes);
 
         if (validateSchema) {
             Validator validator = new Validator().withSchema(schema);
@@ -80,9 +98,9 @@ public class Application extends AbstractMojo {
         }
 
         if (outputDirectory == null) {
-            Application.getLogger().debug("outputDirectory is NULL");
+            getLog().debug("outputDirectory is NULL");
         } else {
-            Application.getLogger().debug("outputDirectory is: " + outputDirectory);
+            getLog().debug("outputDirectory is: " + outputDirectory);
         }
 
         FileGeneration fg = new FileGeneration(outputDirectory);

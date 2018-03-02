@@ -63,16 +63,20 @@ public class Processor {
     }
 
     /**
+     *
      * @return a completed schema
+     * @throws MojoExecutionException when there is a MalformedURLException in the classpathElements
      */
     public Schema buildSchema() throws MojoExecutionException {
         Schema schema = new Schema();
 
         for (Class<? extends Annotation> source : sourceAnnotations) {
-            if(mavenProject == null)
+            if(mavenProject == null) {
+                Application.getLogger().debug("MavenProject is null; falling back to built in class scanner");
                 targetClasses.addAll(AnnotationParser.findAnnotatedClasses(source));
-            else
+            } else {
                 targetClasses.addAll(AnnotationParser.findAnnotatedClasses(mavenProject, source));
+            }
         }
 
         int rootTypeCount = 0;
@@ -85,6 +89,7 @@ public class Processor {
             if (clazz instanceof Class) {
                 TypeDeclaration temp = buildTypeDeclaration(clazz);
                 if (temp.isRoot()) {
+                    Application.getLogger().debug("  Found root: " + temp.getName());
                     rootTypeCount++;
                     if (rootTypeCount > 1) {
                         throw new IllegalArgumentException("Only one rootType declaration is allowed");
@@ -263,6 +268,8 @@ public class Processor {
 
         List<Field> fields = getDeclaredAndInheritedPrivateFields(clazz);
         for (Field field : fields) {
+            Application.getLogger().debug("Number of annotations found: " + field.getDeclaredAnnotations().length);
+
             if (field.getAnnotation(FlatBufferIgnore.class) != null) {
                 Application.getLogger().debug("Ignoring property: " + field.getName());
                 continue;
@@ -303,7 +310,7 @@ public class Processor {
     TypeDeclaration.Property getPropertyForField(Field field) {
         TypeDeclaration.Property property = new TypeDeclaration.Property();
 
-        if (field.getType().isAssignableFrom(int.class)) {
+        if (field.getType().isAssignableFrom(int.class) || field.getType().isAssignableFrom(Integer.class)) {
             property.name = field.getName();
             property.type = FieldType.INT;
             return property;
@@ -315,13 +322,13 @@ public class Processor {
             return property;
         }
 
-        if (field.getType().isAssignableFrom(long.class)) {
+        if (field.getType().isAssignableFrom(long.class) || field.getType().isAssignableFrom(Long.class)) {
             property.name = field.getName();
             property.type = FieldType.LONG;
             return property;
         }
 
-        if (field.getType().isAssignableFrom(short.class)) {
+        if (field.getType().isAssignableFrom(short.class) || field.getType().isAssignableFrom(Short.class)) {
             property.name = field.getName();
             property.type = FieldType.SHORT;
             return property;
@@ -345,21 +352,27 @@ public class Processor {
             return property;
         }
 
-        if (field.getType().isAssignableFrom(boolean.class)) {
+        if (field.getType().isAssignableFrom(boolean.class) || field.getType().isAssignableFrom(Boolean.class)) {
             property.name = field.getName();
             property.type = FieldType.BOOL;
             return property;
         }
 
-        if (field.getType().isAssignableFrom(byte.class)) {
+        if (field.getType().isAssignableFrom(byte.class) || field.getType().isAssignableFrom(Byte.class)) {
             property.name = field.getName();
             property.type = FieldType.BYTE;
             return property;
         }
 
-        if (field.getType().isAssignableFrom(float.class)) {
+        if (field.getType().isAssignableFrom(float.class) || field.getType().isAssignableFrom(Float.class)) {
             property.name = field.getName();
             property.type = FieldType.FLOAT;
+            return property;
+        }
+
+        if (field.getType().isAssignableFrom(double.class) || field.getType().isAssignableFrom(Double.class)) {
+            property.name = field.getName();
+            property.type = FieldType.DOUBLE;
             return property;
         }
 
