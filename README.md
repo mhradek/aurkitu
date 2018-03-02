@@ -25,7 +25,7 @@ Add the following to your dependencies within your `pom.xml`:
 <dependency>
     <groupId>com.michaelhradek</groupId>
     <artifactId>aurkitu-maven-plugin</artifactId>
-    <version>0.0.2</version>
+    <version>0.0.2.1</version>
 </dependency>
 ```
 Followed by the following to the `plugins` of your `build` specifications:
@@ -34,12 +34,17 @@ Followed by the following to the `plugins` of your `build` specifications:
     <groupId>com.michaelhradek</groupId>
     <artifactId>aurkitu-maven-plugin</artifactId>
     <configuration>
-        <schemaName>test-schema</schemaName>
-        <outputDirectory>target/test-dir</outputDirectory>
+        <schemaName>user</schemaName>
+        <searchPath>com.company.package.subpackage.*</searchPath>
+        <schemaNamespace>com.company.package.subpackage.flatbuffers</schemaNamespace>
+        <schemaIncludes>
+             <include>"../../../../target/maven-shared-archive-resources/flatbuffers/other.fbs"</include>
+        </schemaIncludes>
         <validateSchema>true</validateSchema>
     </configuration>
     <executions>
         <execution>
+            <phase>process-classes</phase>
             <goals>
                 <goal>build-schema</goal>
             </goals>
