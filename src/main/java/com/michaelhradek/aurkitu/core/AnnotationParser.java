@@ -4,7 +4,6 @@
 package com.michaelhradek.aurkitu.core;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.lang.annotation.Annotation;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -17,6 +16,7 @@ import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;
 import org.reflections.Reflections;
+import org.reflections.adapters.JavassistAdapter;
 import org.reflections.scanners.FieldAnnotationsScanner;
 import org.reflections.scanners.SubTypesScanner;
 import org.reflections.scanners.TypeAnnotationsScanner;
@@ -25,7 +25,6 @@ import org.reflections.util.ClasspathHelper;
 import org.reflections.util.ConfigurationBuilder;
 
 import com.michaelhradek.aurkitu.Application;
-import sun.reflect.Reflection;
 
 /**
  * @author m.hradek
@@ -54,13 +53,19 @@ public class AnnotationParser {
                 }
             }
 
-            URLClassLoader urlClassLoader = new URLClassLoader(projectClasspathList.toArray(new URL[]{}));
+            // Retain annotations
+            JavassistAdapter javassistAdapter = new JavassistAdapter();
+            javassistAdapter.includeInvisibleTag = false;
+
+            URLClassLoader urlClassLoader = new URLClassLoader(projectClasspathList.toArray(new URL[]{}),
+                    Thread.currentThread().getContextClassLoader());
+
             Reflections reflections = new Reflections(
                     new ConfigurationBuilder().setUrls(
                             ClasspathHelper.forClassLoader(urlClassLoader)
                     ).addClassLoader(urlClassLoader).setScanners(new TypeAnnotationsScanner(), new TypeElementsScanner(),
                             new FieldAnnotationsScanner(), new TypeAnnotationsScanner(), new SubTypesScanner()
-                    )
+                    ).setMetadataAdapter(javassistAdapter)
             );
 
             return findAnnotatedClasses(reflections, input);

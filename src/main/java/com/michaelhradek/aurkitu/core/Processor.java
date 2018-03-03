@@ -8,6 +8,9 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -25,6 +28,7 @@ import com.michaelhradek.aurkitu.core.output.Schema;
 import com.michaelhradek.aurkitu.core.output.TypeDeclaration;
 
 import lombok.Getter;
+import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;
 
@@ -149,13 +153,13 @@ public class Processor {
         enumD.setName(clazz.getSimpleName());
 
         Annotation annotation = clazz.getAnnotation(FlatBufferEnum.class);
-        FlatBufferEnum myAnnotation = (FlatBufferEnum) annotation;
         if (annotation instanceof FlatBufferEnum) {
-            Application.getLogger().debug("Enum structure: " + myAnnotation.value());
-            enumD.setStructure(myAnnotation.value());
-            Application.getLogger().debug("Enum type: " + myAnnotation.enumType());
-            if (myAnnotation.enumType() != FieldType.STRING) {
-                enumD.setType(myAnnotation.enumType());
+            FlatBufferEnum myFlatBufferEnum = (FlatBufferEnum) annotation;
+            Application.getLogger().debug("Enum structure: " + myFlatBufferEnum.value());
+            enumD.setStructure(myFlatBufferEnum.value());
+            Application.getLogger().debug("Enum type: " + myFlatBufferEnum.enumType());
+            if (myFlatBufferEnum.enumType() != FieldType.STRING) {
+                enumD.setType(myFlatBufferEnum.enumType());
             }
         } else {
             Application.getLogger()
@@ -255,12 +259,13 @@ public class Processor {
         type.setName(clazz.getSimpleName());
 
         Annotation annotation = clazz.getAnnotation(FlatBufferTable.class);
-        FlatBufferTable myAnnotation = (FlatBufferTable) annotation;
+        Application.getLogger().debug("Number of annotations of clazz: " + clazz.getDeclaredAnnotations().length);
         if (annotation instanceof FlatBufferTable) {
-            Application.getLogger().debug("Declared root: " + myAnnotation.rootType());
-            type.setRoot(myAnnotation.rootType());
-            Application.getLogger().debug("Table structure: " + myAnnotation.value());
-            type.setStructure(myAnnotation.value());
+            FlatBufferTable myFlatBufferTable = (FlatBufferTable) annotation;
+            Application.getLogger().debug("Declared root: " + myFlatBufferTable.rootType());
+            type.setRoot(myFlatBufferTable.rootType());
+            Application.getLogger().debug("Table structure: " + myFlatBufferTable.value());
+            type.setStructure(myFlatBufferTable.value());
         } else {
             Application.getLogger()
                     .debug("Not FlatBufferTable (likely inner class); Generic table created");
@@ -384,9 +389,13 @@ public class Processor {
         Type fieldType = field.getGenericType();
         String identName = fieldType.getTypeName();
         try {
-            identName = Class.forName(fieldType.getTypeName()).getSimpleName();
-        } catch (ClassNotFoundException e) {
-            Application.getLogger().error("Unable to get class for name: " + fieldType.getTypeName(), e);
+            if(mavenProject != null)
+                identName = getClassForClassName(mavenProject, fieldType.getTypeName()).getSimpleName();
+            else
+                identName = Thread.currentThread().getContextClassLoader().loadClass(fieldType.getTypeName()).getSimpleName();
+            //identName = Class.forName(fieldType.getTypeName(), false,Thread.currentThread().getContextClassLoader()).getSimpleName();
+        } catch (Exception e) {
+            Application.getLogger().warn("Unable to get class for name: " + fieldType.getTypeName(), e);
             identName = fieldType.getTypeName().substring(fieldType.getTypeName().lastIndexOf("."));
             identName = identName.substring(identName.lastIndexOf("$"));
             Application.getLogger().debug("Trimmed: " + fieldType.getTypeName() + " to " + identName);
@@ -394,5 +403,29 @@ public class Processor {
 
         property.options.put(FieldType.IDENT.toString(), identName);
         return property;
+    }
+
+    /**
+     *
+     * @param className The name of the class we need to locate
+     * @return The class we located
+     * @throws ClassNotFoundException if the class cannot be located
+     * @throws MalformedURLException if one of the classpathElements are a malformed URL
+     * @throws DependencyResolutionRequiredException if MavenProject is unable to resolve the compiled classpath elements
+     */
+    Class<?> getClassForClassName(MavenProject mavenProject, String className) throws ClassNotFoundException, MalformedURLException, DependencyResolutionRequiredException {
+        List<String> classpathElements;
+
+        classpathElements = mavenProject.getCompileClasspathElements();
+        List<URL> projectClasspathList = new ArrayList<URL>();
+        for (String element : classpathElements) {
+            Application.getLogger().debug("Considering compile classpath element (via MavenProject): " + element);
+            projectClasspathList.add(new File(element).toURI().toURL());
+        }
+
+        URLClassLoader urlClassLoader = new URLClassLoader(projectClasspathList.toArray(new URL[]{}),
+                Thread.currentThread().getContextClassLoader());
+
+        return urlClassLoader.loadClass(className);
     }
 }

@@ -3,15 +3,14 @@
  */
 package com.michaelhradek.aurkitu.annotations;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.*;
 
 /**
  * @author m.hradek
  */
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
+@Target(value={ElementType.TYPE})
 public @interface FlatBufferTable {
     boolean rootType() default false;
 
