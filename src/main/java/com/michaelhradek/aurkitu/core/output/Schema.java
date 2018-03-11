@@ -179,7 +179,7 @@ public class Schema {
         }
 
         if (namespace != null) {
-            builder.append("namespace: ");
+            builder.append("namespace ");
             builder.append(namespace);
             if(!namespace.endsWith(";"))
                 builder.append(";");

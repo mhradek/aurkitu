@@ -489,12 +489,11 @@ public class Processor {
     }
 
     /**
-     * Ljava/util/List<Lcom/company/team/service/model/Person;>;
      *
-     * @param input
-     * @return
-     * @throws NoSuchFieldException
-     * @throws IllegalAccessException
+     * @param input The List with a type declaration
+     * @return a String which parses: com.company.team.service.model.Person from the following: Ljava/util/List<Lcom/company/team/service/model/Person;>;
+     * @throws NoSuchFieldException if the Field does not exist in the class
+     * @throws IllegalAccessException if the Field is inaccessible
      */
     String parseFieldSignatureForParametrizedTypeString(Field input) throws NoSuchFieldException, IllegalAccessException {
         Field privateField = input.getClass().getDeclaredField("signature");
@@ -513,20 +512,18 @@ public class Processor {
 
     /**
      *
-     * @param classLoaderToSwitchTo
-     * @param actionToPerformOnProvidedClassLoader
-     * @param <T>
-     * @return
+     * @param classLoaderToSwitchTo which will be used temporarily during the operation
+     * @param actionToPerformOnProvidedClassLoader a ExecutableAction
+     * @param <T> resulting type
+     * @return the result
      */
     public static synchronized  <T> T executeActionOnSpecifiedClassLoader(
             final ClassLoader classLoaderToSwitchTo,
             final ExecutableAction<T> actionToPerformOnProvidedClassLoader) {
 
-        Set<Thread> threadSet = Thread.getAllStackTraces().keySet();
         final ClassLoader originalClassLoader = Thread.currentThread().getContextClassLoader();
 
         try {
-            Application.getLogger().debug("THREAD COUNT: " + Thread.activeCount());
             Thread.currentThread().setContextClassLoader(classLoaderToSwitchTo);
             for(URL url : ((URLClassLoader) (Thread.currentThread().getContextClassLoader())).getURLs()) {
                 Application.getLogger().debug("Classloader loaded with: " + url.toString());

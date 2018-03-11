@@ -4,6 +4,7 @@
 package com.michaelhradek.aurkitu.core;
 
 import java.lang.reflect.Field;
+import java.util.Set;
 
 import org.apache.maven.plugin.MojoExecutionException;
 import org.junit.After;
@@ -256,4 +257,33 @@ public class ProcessorTest {
         Assert.assertEquals(true, prop.options.isEmpty());
     }
 
+    @Test
+    public void testParseFieldSignatureForParametrizedTypeString() throws NoSuchFieldException, IllegalAccessException {
+        Schema schema = new Schema();
+        Field field = schema.getClass().getDeclaredField("enums");
+
+        Processor processor = new Processor();
+        Assert.assertEquals(EnumDeclaration.class.getName(), processor.parseFieldSignatureForParametrizedTypeString(field));
+    }
+
+//    @Test(expected = IllegalArgumentException.class)
+//    public void testIllegalArgumentException() throws NoSuchFieldException, IllegalAccessException, MojoExecutionException {
+//
+//        @FlatBufferTable(rootType = true)
+//        class AnotherRootType {
+//            int id;
+//            String name;
+//        }
+//
+//        Processor processor = new Processor().withSourceAnnotation(FlatBufferTable.class)
+//            .withSourceAnnotation(FlatBufferEnum.class);
+//
+//        Field field = processor.getClass().getDeclaredField("targetClasses");
+//        field.setAccessible(true);
+//        Set<Class<?>> targetClasses = (Set<Class<?>>) field.get(processor);
+//        targetClasses.add(AnotherRootType.class);
+//        field.set(processor, targetClasses);
+//
+//        processor.buildSchema();
+//    }
 }
