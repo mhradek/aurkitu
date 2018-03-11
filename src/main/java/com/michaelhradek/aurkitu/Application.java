@@ -7,6 +7,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
+import com.michaelhradek.aurkitu.core.ArtifactReference;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -23,6 +24,9 @@ import com.michaelhradek.aurkitu.core.Processor;
 import com.michaelhradek.aurkitu.core.Validator;
 import com.michaelhradek.aurkitu.core.output.Schema;
 import org.apache.maven.project.MavenProject;
+import org.eclipse.aether.RepositorySystem;
+import org.eclipse.aether.RepositorySystemSession;
+import org.eclipse.aether.repository.RemoteRepository;
 
 /**
  * @author m.hradek
@@ -31,8 +35,17 @@ import org.apache.maven.project.MavenProject;
 @Mojo(name = Application.MOJO_GOAL, defaultPhase = LifecyclePhase.PROCESS_SOURCES)
 public class Application extends AbstractMojo {
 
-    @Component
+    @Parameter(defaultValue="${project}", readonly=true, required=true)
     private MavenProject project;
+
+    @Component
+    private RepositorySystem repoSystem;
+
+    @Parameter( defaultValue = "${repositorySystemSession}", readonly = true, required = true )
+    private RepositorySystemSession repoSession;
+
+    @Parameter( defaultValue = "${project.remoteProjectRepositories}", readonly = true, required = true )
+    private List<RemoteRepository> repositories;
 
     public static final String MOJO_NAME = "aurkitu-maven-plugin";
 
@@ -80,8 +93,10 @@ public class Application extends AbstractMojo {
         getLog().info(" searchPath: " + searchPath);
         getLog().info(" validateSchema: " + validateSchema);
 
+        ArtifactReference reference = new ArtifactReference(project, repoSystem, repoSession, repositories);
+
         Processor processor = new Processor().withSourceAnnotation(FlatBufferTable.class)
-                .withSourceAnnotation(FlatBufferEnum.class).withMavenProject(project);
+                .withSourceAnnotation(FlatBufferEnum.class).withArtifactReference(reference);
 
         Schema schema = processor.buildSchema();
         schema.setNamespace(schemaNamespace);

@@ -4,9 +4,9 @@
 package com.michaelhradek.aurkitu.core;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
-import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -28,9 +28,13 @@ import com.michaelhradek.aurkitu.core.output.Schema;
 import com.michaelhradek.aurkitu.core.output.TypeDeclaration;
 
 import lombok.Getter;
+import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;
+import org.eclipse.aether.artifact.DefaultArtifact;
+import org.eclipse.aether.resolution.ArtifactRequest;
+import org.eclipse.aether.resolution.ArtifactResult;
 
 /**
  * @author m.hradek
@@ -40,7 +44,7 @@ public class Processor {
 
     private List<Class<? extends Annotation>> sourceAnnotations;
     private Set<Class<?>> targetClasses;
-    private MavenProject mavenProject;
+    private ArtifactReference artifactReference;
 
     public Processor() {
         sourceAnnotations = new ArrayList<Class<? extends Annotation>>();
@@ -58,11 +62,11 @@ public class Processor {
 
     /**
      *
-     * @param mavenProject The Maven Project component
+     * @param artifactReference The ArtifactReference component
      * @return an instance of the Processor object
      */
-    public Processor withMavenProject(MavenProject mavenProject) {
-        this.mavenProject = mavenProject;
+    public Processor withArtifactReference(ArtifactReference artifactReference) {
+        this.artifactReference = artifactReference;
         return this;
     }
 
@@ -75,11 +79,11 @@ public class Processor {
         Schema schema = new Schema();
 
         for (Class<? extends Annotation> source : sourceAnnotations) {
-            if(mavenProject == null) {
+            if(artifactReference == null || artifactReference.getMavenProject() == null) {
                 Application.getLogger().debug("MavenProject is null; falling back to built in class scanner");
                 targetClasses.addAll(AnnotationParser.findAnnotatedClasses(source));
             } else {
-                targetClasses.addAll(AnnotationParser.findAnnotatedClasses(mavenProject, source));
+                targetClasses.addAll(AnnotationParser.findAnnotatedClasses(artifactReference.getMavenProject(), source));
             }
         }
 
@@ -312,7 +316,7 @@ public class Processor {
      * @return A type declaration Property. This contains the name of the field and type {@link FieldType}. When
      * encountering an array or ident (Indentifier) the options property is used to store additional information.
      */
-    TypeDeclaration.Property getPropertyForField(Field field) {
+    TypeDeclaration.Property getPropertyForField(final Field field) {
         TypeDeclaration.Property property = new TypeDeclaration.Property();
 
         if (field.getType().isAssignableFrom(int.class) || field.getType().isAssignableFrom(Integer.class)) {
@@ -343,8 +347,60 @@ public class Processor {
             property.name = field.getName();
             property.type = FieldType.ARRAY;
 
-            ParameterizedType listType = (ParameterizedType) field.getGenericType();
-            Class<?> listTypeClass = (Class<?>) listType.getActualTypeArguments()[0];
+            List<String> classpathElements;
+            Class<?> listTypeClass;
+
+            try {
+                // Load build class path
+                classpathElements = artifactReference.getMavenProject().getCompileClasspathElements();
+                List<URL> projectClasspathList = new ArrayList<URL>();
+                for (String element : classpathElements) {
+                    Application.getLogger().debug("Looking at compile classpath element (via MavenProject): " + element);
+                    projectClasspathList.add(new File(element).toURI().toURL());
+                }
+
+                // Load artifact(s) jars using resolver
+                Application.getLogger().debug("Number of artifacts to resolve: "
+                        + artifactReference.getMavenProject().getDependencyArtifacts().size());
+                for (Artifact unresolvedArtifact : artifactReference.getMavenProject().getDependencyArtifacts()) {
+                    String artifactId = unresolvedArtifact.getArtifactId();
+                    org.eclipse.aether.artifact.Artifact aetherArtifact = new DefaultArtifact(
+                            unresolvedArtifact.getGroupId(),
+                            unresolvedArtifact.getArtifactId(),
+                            unresolvedArtifact.getClassifier(),
+                            unresolvedArtifact.getType(),
+                            unresolvedArtifact.getVersion());
+
+                    ArtifactRequest artifactRequest = new ArtifactRequest()
+                            .setRepositories(artifactReference.getRepositories())
+                            .setArtifact(aetherArtifact);
+                    ArtifactResult resolutionResult = artifactReference.getRepoSystem()
+                            .resolveArtifact(artifactReference.getRepoSession(), artifactRequest);
+
+                    // The file should exists, but we never know.
+                    File file = resolutionResult.getArtifact().getFile();
+                    if (file == null || !file.exists()) {
+                        Application.getLogger().warn("Artifact " + artifactId +
+                                " has no attached file. Its content will not be copied in the target model directory.");
+                        continue;
+                    }
+
+                    String jarPath = "jar:file:" + file.getAbsolutePath() + "!/";
+                    Application.getLogger().debug("Adding resolved artifact: " + file.getAbsolutePath());
+                    projectClasspathList.add(new URL(jarPath));
+                }
+
+                // Load all paths into custom classloader
+                ClassLoader urlClassLoader = URLClassLoader.newInstance(projectClasspathList.toArray(new URL[]{}),
+                        Thread.currentThread().getContextClassLoader());
+
+                // Parse Field signature
+                String parametrizedTypeString = parseFieldSignatureForParametrizedTypeString(field);
+                listTypeClass = urlClassLoader.loadClass(parametrizedTypeString);
+            } catch (Exception e) {
+                Application.getLogger().debug("Unable to find and load class for List<?> parameter", e);
+                listTypeClass = String.class;
+            }
 
             String name = listTypeClass.getSimpleName();
             if (Utilities.isLowerCaseType(listTypeClass)) {
@@ -389,8 +445,8 @@ public class Processor {
         Type fieldType = field.getGenericType();
         String identName = fieldType.getTypeName();
         try {
-            if(mavenProject != null)
-                identName = getClassForClassName(mavenProject, fieldType.getTypeName()).getSimpleName();
+            if(artifactReference != null && artifactReference.getMavenProject() != null)
+                identName = getClassForClassName(artifactReference.getMavenProject(), fieldType.getTypeName()).getSimpleName();
             else
                 identName = Thread.currentThread().getContextClassLoader().loadClass(fieldType.getTypeName()).getSimpleName();
             //identName = Class.forName(fieldType.getTypeName(), false,Thread.currentThread().getContextClassLoader()).getSimpleName();
@@ -413,19 +469,87 @@ public class Processor {
      * @throws MalformedURLException if one of the classpathElements are a malformed URL
      * @throws DependencyResolutionRequiredException if MavenProject is unable to resolve the compiled classpath elements
      */
-    Class<?> getClassForClassName(MavenProject mavenProject, String className) throws ClassNotFoundException, MalformedURLException, DependencyResolutionRequiredException {
+    Class<?> getClassForClassName(MavenProject mavenProject, String className) throws ClassNotFoundException,
+            MalformedURLException, DependencyResolutionRequiredException, IOException {
         List<String> classpathElements;
 
         classpathElements = mavenProject.getCompileClasspathElements();
         List<URL> projectClasspathList = new ArrayList<URL>();
         for (String element : classpathElements) {
-            Application.getLogger().debug("Considering compile classpath element (via MavenProject): " + element);
+            Application.getLogger().debug("Adding compiled classpath element (via MavenProject): " + element);
             projectClasspathList.add(new File(element).toURI().toURL());
         }
 
         URLClassLoader urlClassLoader = new URLClassLoader(projectClasspathList.toArray(new URL[]{}),
                 Thread.currentThread().getContextClassLoader());
 
-        return urlClassLoader.loadClass(className);
+        Class<?> result = urlClassLoader.loadClass(className);
+        urlClassLoader.close();
+        return result;
+    }
+
+    /**
+     * Ljava/util/List<Lcom/company/team/service/model/Person;>;
+     *
+     * @param input
+     * @return
+     * @throws NoSuchFieldException
+     * @throws IllegalAccessException
+     */
+    String parseFieldSignatureForParametrizedTypeString(Field input) throws NoSuchFieldException, IllegalAccessException {
+        Field privateField = input.getClass().getDeclaredField("signature");
+        privateField.setAccessible(true);
+        String signature = (String) privateField.get(input);
+        Application.getLogger().debug("Examining signature: " + signature);
+
+        String typeSignature = signature.substring(signature.indexOf("<") + 1, signature.indexOf(">"));
+        typeSignature = typeSignature.replaceFirst("[a-zA-Z]{1}","");
+        typeSignature = typeSignature.replaceAll("/", ".");
+        typeSignature = typeSignature.replaceAll(";", "");
+        Application.getLogger().debug("Derived class: " + typeSignature);
+
+        return typeSignature;
+    }
+
+    /**
+     *
+     * @param classLoaderToSwitchTo
+     * @param actionToPerformOnProvidedClassLoader
+     * @param <T>
+     * @return
+     */
+    public static synchronized  <T> T executeActionOnSpecifiedClassLoader(
+            final ClassLoader classLoaderToSwitchTo,
+            final ExecutableAction<T> actionToPerformOnProvidedClassLoader) {
+
+        Set<Thread> threadSet = Thread.getAllStackTraces().keySet();
+        final ClassLoader originalClassLoader = Thread.currentThread().getContextClassLoader();
+
+        try {
+            Application.getLogger().debug("THREAD COUNT: " + Thread.activeCount());
+            Thread.currentThread().setContextClassLoader(classLoaderToSwitchTo);
+            for(URL url : ((URLClassLoader) (Thread.currentThread().getContextClassLoader())).getURLs()) {
+                Application.getLogger().debug("Classloader loaded with: " + url.toString());
+            }
+
+            return actionToPerformOnProvidedClassLoader.run();
+        } finally {
+            Thread.currentThread().setContextClassLoader(originalClassLoader);
+        }
+    }
+
+    /**
+     * Encapsulates action to be executed.
+     *
+     */
+    public interface ExecutableAction<T> {
+        /**
+         * Execute the operation.
+         *
+         * @return Optional value returned by this operation;
+         *    implementations should document what, if anything,
+         *    is returned by implementations of this method.
+         */
+        T run();
     }
 }

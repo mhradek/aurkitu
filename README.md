@@ -27,7 +27,7 @@ Add the following to your dependencies within your `pom.xml`:
 <dependency>
     <groupId>com.michaelhradek</groupId>
     <artifactId>aurkitu-maven-plugin</artifactId>
-    <version>0.0.2.2</version>
+    <version>0.0.2.3</version>
 </dependency>
 ```
 Followed by the following to the `plugins` of your `build` specifications:

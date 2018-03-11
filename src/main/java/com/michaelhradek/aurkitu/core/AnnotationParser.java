@@ -8,9 +8,7 @@ import java.lang.annotation.Annotation;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -64,7 +62,7 @@ public class AnnotationParser {
                     new ConfigurationBuilder().setUrls(
                             ClasspathHelper.forClassLoader(urlClassLoader)
                     ).addClassLoader(urlClassLoader).setScanners(new TypeAnnotationsScanner(), new TypeElementsScanner(),
-                            new FieldAnnotationsScanner(), new TypeAnnotationsScanner(), new SubTypesScanner()
+                            new FieldAnnotationsScanner(), new TypeAnnotationsScanner(), new SubTypesScanner(false)
                     ).setMetadataAdapter(javassistAdapter)
             );
 
@@ -102,6 +100,7 @@ public class AnnotationParser {
      */
     private static Set<Class<?>> findAnnotatedClasses(Reflections reflections,
                                                       Class<? extends Annotation> input) {
+
         Set<Class<?>> classes = reflections.getTypesAnnotatedWith(input);
         for (Class<?> clazz : classes) {
             String prefix = "Find: " + input.getName();
