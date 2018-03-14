@@ -12,6 +12,8 @@ import com.michaelhradek.aurkitu.core.output.FieldType;
 /**
  * @author m.hradek
  *
+ * A FlatBuffer Enum definition applies to either a enum or a union.
+ *
  */
 @Documented
 @Retention(RetentionPolicy.RUNTIME)

@@ -8,6 +8,7 @@ import java.lang.annotation.*;
 /**
  * @author m.hradek
  *
+ * Applied to either a Field or a Type, this will cause the parser to ignore these during schema generation.
  */
 @Documented
 @Retention(RetentionPolicy.RUNTIME)

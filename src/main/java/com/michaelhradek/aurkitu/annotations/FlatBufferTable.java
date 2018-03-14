@@ -7,6 +7,9 @@ import java.lang.annotation.*;
 
 /**
  * @author m.hradek
+ *
+ * A FlatBuffer Table definition applies to either a class or a struct.
+ *
  */
 @Documented
 @Retention(RetentionPolicy.RUNTIME)

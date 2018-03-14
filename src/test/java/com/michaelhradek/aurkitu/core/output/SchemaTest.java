@@ -33,10 +33,10 @@ public class SchemaTest {
         Assert.assertEquals("abc", schema.getFileExtension());
 
         schema.setFileExtension(null);
-        Assert.assertEquals("abc", schema.getFileExtension());
+        Assert.assertEquals(null, schema.getFileExtension());
 
         schema.setFileExtension("");
-        Assert.assertEquals("abc", schema.getFileExtension());
+        Assert.assertEquals(null, schema.getFileExtension());
     }
 
     @Test

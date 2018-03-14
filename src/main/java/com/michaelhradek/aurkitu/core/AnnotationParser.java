@@ -41,6 +41,10 @@ public class AnnotationParser {
 
         try {
             classpathElements = mavenProject.getCompileClasspathElements();
+            if(classpathElements == null) {
+                throw new MojoExecutionException("No valid compile classpath elements exist; is there source code for this project?");
+            }
+
             List<URL> projectClasspathList = new ArrayList<URL>();
             for (String element : classpathElements) {
                 Application.getLogger().debug("Considering compile classpath element (via MavenProject): " + element);

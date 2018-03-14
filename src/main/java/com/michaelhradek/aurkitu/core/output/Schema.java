@@ -99,7 +99,12 @@ public class Schema {
      * @param input Set the 4 character file identifier.
      */
     public void setFileIdentifier(String input) {
-        if (input == null || input.length() != 4) {
+        if(input == null) {
+            fileIdentifier = null;
+            return;
+        }
+
+        if (input.length() != 4) {
             return;
         }
 
@@ -110,7 +115,12 @@ public class Schema {
      * @param input Set the file extension. Default is {@link com.michaelhradek.aurkitu.Application#fileExtension}
      */
     public void setFileExtension(String input) {
-        if (input == null || input.length() < 1) {
+        if(input == null) {
+            fileExtension = null;
+            return;
+        }
+
+        if (input.length() < 1) {
             return;
         }
 
