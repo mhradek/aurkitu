@@ -10,6 +10,8 @@ Aurkitu is the Basque word for for the English phrase "to find". This project is
 * FlatBuffers: https://google.github.io/flatbuffers/
 * Building schemas with Maven: https://github.com/davidmoten/flatbuffers
 
+Aurkitu currently supports Flatbuffers version 1.3.
+
 ## please note 
 This is a very early proof-of-concept currently being developed in spare time.
 
@@ -19,6 +21,7 @@ This is a very early proof-of-concept currently being developed in spare time.
 - [ ] validate dependencies (optional)
 - [ ] implement as plugin and test against a sample project
 - [ ] test with flatc
+- [ ] update with current (1.8) feature support (i.e. gRPC, Field, String constant, etc.)
 - [x] release to maven
 
 ## integration
