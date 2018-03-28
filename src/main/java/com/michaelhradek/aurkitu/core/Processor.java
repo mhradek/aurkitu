@@ -18,23 +18,16 @@ import java.util.List;
 import java.util.Set;
 
 import com.michaelhradek.aurkitu.Application;
-import com.michaelhradek.aurkitu.annotations.FlatBufferEnum;
-import com.michaelhradek.aurkitu.annotations.FlatBufferEnumTypeField;
-import com.michaelhradek.aurkitu.annotations.FlatBufferIgnore;
-import com.michaelhradek.aurkitu.annotations.FlatBufferTable;
+import com.michaelhradek.aurkitu.annotations.*;
 import com.michaelhradek.aurkitu.core.output.EnumDeclaration;
 import com.michaelhradek.aurkitu.core.output.FieldType;
 import com.michaelhradek.aurkitu.core.output.Schema;
 import com.michaelhradek.aurkitu.core.output.TypeDeclaration;
 
 import lombok.Getter;
-import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;
-import org.eclipse.aether.artifact.DefaultArtifact;
-import org.eclipse.aether.resolution.ArtifactRequest;
-import org.eclipse.aether.resolution.ArtifactResult;
 
 /**
  * @author m.hradek
@@ -83,7 +76,7 @@ public class Processor {
                 Application.getLogger().debug("MavenProject is null; falling back to built in class scanner");
                 targetClasses.addAll(AnnotationParser.findAnnotatedClasses(source));
             } else {
-                targetClasses.addAll(AnnotationParser.findAnnotatedClasses(artifactReference.getMavenProject(), source));
+                targetClasses.addAll(AnnotationParser.findAnnotatedClasses(artifactReference, source));
             }
         }
 
@@ -343,76 +336,6 @@ public class Processor {
             return property;
         }
 
-        if (field.getType().isAssignableFrom(List.class)) {
-            property.name = field.getName();
-            property.type = FieldType.ARRAY;
-
-            List<String> classpathElements;
-            Class<?> listTypeClass;
-
-            try {
-                // Load build class path
-                classpathElements = artifactReference.getMavenProject().getCompileClasspathElements();
-                List<URL> projectClasspathList = new ArrayList<URL>();
-                for (String element : classpathElements) {
-                    Application.getLogger().debug("Looking at compile classpath element (via MavenProject): " + element);
-                    projectClasspathList.add(new File(element).toURI().toURL());
-                }
-
-                // Load artifact(s) jars using resolver
-                Application.getLogger().debug("Number of artifacts to resolve: "
-                        + artifactReference.getMavenProject().getDependencyArtifacts().size());
-                for (Artifact unresolvedArtifact : artifactReference.getMavenProject().getDependencyArtifacts()) {
-                    String artifactId = unresolvedArtifact.getArtifactId();
-                    org.eclipse.aether.artifact.Artifact aetherArtifact = new DefaultArtifact(
-                            unresolvedArtifact.getGroupId(),
-                            unresolvedArtifact.getArtifactId(),
-                            unresolvedArtifact.getClassifier(),
-                            unresolvedArtifact.getType(),
-                            unresolvedArtifact.getVersion());
-
-                    ArtifactRequest artifactRequest = new ArtifactRequest()
-                            .setRepositories(artifactReference.getRepositories())
-                            .setArtifact(aetherArtifact);
-                    ArtifactResult resolutionResult = artifactReference.getRepoSystem()
-                            .resolveArtifact(artifactReference.getRepoSession(), artifactRequest);
-
-                    // The file should exists, but we never know.
-                    File file = resolutionResult.getArtifact().getFile();
-                    if (file == null || !file.exists()) {
-                        Application.getLogger().warn("Artifact " + artifactId +
-                                " has no attached file. Its content will not be copied in the target model directory.");
-                        continue;
-                    }
-
-                    String jarPath = "jar:file:" + file.getAbsolutePath() + "!/";
-                    Application.getLogger().debug("Adding resolved artifact: " + file.getAbsolutePath());
-                    projectClasspathList.add(new URL(jarPath));
-                }
-
-                // Load all paths into custom classloader
-                ClassLoader urlClassLoader = URLClassLoader.newInstance(projectClasspathList.toArray(new URL[]{}),
-                        Thread.currentThread().getContextClassLoader());
-
-                // Parse Field signature
-                String parametrizedTypeString = parseFieldSignatureForParametrizedTypeString(field);
-                listTypeClass = urlClassLoader.loadClass(parametrizedTypeString);
-            } catch (Exception e) {
-                Application.getLogger().debug("Unable to find and load class for List<?> parameter", e);
-                listTypeClass = String.class;
-            }
-
-            String name = listTypeClass.getSimpleName();
-            if (Utilities.isLowerCaseType(listTypeClass)) {
-                Application.getLogger()
-                        .debug("Array parameter is primative, wrapper, or String: " + field.getName());
-                name = name.toLowerCase();
-            }
-
-            property.options.put(FieldType.ARRAY.toString(), name);
-            return property;
-        }
-
         if (field.getType().isAssignableFrom(boolean.class) || field.getType().isAssignableFrom(Boolean.class)) {
             property.name = field.getName();
             property.type = FieldType.BOOL;
@@ -437,6 +360,76 @@ public class Processor {
             return property;
         }
 
+        // Some uses in which we reference other namespaces require us to declare the entirety of the name
+        Annotation annotation = field.getAnnotation(FlatBufferFieldOptions.class);
+        boolean useFullName = false;
+        String defualtValue = "";
+
+        if(annotation != null && annotation instanceof FlatBufferFieldOptions) {
+            FlatBufferFieldOptions flatBufferFieldOptions = (FlatBufferFieldOptions) annotation;
+            defualtValue = flatBufferFieldOptions.useDefaultValue();
+            useFullName = flatBufferFieldOptions.useFullName();
+        }
+
+        // EX: String[], SomeClass[]
+        if (field.getType().isArray()){
+            property.name = field.getName();
+            property.type = FieldType.ARRAY;
+
+            // Determine type of the array
+            String name = field.getType().getComponentType().getSimpleName();
+            if (Utilities.isLowerCaseType(field.getType().getComponentType())) {
+                Application.getLogger()
+                        .debug("Array parameter is primative, wrapper, or String: " + field.getName());
+                name = name.toLowerCase();
+            } else {
+                // It may be a Class<?> which isn't a primative (i.e. lowerCaseType)
+                if (useFullName)
+                    name = field.getType().getComponentType().getName();
+                else
+                    name = field.getType().getComponentType().getSimpleName();
+            }
+
+            // In the end Array[]  and List<?> are represented the same way.
+            property.options.put(TypeDeclaration.Property.PropertyOptionKey.ARRAY, name);
+            return property;
+        }
+
+        // EX: List<String>, List<SomeClass>
+        if (field.getType().isAssignableFrom(List.class)) {
+            property.name = field.getName();
+            property.type = FieldType.ARRAY;
+
+            Class<?> listTypeClass;
+
+            try {
+                // Load all paths into custom classloader
+                ClassLoader urlClassLoader = URLClassLoader.newInstance(Utilities.buildProjectClasspathList(artifactReference),
+                        Thread.currentThread().getContextClassLoader());
+
+                // Parse Field signature
+                String parametrizedTypeString = parseFieldSignatureForParametrizedTypeString(field);
+                listTypeClass = urlClassLoader.loadClass(parametrizedTypeString);
+            } catch (Exception e) {
+                Application.getLogger().debug("Unable to find and load class for List<?> parameter", e);
+                listTypeClass = String.class;
+            }
+
+            String name = listTypeClass.getSimpleName();
+            if(useFullName) {
+                name = listTypeClass.getName();
+            }
+
+            if (Utilities.isLowerCaseType(listTypeClass)) {
+                Application.getLogger()
+                        .debug("Array parameter is primative, wrapper, or String: " + field.getName());
+                name = name.toLowerCase();
+            }
+
+            property.options.put(TypeDeclaration.Property.PropertyOptionKey.ARRAY, name);
+            return property;
+        }
+
         String name = field.getName();
         Application.getLogger().debug("Found unrecognized type; assuming Type.IDENT(IFIER): " + name);
         property.name = name;
@@ -444,20 +437,31 @@ public class Processor {
 
         Type fieldType = field.getGenericType();
         String identName = fieldType.getTypeName();
+
         try {
-            if(artifactReference != null && artifactReference.getMavenProject() != null)
-                identName = getClassForClassName(artifactReference.getMavenProject(), fieldType.getTypeName()).getSimpleName();
-            else
-                identName = Thread.currentThread().getContextClassLoader().loadClass(fieldType.getTypeName()).getSimpleName();
-            //identName = Class.forName(fieldType.getTypeName(), false,Thread.currentThread().getContextClassLoader()).getSimpleName();
+            if(artifactReference != null && artifactReference.getMavenProject() != null) {
+                Class<?> clazz = getClassForClassName(artifactReference.getMavenProject(), fieldType.getTypeName());
+                identName = useFullName ? clazz.getName() : clazz.getSimpleName();
+            } else {
+                Class<?> clazz = Thread.currentThread().getContextClassLoader().loadClass(fieldType.getTypeName());
+                identName = useFullName ? clazz.getName() : clazz.getSimpleName();
+            }
         } catch (Exception e) {
             Application.getLogger().warn("Unable to get class for name: " + fieldType.getTypeName(), e);
-            identName = fieldType.getTypeName().substring(fieldType.getTypeName().lastIndexOf("."));
-            identName = identName.substring(identName.lastIndexOf("$"));
-            Application.getLogger().debug("Trimmed: " + fieldType.getTypeName() + " to " + identName);
+            if(useFullName) {
+                identName = fieldType.getTypeName();
+            } else {
+                identName = fieldType.getTypeName().substring(fieldType.getTypeName().lastIndexOf(".") + 1);
+
+                if (identName.contains("$")) {
+                    identName = identName.substring(identName.lastIndexOf("$"));
+                }
+
+                Application.getLogger().debug("Trimmed: " + fieldType.getTypeName() + " to " + identName);
+            }
         }
 
-        property.options.put(FieldType.IDENT.toString(), identName);
+        property.options.put(TypeDeclaration.Property.PropertyOptionKey.IDENT, identName);
         return property;
     }
 
@@ -469,7 +473,7 @@ public class Processor {
      * @throws MalformedURLException if one of the classpathElements are a malformed URL
      * @throws DependencyResolutionRequiredException if MavenProject is unable to resolve the compiled classpath elements
      */
-    Class<?> getClassForClassName(MavenProject mavenProject, String className) throws ClassNotFoundException,
+    static Class<?> getClassForClassName(MavenProject mavenProject, String className) throws ClassNotFoundException,
             MalformedURLException, DependencyResolutionRequiredException, IOException {
         List<String> classpathElements;
 
@@ -495,7 +499,7 @@ public class Processor {
      * @throws NoSuchFieldException if the Field does not exist in the class
      * @throws IllegalAccessException if the Field is inaccessible
      */
-    String parseFieldSignatureForParametrizedTypeString(Field input) throws NoSuchFieldException, IllegalAccessException {
+    static String parseFieldSignatureForParametrizedTypeString(Field input) throws NoSuchFieldException, IllegalAccessException {
         Field privateField = input.getClass().getDeclaredField("signature");
         privateField.setAccessible(true);
         String signature = (String) privateField.get(input);

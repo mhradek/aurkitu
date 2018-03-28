@@ -89,7 +89,7 @@ public class Validator {
         Application.getLogger().debug("    Checking TypeDeclaration list for: " + input.name);
         if (input.type == FieldType.ARRAY) {
             Application.getLogger().debug("    is an array: " + input.name);
-            String listTypeName = input.options.get(FieldType.ARRAY.toString());
+            String listTypeName = input.options.get(Property.PropertyOptionKey.ARRAY);
             Application.getLogger().debug("    with type name: " + listTypeName);
             if (Character.isUpperCase(listTypeName.charAt(0))) {
                 for (TypeDeclaration type : schema.getTypes()) {
@@ -112,7 +112,7 @@ public class Validator {
 
         if (input.type == FieldType.IDENT) {
             Application.getLogger().debug("    is an ident: " + input.name);
-            String identTypeName = input.options.get(FieldType.IDENT.toString());
+            String identTypeName = input.options.get(Property.PropertyOptionKey.IDENT);
             Application.getLogger().debug("    with type name: " + identTypeName);
             if (Character.isUpperCase(identTypeName.charAt(0))) {
                 for (TypeDeclaration type : schema.getTypes()) {

@@ -48,7 +48,13 @@ public class TypeDeclaration {
     public static class Property {
         public String name;
         public FieldType type;
-        public Map<String, String> options = new HashMap<String, String>();
+        public Map<PropertyOptionKey, String> options = new HashMap<PropertyOptionKey, String>();
+
+        public enum PropertyOptionKey {
+            ARRAY,
+            IDENT,
+            DEFAULT_VALUE
+        }
     }
 
     @Override
@@ -65,22 +71,22 @@ public class TypeDeclaration {
             builder.append(":");
             if (property.type == FieldType.ARRAY) {
                 builder.append("[");
-                builder.append(property.options.get(FieldType.ARRAY.toString()));
+                builder.append(property.options.get(Property.PropertyOptionKey.ARRAY));
                 builder.append("]");
             } else if (property.type == FieldType.IDENT) {
-                builder.append(property.options.get(FieldType.IDENT.toString()));
+                builder.append(property.options.get(Property.PropertyOptionKey.IDENT));
             } else {
                 builder.append(property.type.toString());
             }
 
             if (!property.options.isEmpty()) {
-                for (Entry<String, String> option : property.options.entrySet()) {
-                    if (option.getKey().equalsIgnoreCase(FieldType.ARRAY.toString())) {
+                for (Entry<TypeDeclaration.Property.PropertyOptionKey, String> option : property.options.entrySet()) {
+                    if (option.getKey() == Property.PropertyOptionKey.ARRAY) {
                         // Already grabbed this if we handled arrays above
                         continue;
                     }
 
-                    if (option.getKey().equalsIgnoreCase(FieldType.IDENT.toString())) {
+                    if (option.getKey() == Property.PropertyOptionKey.IDENT) {
                         // Already grabbed this if we handled indent above
                         continue;
                     }

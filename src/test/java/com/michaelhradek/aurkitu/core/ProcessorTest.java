@@ -132,7 +132,7 @@ public class ProcessorTest {
 
         for (TypeDeclaration type : schema.getTypes()) {
             if (type.getName().equals(SampleClassTable.class.getSimpleName())) {
-                Assert.assertEquals(9, type.properties.size());
+                Assert.assertEquals(11, type.properties.size());
 
                 if (Config.DEBUG) {
                     System.out.println(type.toString());
@@ -240,8 +240,8 @@ public class ProcessorTest {
         Assert.assertEquals("tokens", prop.name);
         Assert.assertEquals(FieldType.ARRAY, prop.type);
         Assert.assertEquals(false, prop.options.isEmpty());
-        Assert.assertEquals(true, prop.options.containsKey(FieldType.ARRAY.toString()));
-        Assert.assertEquals("string", prop.options.get(FieldType.ARRAY.toString()));
+        Assert.assertEquals(true, prop.options.containsKey(Property.PropertyOptionKey.ARRAY));
+        Assert.assertEquals("string", prop.options.get(Property.PropertyOptionKey.ARRAY));
 
         field = SampleClassTable.class.getDeclaredField("deleted");
         prop = processor.getPropertyForField(field);

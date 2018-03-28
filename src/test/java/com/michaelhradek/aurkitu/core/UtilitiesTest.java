@@ -1,6 +1,8 @@
 package com.michaelhradek.aurkitu.core;
 
+import com.michaelhradek.aurkitu.Application;
 import com.michaelhradek.aurkitu.core.output.Schema;
+import org.apache.maven.plugin.testing.stubs.MavenProjectStub;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -38,6 +40,18 @@ public class UtilitiesTest {
 
         Schema schema = new Schema();
         Assert.assertFalse(Utilities.isLowerCaseType(schema.getClass()));
+
+        Assert.assertFalse(Utilities.isLowerCaseType(Application.class));
+    }
+
+    @Test
+    public void testBuildReflections() {
+
+    }
+
+    @Test
+    public void testBuildProjectClasspathList() {
+
     }
 }
 

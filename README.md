@@ -30,7 +30,7 @@ Add the following to your dependencies within your `pom.xml`:
 <dependency>
     <groupId>com.michaelhradek</groupId>
     <artifactId>aurkitu-maven-plugin</artifactId>
-    <version>0.0.2.3</version>
+    <version>0.0.2.4</version>
 </dependency>
 ```
 Followed by the following to the `plugins` of your `build` specifications:
@@ -79,6 +79,14 @@ public class SampleClassStruct {
 
 @FlatBufferEnum(enumType = FieldType.BYTE)
 public enum SampleEnumByte {
+
+    // If you specify a enumType you will need to specify which field represents the type (as there can be several fields within an `ENUM`)
+    @FlatBufferEnumTypeField
+    byte id;
+    
+    String description;
+    
+    SampleEnumByte(byte id, String description) {
 ...
 ```
 

@@ -23,6 +23,8 @@ public class SampleClassTable {
     protected boolean deleted = false;
     protected byte energy;
     protected Double weight;
+    protected int[] options;
+    protected SimpleUndefinedClass[] anomalousSamples;
 
     @FlatBufferIgnore
     protected String ignore;
