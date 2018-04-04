@@ -16,18 +16,20 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
+import org.apache.maven.artifact.DependencyResolutionRequiredException;
+import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.project.MavenProject;
 import com.michaelhradek.aurkitu.Application;
-import com.michaelhradek.aurkitu.annotations.*;
+import com.michaelhradek.aurkitu.annotations.FlatBufferEnum;
+import com.michaelhradek.aurkitu.annotations.FlatBufferEnumTypeField;
+import com.michaelhradek.aurkitu.annotations.FlatBufferFieldOptions;
+import com.michaelhradek.aurkitu.annotations.FlatBufferIgnore;
+import com.michaelhradek.aurkitu.annotations.FlatBufferTable;
 import com.michaelhradek.aurkitu.core.output.EnumDeclaration;
 import com.michaelhradek.aurkitu.core.output.FieldType;
 import com.michaelhradek.aurkitu.core.output.Schema;
 import com.michaelhradek.aurkitu.core.output.TypeDeclaration;
-
 import lombok.Getter;
-import org.apache.maven.artifact.DependencyResolutionRequiredException;
-import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.project.MavenProject;
 
 /**
  * @author m.hradek
@@ -38,6 +40,7 @@ public class Processor {
     private List<Class<? extends Annotation>> sourceAnnotations;
     private Set<Class<?>> targetClasses;
     private ArtifactReference artifactReference;
+    private Set<String> warnedTypeNames = new HashSet<String>();
 
     public Processor() {
         sourceAnnotations = new ArrayList<Class<? extends Annotation>>();
@@ -72,7 +75,7 @@ public class Processor {
         Schema schema = new Schema();
 
         for (Class<? extends Annotation> source : sourceAnnotations) {
-            if(artifactReference == null || artifactReference.getMavenProject() == null) {
+            if (artifactReference == null || artifactReference.getMavenProject() == null) {
                 Application.getLogger().debug("MavenProject is null; falling back to built in class scanner");
                 targetClasses.addAll(AnnotationParser.findAnnotatedClasses(source));
             } else {
@@ -159,8 +162,7 @@ public class Processor {
                 enumD.setType(myFlatBufferEnum.enumType());
             }
         } else {
-            Application.getLogger()
-                    .debug("Not FlatBufferEnum (likely inner class); Generic enum created");
+            Application.getLogger().debug("Not FlatBufferEnum (likely inner class); Generic enum created");
         }
 
         Field[] fields = clazz.getDeclaredFields();
@@ -172,8 +174,7 @@ public class Processor {
         if (fields != null && fields.length > 0) {
             Application.getLogger().debug("Enum with declared fields detected");
             for (Field field : fields) {
-                Application.getLogger()
-                        .debug("  Field: " + field.getName() + " type:" + field.getType().getSimpleName());
+                Application.getLogger().debug("  Field: " + field.getName() + " type:" + field.getType().getSimpleName());
                 if (field.getAnnotation(FlatBufferEnumTypeField.class) != null) {
                     Application.getLogger().debug("    Annotated field");
 
@@ -233,8 +234,8 @@ public class Processor {
                     }
 
                     enumD.addValue(temp + valueField.get(constant));
-                } catch (Exception e) {
-                    Application.getLogger().error("Error attempting to grab Enum field value", e);
+                } catch (IllegalAccessException e) {
+                    Application.getLogger().error("Not allowed to grab Enum field value: ", e);
                 }
             } else {
                 // Otherwise, just use the name of the constant
@@ -264,8 +265,7 @@ public class Processor {
             Application.getLogger().debug("Table structure: " + myFlatBufferTable.value());
             type.setStructure(myFlatBufferTable.value());
         } else {
-            Application.getLogger()
-                    .debug("Not FlatBufferTable (likely inner class); Generic table created");
+            Application.getLogger().debug("Not FlatBufferTable (likely inner class); Generic table created");
         }
 
         List<Field> fields = getDeclaredAndInheritedPrivateFields(clazz);
@@ -285,7 +285,8 @@ public class Processor {
     }
 
     /**
-     * @param type Class which needs to be travered up to determine which fields are to be considered as candidates for declaration
+     * @param type Class which needs to be travered up to determine which fields are to be
+     *        considered as candidates for declaration
      * @return A list of valid fields
      */
     List<Field> getDeclaredAndInheritedPrivateFields(Class<?> type) {
@@ -306,8 +307,9 @@ public class Processor {
 
     /**
      * @param field A class field
-     * @return A type declaration Property. This contains the name of the field and type {@link FieldType}. When
-     * encountering an array or ident (Indentifier) the options property is used to store additional information.
+     * @return A type declaration Property. This contains the name of the field and type
+     *         {@link FieldType}. When encountering an array or ident (Indentifier) the options
+     *         property is used to store additional information.
      */
     TypeDeclaration.Property getPropertyForField(final Field field) {
         TypeDeclaration.Property property = new TypeDeclaration.Property();
@@ -360,27 +362,24 @@ public class Processor {
             return property;
         }
 
-        // Some uses in which we reference other namespaces require us to declare the entirety of the name
+        // Some uses in which we reference other namespaces require us to declare the entirety of
+        // the name
         Annotation annotation = field.getAnnotation(FlatBufferFieldOptions.class);
         boolean useFullName = false;
-        String defualtValue = "";
 
-        if(annotation != null && annotation instanceof FlatBufferFieldOptions) {
-            FlatBufferFieldOptions flatBufferFieldOptions = (FlatBufferFieldOptions) annotation;
-            defualtValue = flatBufferFieldOptions.useDefaultValue();
-            useFullName = flatBufferFieldOptions.useFullName();
+        if (annotation != null && annotation instanceof FlatBufferFieldOptions) {
+            useFullName = ((FlatBufferFieldOptions) annotation).useFullName();
         }
 
         // EX: String[], SomeClass[]
-        if (field.getType().isArray()){
+        if (field.getType().isArray()) {
             property.name = field.getName();
             property.type = FieldType.ARRAY;
 
             // Determine type of the array
             String name = field.getType().getComponentType().getSimpleName();
             if (Utilities.isLowerCaseType(field.getType().getComponentType())) {
-                Application.getLogger()
-                        .debug("Array parameter is primative, wrapper, or String: " + field.getName());
+                Application.getLogger().debug("Array parameter is primative, wrapper, or String: " + field.getName());
                 name = name.toLowerCase();
             } else {
                 // It may be a Class<?> which isn't a primative (i.e. lowerCaseType)
@@ -390,7 +389,7 @@ public class Processor {
                     name = field.getType().getComponentType().getSimpleName();
             }
 
-            // In the end Array[]  and List<?> are represented the same way.
+            // In the end Array[] and List<?> are represented the same way.
             property.options.put(TypeDeclaration.Property.PropertyOptionKey.ARRAY, name);
             return property;
         }
@@ -404,25 +403,25 @@ public class Processor {
 
             try {
                 // Load all paths into custom classloader
-                ClassLoader urlClassLoader = URLClassLoader.newInstance(Utilities.buildProjectClasspathList(artifactReference),
-                        Thread.currentThread().getContextClassLoader());
+                ClassLoader urlClassLoader = Thread.currentThread().getContextClassLoader();
+                if (artifactReference != null && artifactReference.getMavenProject() != null)
+                    urlClassLoader = URLClassLoader.newInstance(Utilities.buildProjectClasspathList(artifactReference), urlClassLoader);
 
                 // Parse Field signature
                 String parametrizedTypeString = parseFieldSignatureForParametrizedTypeString(field);
                 listTypeClass = urlClassLoader.loadClass(parametrizedTypeString);
             } catch (Exception e) {
-                Application.getLogger().debug("Unable to find and load class for List<?> parameter", e);
+                Application.getLogger().warn("Unable to find and load class for List<?> parameter, using String instead: ", e);
                 listTypeClass = String.class;
             }
 
             String name = listTypeClass.getSimpleName();
-            if(useFullName) {
+            if (useFullName) {
                 name = listTypeClass.getName();
             }
 
             if (Utilities.isLowerCaseType(listTypeClass)) {
-                Application.getLogger()
-                        .debug("Array parameter is primative, wrapper, or String: " + field.getName());
+                Application.getLogger().debug("Array parameter is primative, wrapper, or String: " + field.getName());
                 name = name.toLowerCase();
             }
 
@@ -439,7 +438,7 @@ public class Processor {
         String identName = fieldType.getTypeName();
 
         try {
-            if(artifactReference != null && artifactReference.getMavenProject() != null) {
+            if (artifactReference != null && artifactReference.getMavenProject() != null) {
                 Class<?> clazz = getClassForClassName(artifactReference.getMavenProject(), fieldType.getTypeName());
                 identName = useFullName ? clazz.getName() : clazz.getSimpleName();
             } else {
@@ -447,8 +446,15 @@ public class Processor {
                 identName = useFullName ? clazz.getName() : clazz.getSimpleName();
             }
         } catch (Exception e) {
-            Application.getLogger().warn("Unable to get class for name: " + fieldType.getTypeName(), e);
-            if(useFullName) {
+            if (!warnedTypeNames.contains(fieldType.getTypeName())) {
+                if (e instanceof ClassNotFoundException) {
+                    Application.getLogger().warn("Class not found for type name: " + fieldType.getTypeName());
+                } else {
+                    Application.getLogger().warn("Unable to get class for name: " + fieldType.getTypeName(), e);
+                }
+                warnedTypeNames.add(fieldType.getTypeName());
+            }
+            if (useFullName) {
                 identName = fieldType.getTypeName();
             } else {
                 identName = fieldType.getTypeName().substring(fieldType.getTypeName().lastIndexOf(".") + 1);
@@ -471,10 +477,11 @@ public class Processor {
      * @return The class we located
      * @throws ClassNotFoundException if the class cannot be located
      * @throws MalformedURLException if one of the classpathElements are a malformed URL
-     * @throws DependencyResolutionRequiredException if MavenProject is unable to resolve the compiled classpath elements
+     * @throws DependencyResolutionRequiredException if MavenProject is unable to resolve the
+     *         compiled classpath elements
      */
-    static Class<?> getClassForClassName(MavenProject mavenProject, String className) throws ClassNotFoundException,
-            MalformedURLException, DependencyResolutionRequiredException, IOException {
+    static Class<?> getClassForClassName(MavenProject mavenProject, String className)
+            throws ClassNotFoundException, MalformedURLException, DependencyResolutionRequiredException, IOException {
         List<String> classpathElements;
 
         classpathElements = mavenProject.getCompileClasspathElements();
@@ -484,8 +491,7 @@ public class Processor {
             projectClasspathList.add(new File(element).toURI().toURL());
         }
 
-        URLClassLoader urlClassLoader = new URLClassLoader(projectClasspathList.toArray(new URL[]{}),
-                Thread.currentThread().getContextClassLoader());
+        URLClassLoader urlClassLoader = new URLClassLoader(projectClasspathList.toArray(new URL[] {}), Thread.currentThread().getContextClassLoader());
 
         Class<?> result = urlClassLoader.loadClass(className);
         urlClassLoader.close();
@@ -495,7 +501,8 @@ public class Processor {
     /**
      *
      * @param input The List with a type declaration
-     * @return a String which parses: com.company.team.service.model.Person from the following: Ljava/util/List<Lcom/company/team/service/model/Person;>;
+     * @return a String which parses: com.company.team.service.model.Person from the following:
+     *         Ljava/util/List<Lcom/company/team/service/model/Person;>;
      * @throws NoSuchFieldException if the Field does not exist in the class
      * @throws IllegalAccessException if the Field is inaccessible
      */
@@ -506,7 +513,7 @@ public class Processor {
         Application.getLogger().debug("Examining signature: " + signature);
 
         String typeSignature = signature.substring(signature.indexOf("<") + 1, signature.indexOf(">"));
-        typeSignature = typeSignature.replaceFirst("[a-zA-Z]{1}","");
+        typeSignature = typeSignature.replaceFirst("[a-zA-Z]{1}", "");
         typeSignature = typeSignature.replaceAll("/", ".");
         typeSignature = typeSignature.replaceAll(";", "");
         Application.getLogger().debug("Derived class: " + typeSignature);
@@ -521,15 +528,14 @@ public class Processor {
      * @param <T> resulting type
      * @return the result
      */
-    public static synchronized  <T> T executeActionOnSpecifiedClassLoader(
-            final ClassLoader classLoaderToSwitchTo,
+    public static synchronized <T> T executeActionOnSpecifiedClassLoader(final ClassLoader classLoaderToSwitchTo,
             final ExecutableAction<T> actionToPerformOnProvidedClassLoader) {
 
         final ClassLoader originalClassLoader = Thread.currentThread().getContextClassLoader();
 
         try {
             Thread.currentThread().setContextClassLoader(classLoaderToSwitchTo);
-            for(URL url : ((URLClassLoader) (Thread.currentThread().getContextClassLoader())).getURLs()) {
+            for (URL url : ((URLClassLoader) (Thread.currentThread().getContextClassLoader())).getURLs()) {
                 Application.getLogger().debug("Classloader loaded with: " + url.toString());
             }
 
@@ -547,9 +553,8 @@ public class Processor {
         /**
          * Execute the operation.
          *
-         * @return Optional value returned by this operation;
-         *    implementations should document what, if anything,
-         *    is returned by implementations of this method.
+         * @return Optional value returned by this operation; implementations should document what,
+         *         if anything, is returned by implementations of this method.
          */
         T run();
     }
