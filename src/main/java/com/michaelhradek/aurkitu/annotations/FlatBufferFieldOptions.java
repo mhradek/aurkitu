@@ -3,16 +3,11 @@
  */
 package com.michaelhradek.aurkitu.annotations;
 
-import static java.lang.annotation.ElementType.FIELD;
-import static java.lang.annotation.ElementType.LOCAL_VARIABLE;
-import static java.lang.annotation.ElementType.PARAMETER;
-import static java.lang.annotation.RetentionPolicy.CLASS;
-
-import java.lang.annotation.*;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import com.michaelhradek.aurkitu.core.output.FieldType;
 
 /**
@@ -21,9 +16,9 @@ import com.michaelhradek.aurkitu.core.output.FieldType;
  */
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
-@Target(value={ElementType.FIELD, ElementType.PARAMETER, ElementType.LOCAL_VARIABLE})
+@Target(value = {ElementType.FIELD, ElementType.PARAMETER, ElementType.LOCAL_VARIABLE})
 public @interface FlatBufferFieldOptions {
-  FieldType fieldType();
-  boolean useFullName() default false;
-  String useDefaultValue() default "";
+    FieldType fieldType();
+
+    boolean useFullName() default false;
 }
