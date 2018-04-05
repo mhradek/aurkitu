@@ -54,6 +54,10 @@
                     <schemaName>test-schema</schemaName>
                     <outputDirectory>target/test-dir</outputDirectory>
                     <validateSchema>true</validateSchema>
+                  <generateVersion>true</generateVersion>
+                  <namespaceOverrideMap>
+                    <search.namespace>replacement.namespace</search.namespace>
+                  </namespaceOverrideMap>
                 </configuration>
                 <executions>
                     <execution>

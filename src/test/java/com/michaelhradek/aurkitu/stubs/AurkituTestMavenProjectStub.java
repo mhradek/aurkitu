@@ -1,5 +1,9 @@
 package com.michaelhradek.aurkitu.stubs;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
+import java.util.Collections;
 import lombok.Getter;
 import org.apache.maven.model.Build;
 import org.apache.maven.model.Model;
@@ -8,11 +12,6 @@ import org.apache.maven.model.Resource;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.apache.maven.plugin.testing.stubs.MavenProjectStub;
 import org.codehaus.plexus.PlexusTestCase;
-
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStreamReader;
-import java.util.Collections;
 
 @Getter
 public class AurkituTestMavenProjectStub extends MavenProjectStub {
@@ -63,5 +62,7 @@ public class AurkituTestMavenProjectStub extends MavenProjectStub {
         Reporting reporting = new Reporting();
         reporting.setOutputDirectory(getBasedir().getAbsolutePath() + "/target/site");
         getModel().setReporting(reporting);
+
+        addCompileSourceRoot(PlexusTestCase.getBasedir());
     }
 }

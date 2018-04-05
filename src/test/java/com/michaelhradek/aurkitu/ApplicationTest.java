@@ -1,18 +1,10 @@
-/**
- *
- */
 package com.michaelhradek.aurkitu;
 
 import java.io.File;
-
-import org.apache.maven.execution.DefaultMavenExecutionRequest;
-import org.apache.maven.execution.MavenExecutionRequest;
-import org.apache.maven.plugin.MojoExecutionException;
+import java.lang.reflect.Field;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
 import org.apache.maven.plugin.testing.MojoRule;
 import org.apache.maven.project.MavenProject;
-import org.apache.maven.project.ProjectBuilder;
-import org.apache.maven.project.ProjectBuildingRequest;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -59,6 +51,25 @@ public class ApplicationTest extends AbstractMojoTestCase {
 
         assertNotNull(mojo);
         mojo.execute();
+    }
+
+    @Test
+    public void testBasicWithProjectRead() throws Exception {
+        File testPom = new File(getBasedir(), "src/test/resources/plugin-basic-with-project/pom.xml");
+        Assert.assertNotNull(testPom);
+        Assert.assertTrue(testPom.exists());
+        Assert.assertTrue(testPom.isFile());
+
+        Application mojo = new Application();
+        mojo = (Application) this.configureMojo(
+            mojo, extractPluginConfiguration(Application.MOJO_NAME, testPom)
+        );
+
+        Field projectField = mojo.getClass().getDeclaredField("project");
+        projectField.setAccessible(true);
+        MavenProject mavenProject = (MavenProject) projectField.get(mojo);
+
+        Assert.assertNotNull(mavenProject);
     }
 
 //    @Test(expected = MojoExecutionException.class)

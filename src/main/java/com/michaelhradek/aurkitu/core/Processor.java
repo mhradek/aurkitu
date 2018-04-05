@@ -1,24 +1,5 @@
-/**
- *
- */
 package com.michaelhradek.aurkitu.core;
 
-import java.io.File;
-import java.io.IOException;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Field;
-import java.lang.reflect.Type;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import org.apache.maven.artifact.DependencyResolutionRequiredException;
-import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.project.MavenProject;
 import com.michaelhradek.aurkitu.Application;
 import com.michaelhradek.aurkitu.annotations.FlatBufferEnum;
 import com.michaelhradek.aurkitu.annotations.FlatBufferEnumTypeField;
@@ -29,7 +10,26 @@ import com.michaelhradek.aurkitu.core.output.EnumDeclaration;
 import com.michaelhradek.aurkitu.core.output.FieldType;
 import com.michaelhradek.aurkitu.core.output.Schema;
 import com.michaelhradek.aurkitu.core.output.TypeDeclaration;
+import com.michaelhradek.aurkitu.core.output.TypeDeclaration.Property.PropertyOptionKey;
+import java.io.File;
+import java.io.IOException;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
+import java.lang.reflect.Type;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 import lombok.Getter;
+import org.apache.maven.artifact.DependencyResolutionRequiredException;
+import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.project.MavenProject;
 
 /**
  * @author m.hradek
@@ -40,11 +40,16 @@ public class Processor {
     private List<Class<? extends Annotation>> sourceAnnotations;
     private Set<Class<?>> targetClasses;
     private ArtifactReference artifactReference;
-    private Set<String> warnedTypeNames = new HashSet<String>();
+    private Set<String> warnedTypeNames;
+    private Map<String, String> namespaceOverrideMap;
 
     public Processor() {
         sourceAnnotations = new ArrayList<Class<? extends Annotation>>();
         targetClasses = new HashSet<Class<?>>();
+        warnedTypeNames = new HashSet<String>();
+
+        // This could be null as the value via Application could be overriden here
+        namespaceOverrideMap = new HashMap<String, String>();
     }
 
     /**
@@ -63,6 +68,31 @@ public class Processor {
      */
     public Processor withArtifactReference(ArtifactReference artifactReference) {
         this.artifactReference = artifactReference;
+        return this;
+    }
+
+    /**
+     * By setting this we override namespaces found while building TypeDeclaration
+     *
+     * @param namespaceOverrideMap The namespace map
+     * @return an instance of the Processor object
+     */
+    public Processor withNamespaceOverrideMap(Map<String, String> namespaceOverrideMap) {
+        if (namespaceOverrideMap == null) {
+            return this;
+        }
+
+        // Formatting the input so it is consistent
+        Map<String, String> temp = new HashMap<String, String>();
+        for (Entry<String, String> item : namespaceOverrideMap.entrySet()) {
+            Application.getLogger().debug(String.format("Reviewing namespaceOverrideMap item key: %s, value %s",
+                item.getKey(), item.getValue()));
+
+            temp.put(item.getKey().endsWith(".") ? item.getKey() : item.getKey() + ".",
+                item.getValue().endsWith(".") ? item.getValue() : item.getValue() + ".");
+        }
+
+        this.namespaceOverrideMap = temp;
         return this;
     }
 
@@ -179,6 +209,12 @@ public class Processor {
                     Application.getLogger().debug("    Annotated field");
 
                     // Verify the declaration on the enum matches the declaration of the field
+                    if (enumD.getType() == null) {
+                        throw new IllegalArgumentException(
+                            "Missing @FlatBufferEnum(enumType = FieldType.<SELECT>) declaration or remove @FlatBufferEnumTypeField for: "
+                                + clazz.getName());
+                    }
+
                     if (field.getType().isAssignableFrom(enumD.getType().targetClass)) {
                         setValues = true;
                         valueField = field;
@@ -189,7 +225,8 @@ public class Processor {
         }
 
         if (numAnnotations > 1) {
-            throw new IllegalArgumentException("Can only declare one @FlatBufferEnumTypeField for Enum");
+            throw new IllegalArgumentException(
+                "Can only declare one @FlatBufferEnumTypeField for Enum: " + clazz.getName());
         }
 
         Object[] constants = clazz.getEnumConstants();
@@ -314,6 +351,22 @@ public class Processor {
     TypeDeclaration.Property getPropertyForField(final Field field) {
         TypeDeclaration.Property property = new TypeDeclaration.Property();
 
+        // Some uses in which we reference other namespaces require us to declare the entirety of
+        // the name
+        Annotation annotation = field.getAnnotation(FlatBufferFieldOptions.class);
+        boolean useFullName = false;
+        String defaultValue = null;
+
+        if (annotation != null && annotation instanceof FlatBufferFieldOptions) {
+            useFullName = ((FlatBufferFieldOptions) annotation).useFullName();
+            defaultValue = ((FlatBufferFieldOptions) annotation).defaultValue();
+        }
+
+        if (defaultValue != null && !defaultValue.isEmpty()) {
+            Application.getLogger().debug("Found a default value to assign to field: " + defaultValue);
+            property.options.put(PropertyOptionKey.DEFAULT_VALUE, defaultValue);
+        }
+
         if (field.getType().isAssignableFrom(int.class) || field.getType().isAssignableFrom(Integer.class)) {
             property.name = field.getName();
             property.type = FieldType.INT;
@@ -362,15 +415,6 @@ public class Processor {
             return property;
         }
 
-        // Some uses in which we reference other namespaces require us to declare the entirety of
-        // the name
-        Annotation annotation = field.getAnnotation(FlatBufferFieldOptions.class);
-        boolean useFullName = false;
-
-        if (annotation != null && annotation instanceof FlatBufferFieldOptions) {
-            useFullName = ((FlatBufferFieldOptions) annotation).useFullName();
-        }
-
         // EX: String[], SomeClass[]
         if (field.getType().isArray()) {
             property.name = field.getName();
@@ -383,10 +427,23 @@ public class Processor {
                 name = name.toLowerCase();
             } else {
                 // It may be a Class<?> which isn't a primative (i.e. lowerCaseType)
-                if (useFullName)
+                if (useFullName) {
                     name = field.getType().getComponentType().getName();
-                else
+
+                    String simpleName = field.getType().getComponentType().getName()
+                        .substring(field.getType().getComponentType().getName().lastIndexOf(".") + 1);
+                    String packageName = field.getType().getComponentType().getName()
+                        .substring(0, field.getType().getComponentType().getName().lastIndexOf(".") + 1);
+                    Application.getLogger().debug(String
+                        .format("Using full name; reviewing simpleName: %s and package: %s", simpleName, packageName));
+
+                    if (namespaceOverrideMap != null && namespaceOverrideMap.containsKey(packageName)) {
+                        name = namespaceOverrideMap.get(packageName) + simpleName;
+                        Application.getLogger().debug("Override located; using it: " + name);
+                    }
+                } else {
                     name = field.getType().getComponentType().getSimpleName();
+                }
             }
 
             // In the end Array[] and List<?> are represented the same way.
@@ -418,6 +475,16 @@ public class Processor {
             String name = listTypeClass.getSimpleName();
             if (useFullName) {
                 name = listTypeClass.getName();
+
+                String simpleName = listTypeClass.getName().substring(listTypeClass.getName().lastIndexOf(".") + 1);
+                String packageName = listTypeClass.getName().substring(0, listTypeClass.getName().lastIndexOf(".") + 1);
+                Application.getLogger().debug(String
+                    .format("Using full name; reviewing simpleName: %s and package: %s", simpleName, packageName));
+
+                if (namespaceOverrideMap != null && namespaceOverrideMap.containsKey(packageName)) {
+                    name = namespaceOverrideMap.get(packageName) + simpleName;
+                    Application.getLogger().debug("Override located; using it: " + name);
+                }
             }
 
             if (Utilities.isLowerCaseType(listTypeClass)) {
@@ -429,6 +496,7 @@ public class Processor {
             return property;
         }
 
+        // Anything else
         String name = field.getName();
         Application.getLogger().debug("Found unrecognized type; assuming Type.IDENT(IFIER): " + name);
         property.name = name;
@@ -441,9 +509,27 @@ public class Processor {
             if (artifactReference != null && artifactReference.getMavenProject() != null) {
                 Class<?> clazz = getClassForClassName(artifactReference.getMavenProject(), fieldType.getTypeName());
                 identName = useFullName ? clazz.getName() : clazz.getSimpleName();
+
+                if (useFullName) {
+                    String simpleName = clazz.getName().substring(clazz.getName().lastIndexOf(".") + 1);
+                    String packageName = clazz.getName().substring(0, clazz.getName().lastIndexOf(".") + 1);
+                    if (namespaceOverrideMap != null && namespaceOverrideMap.containsKey(packageName)) {
+                        identName = namespaceOverrideMap.get(packageName) + simpleName;
+                        Application.getLogger().debug("Override located; using it: " + identName);
+                    }
+                }
             } else {
                 Class<?> clazz = Thread.currentThread().getContextClassLoader().loadClass(fieldType.getTypeName());
                 identName = useFullName ? clazz.getName() : clazz.getSimpleName();
+
+                if (useFullName) {
+                    String simpleName = clazz.getName().substring(clazz.getName().lastIndexOf(".") + 1);
+                    String packageName = clazz.getName().substring(0, clazz.getName().lastIndexOf(".") + 1);
+                    if (namespaceOverrideMap != null && namespaceOverrideMap.containsKey(packageName)) {
+                        identName = namespaceOverrideMap.get(packageName) + simpleName;
+                        Application.getLogger().debug("Override located; using it: " + identName);
+                    }
+                }
             }
         } catch (Exception e) {
             if (!warnedTypeNames.contains(fieldType.getTypeName())) {
@@ -454,8 +540,14 @@ public class Processor {
                 }
                 warnedTypeNames.add(fieldType.getTypeName());
             }
+
             if (useFullName) {
                 identName = fieldType.getTypeName();
+                String simpleName = identName.substring(identName.lastIndexOf(".") + 1);
+                String packageName = identName.substring(0, identName.lastIndexOf(".") + 1);
+                if (namespaceOverrideMap != null && namespaceOverrideMap.containsKey(packageName)) {
+                    identName = namespaceOverrideMap.get(packageName) + simpleName;
+                }
             } else {
                 identName = fieldType.getTypeName().substring(fieldType.getTypeName().lastIndexOf(".") + 1);
 
@@ -476,15 +568,14 @@ public class Processor {
      * @param className The name of the class we need to locate
      * @return The class we located
      * @throws ClassNotFoundException if the class cannot be located
-     * @throws MalformedURLException if one of the classpathElements are a malformed URL
+     * @throws IOException if one of the classpathElements are a malformed URL
      * @throws DependencyResolutionRequiredException if MavenProject is unable to resolve the
      *         compiled classpath elements
      */
     static Class<?> getClassForClassName(MavenProject mavenProject, String className)
-            throws ClassNotFoundException, MalformedURLException, DependencyResolutionRequiredException, IOException {
-        List<String> classpathElements;
+        throws ClassNotFoundException, DependencyResolutionRequiredException, IOException {
 
-        classpathElements = mavenProject.getCompileClasspathElements();
+        List<String> classpathElements = mavenProject.getCompileClasspathElements();
         List<URL> projectClasspathList = new ArrayList<URL>();
         for (String element : classpathElements) {
             Application.getLogger().debug("Adding compiled classpath element (via MavenProject): " + element);

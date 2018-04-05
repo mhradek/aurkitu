@@ -1,6 +1,13 @@
 package com.michaelhradek.aurkitu.core;
 
 import com.michaelhradek.aurkitu.Application;
+import java.io.File;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -10,17 +17,15 @@ import org.eclipse.aether.resolution.ArtifactResolutionException;
 import org.eclipse.aether.resolution.ArtifactResult;
 import org.reflections.Reflections;
 import org.reflections.adapters.JavassistAdapter;
-import org.reflections.scanners.*;
+import org.reflections.scanners.FieldAnnotationsScanner;
+import org.reflections.scanners.MemberUsageScanner;
+import org.reflections.scanners.MethodAnnotationsScanner;
+import org.reflections.scanners.MethodParameterNamesScanner;
+import org.reflections.scanners.MethodParameterScanner;
+import org.reflections.scanners.SubTypesScanner;
+import org.reflections.scanners.TypeAnnotationsScanner;
 import org.reflections.util.ClasspathHelper;
 import org.reflections.util.ConfigurationBuilder;
-
-import java.io.File;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
 
 /**
  * @author m.hradek
@@ -105,7 +110,7 @@ public class Utilities {
 
         // Load build class path
         if(classpathElementsCache == null) {
-            Application.getLogger().debug("Compile Classpath Elements Cache was null; fetching it");
+            Application.getLogger().debug("Compile Classpath Elements Cache was null; fetching update");
             classpathElementsCache = artifactReference.getMavenProject().getCompileClasspathElements();
         }
 
@@ -116,7 +121,7 @@ public class Utilities {
 
         // Load artifact(s) jars using resolver
         if(dependencyArtifactsCache == null) {
-            Application.getLogger().debug("Dependency Artifacts Cache was null; fetching it");
+            Application.getLogger().debug("Dependency Artifacts Cache was null; fetching update");
             dependencyArtifactsCache =  artifactReference.getMavenProject().getDependencyArtifacts();
         }
 

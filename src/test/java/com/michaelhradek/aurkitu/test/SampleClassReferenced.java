@@ -1,11 +1,10 @@
-/**
- *
- */
 package com.michaelhradek.aurkitu.test;
 
-import java.util.List;
-
+import com.michaelhradek.aurkitu.annotations.FlatBufferFieldOptions;
 import com.michaelhradek.aurkitu.annotations.FlatBufferTable;
+import com.michaelhradek.aurkitu.core.output.FieldType;
+import com.michaelhradek.aurkitu.test.other.SampleClassNamespaceMap;
+import java.util.List;
 
 /**
  * @author m.hradek
@@ -16,7 +15,10 @@ public class SampleClassReferenced extends SampleClassAbstract {
     protected long id;
     protected List<SampleClassTable> baggage;
 
-    enum SampleClassTableInnerEnumInt {
+    @FlatBufferFieldOptions(fieldType = FieldType.IDENT, useFullName = true)
+    protected List<SampleClassNamespaceMap> samples;
+
+    public enum SampleClassTableInnerEnumInt {
         DAGGER, SHORT_SWORD, SWORD, GREAT_SWORD
     }
 

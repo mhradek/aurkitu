@@ -1,15 +1,10 @@
-/**
- *
- */
 package com.michaelhradek.aurkitu.core.output;
 
+import com.michaelhradek.aurkitu.Config;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import com.michaelhradek.aurkitu.Config;
-
 import lombok.Getter;
 import lombok.Setter;
 
@@ -20,6 +15,7 @@ import lombok.Setter;
 @Setter
 public class Schema {
 
+    // IDL values
     String name;
     String fileIdentifier;
     String fileExtension;
@@ -31,6 +27,8 @@ public class Schema {
     List<String> attributes;
     List<Constant<Integer>> integerConstants;
     List<Constant<Float>> floatConstants;
+
+    // Aurkitu values
     boolean generateVersion;
     boolean isValidSchema;
 
@@ -47,14 +45,18 @@ public class Schema {
      * @param input Add an enum declaration to the schema
      */
     public void addEnumDeclaration(EnumDeclaration input) {
-        enums.add(input);
+        if (!enums.contains(input)) {
+            enums.add(input);
+        }
     }
 
     /**
      * @param input Add a type (i.e. class) declaration to the schema
      */
     public void addTypeDeclaration(TypeDeclaration input) {
-        types.add(input);
+        if (!types.contains(input)) {
+            types.add(input);
+        }
     }
 
     /**

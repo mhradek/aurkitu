@@ -1,14 +1,4 @@
-/**
- *
- */
 package com.michaelhradek.aurkitu.core;
-
-import java.util.Set;
-
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
 
 import com.michaelhradek.aurkitu.annotations.FlatBufferTable;
 import com.michaelhradek.aurkitu.test.BogusAnnotation;
@@ -16,6 +6,11 @@ import com.michaelhradek.aurkitu.test.SampleClassReferenced;
 import com.michaelhradek.aurkitu.test.SampleClassTable;
 import com.michaelhradek.aurkitu.test.SampleEnumByte;
 import com.michaelhradek.aurkitu.test.SampleEnumNull;
+import java.util.Set;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 /**
  * @author m.hradek
@@ -44,7 +39,7 @@ public class AnnotationParserTest {
     public void testFindAnnotatedClasses() {
         Set<Class<?>> annotated = AnnotationParser.findAnnotatedClasses(FlatBufferTable.class);
         Assert.assertEquals(false, annotated.isEmpty());
-        Assert.assertEquals(4, annotated.size());
+        Assert.assertEquals(6, annotated.size());
 
         Assert.assertEquals(true, annotated.contains(SampleClassReferenced.class));
         Assert.assertEquals(true, annotated.contains(SampleClassTable.class));

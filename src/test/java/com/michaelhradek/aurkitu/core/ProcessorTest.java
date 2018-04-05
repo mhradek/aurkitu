@@ -1,18 +1,6 @@
-/**
- *
- */
 package com.michaelhradek.aurkitu.core;
 
-import java.lang.reflect.Field;
-import java.net.URLClassLoader;
-import java.util.Set;
-
-import org.apache.maven.plugin.MojoExecutionException;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-
+import com.michaelhradek.aurkitu.Application;
 import com.michaelhradek.aurkitu.Config;
 import com.michaelhradek.aurkitu.annotations.FlatBufferEnum;
 import com.michaelhradek.aurkitu.annotations.FlatBufferTable;
@@ -21,30 +9,63 @@ import com.michaelhradek.aurkitu.core.output.FieldType;
 import com.michaelhradek.aurkitu.core.output.Schema;
 import com.michaelhradek.aurkitu.core.output.TypeDeclaration;
 import com.michaelhradek.aurkitu.core.output.TypeDeclaration.Property;
+import com.michaelhradek.aurkitu.core.output.TypeDeclaration.Property.PropertyOptionKey;
+import com.michaelhradek.aurkitu.stubs.AurkituTestMavenProjectStub;
+import com.michaelhradek.aurkitu.stubs.AurkituTestSettingsStub;
 import com.michaelhradek.aurkitu.test.SampleClassReferenced;
+import com.michaelhradek.aurkitu.test.SampleClassReferenced.SampleClassTableInnerEnumInt;
 import com.michaelhradek.aurkitu.test.SampleClassStruct;
 import com.michaelhradek.aurkitu.test.SampleClassTable;
 import com.michaelhradek.aurkitu.test.SampleClassTableWithUndefined;
 import com.michaelhradek.aurkitu.test.SampleEnumByte;
 import com.michaelhradek.aurkitu.test.SampleEnumNull;
+import com.michaelhradek.aurkitu.test.other.SampleAnonymousEnum;
+import com.michaelhradek.aurkitu.test.other.SampleClassNamespaceMap;
+import java.io.File;
+import java.lang.reflect.Field;
+import java.net.URLClassLoader;
+import java.util.HashMap;
+import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.testing.AbstractMojoTestCase;
+import org.apache.maven.plugin.testing.MojoRule;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Rule;
+import org.junit.Test;
 
 /**
  * @author m.hradek
  */
-public class ProcessorTest {
+public class ProcessorTest extends AbstractMojoTestCase {
 
     /**
-     * @throws java.lang.Exception
+     * @see junit.framework.TestCase#setUp()
      */
-    @Before
-    public void setUp() throws Exception {
+    @Override
+    protected void setUp() throws Exception {
+
+        // required for mojo lookups to work
+        super.setUp();
     }
+
+    @Rule
+    public MojoRule rule = new MojoRule() {
+
+        @Override
+        protected void before() throws Throwable {
+        }
+
+        @Override
+        protected void after() {
+        }
+    };
 
     /**
      * @throws java.lang.Exception
      */
     @After
     public void tearDown() throws Exception {
+        super.tearDown();
     }
 
     /**
@@ -58,14 +79,14 @@ public class ProcessorTest {
 
         Schema schema = processor.buildSchema();
         schema.setNamespace(
-                processor.getClass().getPackage().getName().toString().replace("core", "flatbuffers"));
+            processor.getClass().getPackage().getName().replace("core", "flatbuffers"));
         schema.addAttribute("Priority");
         schema.addAttribute("ConsiderThis");
         schema.addInclude("AnotherFile.fbs");
 
-        Assert.assertEquals(6, processor.getTargetClasses().size());
-        Assert.assertEquals(6, schema.getTypes().size());
-        Assert.assertEquals(3, schema.getEnums().size());
+        Assert.assertEquals(13, processor.getTargetClasses().size());
+        Assert.assertEquals(8, schema.getTypes().size());
+        Assert.assertEquals(9, schema.getEnums().size());
 
         Assert.assertEquals("SampleClassTable", schema.getRootType());
 
@@ -85,9 +106,9 @@ public class ProcessorTest {
         Assert.assertEquals(1, processor.getSourceAnnotations().size());
         Schema schema = processor.buildSchema();
 
-        Assert.assertEquals(2, processor.getTargetClasses().size());
+        Assert.assertEquals(7, processor.getTargetClasses().size());
         Assert.assertEquals(0, schema.getTypes().size());
-        Assert.assertEquals(2, schema.getEnums().size());
+        Assert.assertEquals(7, schema.getEnums().size());
 
         Assert.assertEquals(null, schema.getRootType());
 
@@ -124,15 +145,32 @@ public class ProcessorTest {
         Assert.assertEquals(1, processor.getSourceAnnotations().size());
         Schema schema = processor.buildSchema();
 
-        Assert.assertEquals(4, processor.getTargetClasses().size());
-        Assert.assertEquals(6, schema.getTypes().size());
-        Assert.assertEquals(1, schema.getEnums().size());
+        Assert.assertEquals(6, processor.getTargetClasses().size());
+        Assert.assertEquals(8, schema.getTypes().size());
+        Assert.assertEquals(7, schema.getEnums().size());
 
         Assert.assertEquals("SampleClassTable", schema.getRootType());
 
         for (TypeDeclaration type : schema.getTypes()) {
+
             if (type.getName().equals(SampleClassTable.class.getSimpleName())) {
-                Assert.assertEquals(11, type.properties.size());
+                Assert.assertEquals(14, type.properties.size());
+
+                for (Property property : type.getProperties()) {
+                    if (property.name.equals("innerEnum")) {
+                        Assert.assertEquals("SHORT_SWORD", property.options.get(PropertyOptionKey.DEFAULT_VALUE));
+                    }
+
+                    if (property.name.equals("definedInnerEnumArray")) {
+                        Assert.assertEquals(SampleClassTableInnerEnumInt.class.getName(),
+                            property.options.get(PropertyOptionKey.ARRAY));
+                    }
+
+                    if (property.name.equals("fullnameClass")) {
+                        Assert.assertEquals(SampleClassReferenced.class.getName(),
+                            property.options.get(PropertyOptionKey.IDENT));
+                    }
+                }
 
                 if (Config.DEBUG) {
                     System.out.println(type.toString());
@@ -142,7 +180,7 @@ public class ProcessorTest {
             }
 
             if (type.getName().equals(SampleClassReferenced.class.getSimpleName())) {
-                Assert.assertEquals(3, type.properties.size());
+                Assert.assertEquals(4, type.properties.size());
                 // TODO More tests here
 
                 if (Config.DEBUG) {
@@ -187,6 +225,28 @@ public class ProcessorTest {
 
             if (type.getName().equals(SampleClassTableWithUndefined.class.getSimpleName())) {
                 Assert.assertEquals(3, type.properties.size());
+                // TODO More tests here
+
+                if (Config.DEBUG) {
+                    System.out.println(type.toString());
+                }
+
+                continue;
+            }
+
+            if (type.getName().equals(SampleClassNamespaceMap.class.getSimpleName())) {
+                Assert.assertEquals(1, type.properties.size());
+                // TODO More tests here
+
+                if (Config.DEBUG) {
+                    System.out.println(type.toString());
+                }
+
+                continue;
+            }
+
+            if (type.getName().equals(SampleAnonymousEnum.class.getSimpleName())) {
+                Assert.assertEquals(6, type.properties.size());
                 // TODO More tests here
 
                 if (Config.DEBUG) {
@@ -289,5 +349,50 @@ public class ProcessorTest {
                 }
             }
         });
+    }
+
+    @Test
+    public void testProcessNamespaceOverride() throws MojoExecutionException, NoSuchFieldException {
+        Processor processor = new Processor()
+            .withSourceAnnotation(FlatBufferTable.class)
+            .withNamespaceOverrideMap(new HashMap<String, String>() {
+                {
+                    put("com.michaelhradek.aurkitu.test.other", "com.michaelhradek.aurkitu.test.flatbuffer");
+                }
+            });
+
+        Schema schema = processor.buildSchema();
+        for (TypeDeclaration type : schema.getTypes()) {
+            if (type.getName().equals(SampleClassReferenced.class.getSimpleName())) {
+
+                Field field = SampleClassReferenced.class.getDeclaredField("samples");
+                Property prop = processor.getPropertyForField(field);
+
+                Assert.assertEquals(
+                    "com.michaelhradek.aurkitu.test.flatbuffer." + SampleClassNamespaceMap.class.getSimpleName(),
+                    prop.options.get(PropertyOptionKey.ARRAY)
+                );
+            }
+        }
+    }
+
+    @Test
+    public void testGetClassForClassName() throws Exception {
+        File testPom = new File(getBasedir(), "src/test/resources/plugin-basic-with-project/pom.xml");
+
+        Application mojo = new Application();
+        mojo = (Application) this.configureMojo(
+            mojo, extractPluginConfiguration(Application.MOJO_NAME, testPom)
+        );
+
+        Field projectField = mojo.getClass().getDeclaredField("project");
+        projectField.setAccessible(true);
+        AurkituTestMavenProjectStub mavenProject = (AurkituTestMavenProjectStub) projectField.get(mojo);
+
+        Assert.assertNotNull(mavenProject);
+
+        Class<?> clazz = Processor.getClassForClassName(mavenProject, AurkituTestSettingsStub.class.getName());
+        Assert.assertNotNull(clazz);
+        Assert.assertEquals(AurkituTestSettingsStub.class.getName(), clazz.getName());
     }
 }

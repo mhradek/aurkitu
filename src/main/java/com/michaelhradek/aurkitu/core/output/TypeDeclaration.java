@@ -1,16 +1,11 @@
-/**
- *
- */
 package com.michaelhradek.aurkitu.core.output;
 
+import com.michaelhradek.aurkitu.annotations.FlatBufferTable.TableStructureType;
+import com.michaelhradek.aurkitu.core.output.TypeDeclaration.Property.PropertyOptionKey;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-
-import com.michaelhradek.aurkitu.annotations.FlatBufferTable.TableStructureType;
-
 import lombok.Getter;
 import lombok.Setter;
 
@@ -71,30 +66,18 @@ public class TypeDeclaration {
             builder.append(":");
             if (property.type == FieldType.ARRAY) {
                 builder.append("[");
-                builder.append(property.options.get(Property.PropertyOptionKey.ARRAY));
+                builder.append(property.options.get(PropertyOptionKey.ARRAY));
                 builder.append("]");
             } else if (property.type == FieldType.IDENT) {
-                builder.append(property.options.get(Property.PropertyOptionKey.IDENT));
+                builder.append(property.options.get(PropertyOptionKey.IDENT));
             } else {
                 builder.append(property.type.toString());
             }
 
-            if (!property.options.isEmpty()) {
-                for (Entry<TypeDeclaration.Property.PropertyOptionKey, String> option : property.options.entrySet()) {
-                    if (option.getKey() == Property.PropertyOptionKey.ARRAY) {
-                        // Already grabbed this if we handled arrays above
-                        continue;
-                    }
-
-                    if (option.getKey() == Property.PropertyOptionKey.IDENT) {
-                        // Already grabbed this if we handled indent above
-                        continue;
-                    }
-
-                    builder.append(" ");
-                    builder.append(option.getValue());
-                    builder.append(" ");
-                }
+            // This needs to be right before the property terminating character (i.e. ";")
+            if (property.options.get(PropertyOptionKey.DEFAULT_VALUE) != null) {
+                builder.append(" = ");
+                builder.append(property.options.get(PropertyOptionKey.DEFAULT_VALUE));
             }
 
             builder.append(";");
@@ -106,5 +89,24 @@ public class TypeDeclaration {
         builder.append(System.lineSeparator());
 
         return builder.toString();
+    }
+
+    @Override
+    public int hashCode() {
+        if (name == null) {
+            return super.hashCode();
+        }
+
+        return name.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o instanceof TypeDeclaration) {
+            TypeDeclaration toCompare = (TypeDeclaration) o;
+            return this.name.equals(toCompare.name);
+        }
+
+        return false;
     }
 }

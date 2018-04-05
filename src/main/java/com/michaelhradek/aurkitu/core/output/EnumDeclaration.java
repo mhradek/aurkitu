@@ -1,13 +1,8 @@
-/**
- *
- */
 package com.michaelhradek.aurkitu.core.output;
 
+import com.michaelhradek.aurkitu.annotations.FlatBufferEnum.EnumStructureType;
 import java.util.ArrayList;
 import java.util.List;
-
-import com.michaelhradek.aurkitu.annotations.FlatBufferEnum.EnumStructureType;
-
 import lombok.Getter;
 import lombok.Setter;
 
@@ -62,5 +57,24 @@ public class EnumDeclaration {
         builder.append(System.lineSeparator());
 
         return builder.toString();
+    }
+
+    @Override
+    public int hashCode() {
+        if (name == null) {
+            return super.hashCode();
+        }
+
+        return name.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o instanceof EnumDeclaration) {
+            EnumDeclaration toCompare = (EnumDeclaration) o;
+            return this.hashCode() == o.hashCode();
+        }
+
+        return false;
     }
 }

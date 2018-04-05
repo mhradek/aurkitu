@@ -2,11 +2,35 @@ package com.michaelhradek.aurkitu.core;
 
 import com.michaelhradek.aurkitu.Application;
 import com.michaelhradek.aurkitu.core.output.Schema;
-import org.apache.maven.plugin.testing.stubs.MavenProjectStub;
+import org.apache.maven.plugin.testing.AbstractMojoTestCase;
+import org.apache.maven.plugin.testing.MojoRule;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
 
-public class UtilitiesTest {
+public class UtilitiesTest extends AbstractMojoTestCase {
+
+    /**
+     * @see junit.framework.TestCase#setUp()
+     */
+    @Override
+    protected void setUp() throws Exception {
+
+        // required for mojo lookups to work
+        super.setUp();
+    }
+
+    @Rule
+    public MojoRule rule = new MojoRule() {
+
+        @Override
+        protected void before() throws Throwable {
+        }
+
+        @Override
+        protected void after() {
+        }
+    };
 
     @Test
     public void testIsLowerCaseType() {
@@ -45,12 +69,12 @@ public class UtilitiesTest {
     }
 
     @Test
-    public void testBuildReflections() {
+    public void testBuildProjectClasspathList() throws Exception {
 
     }
 
     @Test
-    public void testBuildProjectClasspathList() {
+    public void testBuildReflections() {
 
     }
 }
