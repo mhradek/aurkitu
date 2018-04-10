@@ -13,10 +13,11 @@ import lombok.Setter;
 @Setter
 public class EnumDeclaration {
 
-    public String name;
-    public EnumStructureType structure;
-    public FieldType type;
-    public List<String> values = new ArrayList<String>();
+    private String name;
+    private EnumStructureType structure;
+    private EnumType type;
+    private List<String> values = new ArrayList<String>();
+    private String comment;
 
     public EnumDeclaration(EnumStructureType structure) {
         this.structure = structure;
@@ -35,7 +36,14 @@ public class EnumDeclaration {
 
     @Override
     public String toString() {
-        StringBuilder builder = new StringBuilder(structure.name().toLowerCase());
+        StringBuilder builder = new StringBuilder();
+        if (comment != null && !comment.isEmpty()) {
+            builder.append("// ");
+            builder.append(comment);
+            builder.append(System.lineSeparator());
+        }
+
+        builder.append(structure.name().toLowerCase());
         builder.append(" ");
         builder.append(name);
         if (type != null) {

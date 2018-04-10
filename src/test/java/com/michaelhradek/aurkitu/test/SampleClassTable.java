@@ -1,5 +1,6 @@
 package com.michaelhradek.aurkitu.test;
 
+import com.michaelhradek.aurkitu.annotations.FlatBufferComment;
 import com.michaelhradek.aurkitu.annotations.FlatBufferFieldOptions;
 import com.michaelhradek.aurkitu.annotations.FlatBufferIgnore;
 import com.michaelhradek.aurkitu.annotations.FlatBufferTable;
@@ -10,11 +11,13 @@ import java.util.List;
 /**
  * @author m.hradek
  */
+@FlatBufferComment(comment = "This is a type level comment")
 @FlatBufferTable(rootType = true)
 public class SampleClassTable {
 
     protected long id;
     protected String name;
+    @FlatBufferComment(comment = "This is a field level comment")
     protected short level;
     protected int currency;
     protected long createTime;
@@ -34,6 +37,7 @@ public class SampleClassTable {
     @FlatBufferFieldOptions(fieldType = FieldType.IDENT, useFullName = true)
     SampleClassReferenced fullnameClass;
 
+    @FlatBufferComment(comment = "This is a comment which won't appear")
     @FlatBufferIgnore
     protected String ignore;
 }

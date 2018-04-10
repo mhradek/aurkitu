@@ -5,6 +5,7 @@ import com.michaelhradek.aurkitu.Config;
 import com.michaelhradek.aurkitu.annotations.FlatBufferEnum;
 import com.michaelhradek.aurkitu.annotations.FlatBufferTable;
 import com.michaelhradek.aurkitu.core.output.EnumDeclaration;
+import com.michaelhradek.aurkitu.core.output.EnumType;
 import com.michaelhradek.aurkitu.core.output.FieldType;
 import com.michaelhradek.aurkitu.core.output.Schema;
 import com.michaelhradek.aurkitu.core.output.TypeDeclaration;
@@ -23,7 +24,6 @@ import com.michaelhradek.aurkitu.test.other.SampleAnonymousEnum;
 import com.michaelhradek.aurkitu.test.other.SampleClassNamespaceMap;
 import java.io.File;
 import java.lang.reflect.Field;
-import java.net.URLClassLoader;
 import java.util.HashMap;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
@@ -61,7 +61,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
     };
 
     /**
-     * @throws java.lang.Exception
+     * @throws java.lang.Exception via super
      */
     @After
     public void tearDown() throws Exception {
@@ -84,9 +84,9 @@ public class ProcessorTest extends AbstractMojoTestCase {
         schema.addAttribute("ConsiderThis");
         schema.addInclude("AnotherFile.fbs");
 
-        Assert.assertEquals(13, processor.getTargetClasses().size());
+        Assert.assertEquals(11, processor.getTargetClasses().size());
         Assert.assertEquals(8, schema.getTypes().size());
-        Assert.assertEquals(9, schema.getEnums().size());
+        Assert.assertEquals(7, schema.getEnums().size());
 
         Assert.assertEquals("SampleClassTable", schema.getRootType());
 
@@ -106,15 +106,16 @@ public class ProcessorTest extends AbstractMojoTestCase {
         Assert.assertEquals(1, processor.getSourceAnnotations().size());
         Schema schema = processor.buildSchema();
 
-        Assert.assertEquals(7, processor.getTargetClasses().size());
+        Assert.assertEquals(5, processor.getTargetClasses().size());
         Assert.assertEquals(0, schema.getTypes().size());
-        Assert.assertEquals(7, schema.getEnums().size());
+        Assert.assertEquals(5, schema.getEnums().size());
 
         Assert.assertEquals(null, schema.getRootType());
 
         for (EnumDeclaration enumD : schema.getEnums()) {
             if (enumD.getName().equals(SampleEnumByte.class.getSimpleName())) {
-                Assert.assertEquals(FieldType.BYTE, enumD.getType());
+                Assert.assertEquals(EnumType.BYTE, enumD.getType());
+                Assert.assertNull(enumD.getComment());
 
                 if (Config.DEBUG) {
                     System.out.println(enumD.toString());
@@ -123,14 +124,25 @@ public class ProcessorTest extends AbstractMojoTestCase {
                 continue;
             }
 
+            // Undefined defaults to EnumType.BYTE
             if (enumD.getName().equals(SampleEnumNull.class.getSimpleName())) {
-                Assert.assertEquals(null, enumD.getType());
+                Assert.assertEquals(EnumType.BYTE, enumD.getType());
+                Assert.assertNull(enumD.getComment());
 
                 if (Config.DEBUG) {
                     System.out.println(enumD.toString());
                 }
 
                 continue;
+            }
+
+            if (enumD.getName().equals(SampleAnonymousEnum.class.getSimpleName())) {
+                Assert.assertEquals(EnumType.SHORT, enumD.getType());
+                Assert.assertNotNull(enumD.getComment());
+
+                if (Config.DEBUG) {
+                    System.out.println(enumD.toString());
+                }
             }
         }
     }
@@ -147,28 +159,38 @@ public class ProcessorTest extends AbstractMojoTestCase {
 
         Assert.assertEquals(6, processor.getTargetClasses().size());
         Assert.assertEquals(8, schema.getTypes().size());
-        Assert.assertEquals(7, schema.getEnums().size());
+        Assert.assertEquals(5, schema.getEnums().size());
 
         Assert.assertEquals("SampleClassTable", schema.getRootType());
 
         for (TypeDeclaration type : schema.getTypes()) {
 
             if (type.getName().equals(SampleClassTable.class.getSimpleName())) {
-                Assert.assertEquals(14, type.properties.size());
+                Assert.assertEquals(14, type.getProperties().size());
+
+                Assert.assertNotNull(type.getComment());
 
                 for (Property property : type.getProperties()) {
                     if (property.name.equals("innerEnum")) {
-                        Assert.assertEquals("SHORT_SWORD", property.options.get(PropertyOptionKey.DEFAULT_VALUE));
+                        Assert.assertEquals("SHORT_SWORD",
+                            property.options.get(PropertyOptionKey.DEFAULT_VALUE));
+                        Assert.assertNull(property.options.get(PropertyOptionKey.COMMENT));
                     }
 
                     if (property.name.equals("definedInnerEnumArray")) {
                         Assert.assertEquals(SampleClassTableInnerEnumInt.class.getName(),
                             property.options.get(PropertyOptionKey.ARRAY));
+                        Assert.assertNull(property.options.get(PropertyOptionKey.COMMENT));
                     }
 
                     if (property.name.equals("fullnameClass")) {
                         Assert.assertEquals(SampleClassReferenced.class.getName(),
                             property.options.get(PropertyOptionKey.IDENT));
+                        Assert.assertNull(property.options.get(PropertyOptionKey.COMMENT));
+                    }
+
+                    if (property.name.equals("level")) {
+                        Assert.assertNotNull(property.options.get(PropertyOptionKey.COMMENT));
                     }
                 }
 
@@ -180,7 +202,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
             }
 
             if (type.getName().equals(SampleClassReferenced.class.getSimpleName())) {
-                Assert.assertEquals(4, type.properties.size());
+                Assert.assertEquals(4, type.getProperties().size());
                 // TODO More tests here
 
                 if (Config.DEBUG) {
@@ -191,7 +213,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
             }
 
             if (type.getName().equals(SampleClassStruct.class.getSimpleName())) {
-                Assert.assertEquals(3, type.properties.size());
+                Assert.assertEquals(3, type.getProperties().size());
                 // TODO More tests here
 
                 if (Config.DEBUG) {
@@ -202,7 +224,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
             }
 
             if (type.getName().equals(SampleClassReferenced.InnerClassStatic.class.getSimpleName())) {
-                Assert.assertEquals(1, type.properties.size());
+                Assert.assertEquals(1, type.getProperties().size());
                 // TODO More tests here
 
                 if (Config.DEBUG) {
@@ -213,7 +235,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
             }
 
             if (type.getName().equals(SampleClassReferenced.InnerClass.class.getSimpleName())) {
-                Assert.assertEquals(2, type.properties.size());
+                Assert.assertEquals(2, type.getProperties().size());
                 // TODO More tests here
 
                 if (Config.DEBUG) {
@@ -224,7 +246,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
             }
 
             if (type.getName().equals(SampleClassTableWithUndefined.class.getSimpleName())) {
-                Assert.assertEquals(3, type.properties.size());
+                Assert.assertEquals(3, type.getProperties().size());
                 // TODO More tests here
 
                 if (Config.DEBUG) {
@@ -235,7 +257,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
             }
 
             if (type.getName().equals(SampleClassNamespaceMap.class.getSimpleName())) {
-                Assert.assertEquals(1, type.properties.size());
+                Assert.assertEquals(1, type.getProperties().size());
                 // TODO More tests here
 
                 if (Config.DEBUG) {
@@ -246,7 +268,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
             }
 
             if (type.getName().equals(SampleAnonymousEnum.class.getSimpleName())) {
-                Assert.assertEquals(6, type.properties.size());
+                Assert.assertEquals(4, type.getProperties().size());
                 // TODO More tests here
 
                 if (Config.DEBUG) {
@@ -264,8 +286,8 @@ public class ProcessorTest extends AbstractMojoTestCase {
      * Test method for
      * {@link com.michaelhradek.aurkitu.core.Processor#getPropertyForField(java.lang.reflect.Field)}.
      *
-     * @throws SecurityException
-     * @throws NoSuchFieldException
+     * @throws SecurityException if unable to access field via getDeclaredField()
+     * @throws NoSuchFieldException if unable to locate field via getDeclaredField()
      */
     @Test
     public void testGetPropertyForField() throws NoSuchFieldException, SecurityException {
@@ -287,7 +309,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
         prop = processor.getPropertyForField(field);
         Assert.assertEquals("level", prop.name);
         Assert.assertEquals(FieldType.SHORT, prop.type);
-        Assert.assertEquals(true, prop.options.isEmpty());
+        Assert.assertEquals(false, prop.options.isEmpty());
 
         field = SampleClassTable.class.getDeclaredField("currency");
         prop = processor.getPropertyForField(field);
@@ -323,32 +345,17 @@ public class ProcessorTest extends AbstractMojoTestCase {
         Schema schema = new Schema();
         Field field = schema.getClass().getDeclaredField("enums");
 
-        Processor processor = new Processor();
-        Assert.assertEquals(EnumDeclaration.class.getName(), processor.parseFieldSignatureForParametrizedTypeString(field));
+        Assert.assertEquals(EnumDeclaration.class.getName(),
+            Processor.parseFieldSignatureForParametrizedTypeString(field));
 
         Class<?> testClass = Class.forName(SampleClassTable.class.getName());
         field = testClass.getDeclaredField("tokens");
-        Assert.assertEquals(String.class.getName(), processor.parseFieldSignatureForParametrizedTypeString(field));
+        Assert.assertEquals(String.class.getName(), Processor.parseFieldSignatureForParametrizedTypeString(field));
 
         testClass = Class.forName(SampleClassReferenced.class.getName());
         field = testClass.getDeclaredField("baggage");
-        Assert.assertEquals(SampleClassTable.class.getName(), processor.parseFieldSignatureForParametrizedTypeString(field));
-    }
-
-    @Test
-    public void testExecuteActionOnSpecifiedClassLoader() {
-        Class<?> result;
-
-        result = Processor.executeActionOnSpecifiedClassLoader(URLClassLoader.getSystemClassLoader(), new Processor.ExecutableAction<Class<?>>() {
-
-            public Class<?> run() {
-                try {
-                    return Class.forName(SampleClassTable.class.getName());
-                } catch (ClassNotFoundException e) {
-                    return null;
-                }
-            }
-        });
+        Assert.assertEquals(SampleClassTable.class.getName(),
+            Processor.parseFieldSignatureForParametrizedTypeString(field));
     }
 
     @Test

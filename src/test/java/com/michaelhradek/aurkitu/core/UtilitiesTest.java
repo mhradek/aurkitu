@@ -2,6 +2,8 @@ package com.michaelhradek.aurkitu.core;
 
 import com.michaelhradek.aurkitu.Application;
 import com.michaelhradek.aurkitu.core.output.Schema;
+import com.michaelhradek.aurkitu.test.SampleClassTable;
+import java.net.URLClassLoader;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
 import org.apache.maven.plugin.testing.MojoRule;
 import org.junit.Assert;
@@ -66,6 +68,24 @@ public class UtilitiesTest extends AbstractMojoTestCase {
         Assert.assertFalse(Utilities.isLowerCaseType(schema.getClass()));
 
         Assert.assertFalse(Utilities.isLowerCaseType(Application.class));
+    }
+
+    @Test
+    public void testExecuteActionOnSpecifiedClassLoader() {
+        Class<?> result = Utilities.executeActionOnSpecifiedClassLoader(URLClassLoader.getSystemClassLoader(),
+            new Utilities.ExecutableAction<Class<?>>() {
+
+                public Class<?> run() {
+                    try {
+                        return Class.forName(SampleClassTable.class.getName());
+                    } catch (ClassNotFoundException e) {
+                        return null;
+                    }
+                }
+            });
+
+        Assert.assertNotNull(result);
+        Assert.assertEquals(SampleClassTable.class, result);
     }
 
     @Test

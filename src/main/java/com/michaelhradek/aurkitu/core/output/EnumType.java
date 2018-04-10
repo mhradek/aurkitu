@@ -1,13 +1,18 @@
-/**
- *
- */
 package com.michaelhradek.aurkitu.core.output;
 
 /**
  * @author m.hradek
  */
 public enum EnumType {
-    ENUM, UNION;
+    BYTE(byte.class), UBYTE(byte.class), SHORT(short.class), USHORT(
+        short.class), INT(int.class), UINT(int.class), LONG(long.class), ULONG(
+        long.class);
+
+    public Class<?> targetClass;
+
+    EnumType(Class<?> targetClass) {
+        this.targetClass = targetClass;
+    }
 
     @Override
     public String toString() {

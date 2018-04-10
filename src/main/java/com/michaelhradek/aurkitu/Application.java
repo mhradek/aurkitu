@@ -123,7 +123,8 @@ public class Application extends AbstractMojo {
         if (validateSchema) {
             Validator validator = new Validator().withSchema(schema);
             validator.validateSchema();
-            schema.setValidSchema(validator.getErrors().isEmpty());
+            schema.setIsValidSchema(validator.getErrors().isEmpty());
+            schema.setValidator(validator);
             Application.getLogger().info(validator.getErrorComments());
         }
 

@@ -1,6 +1,7 @@
 package com.michaelhradek.aurkitu.core.output;
 
 import com.michaelhradek.aurkitu.Config;
+import com.michaelhradek.aurkitu.core.Validator;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -30,7 +31,8 @@ public class Schema {
 
     // Aurkitu values
     boolean generateVersion;
-    boolean isValidSchema;
+    Boolean isValidSchema;
+    Validator validator;
 
     public Schema() {
         enums = new ArrayList<EnumDeclaration>();
@@ -208,9 +210,10 @@ public class Schema {
         }
 
         if (rootType != null) {
-            builder.append("root_type: ");
+            builder.append("root_type ");
             builder.append(rootType);
             builder.append(";");
+            builder.append(System.lineSeparator());
             builder.append(System.lineSeparator());
         }
 
@@ -221,6 +224,7 @@ public class Schema {
             builder.append("\"");
             builder.append(";");
             builder.append(System.lineSeparator());
+            builder.append(System.lineSeparator());
         }
 
         if (fileExtension != null) {
@@ -230,6 +234,11 @@ public class Schema {
             builder.append("\"");
             builder.append(";");
             builder.append(System.lineSeparator());
+            builder.append(System.lineSeparator());
+        }
+
+        if (isValidSchema != null) {
+            builder.append(validator.getErrorComments());
         }
 
         String result = builder.toString();

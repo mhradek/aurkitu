@@ -31,7 +31,7 @@ import org.reflections.util.ConfigurationBuilder;
  * @author m.hradek
  *
  */
-public class Utilities {
+class Utilities {
 
     private static Set<Artifact> dependencyArtifactsCache;
     private static List<String> classpathElementsCache;
@@ -157,5 +157,42 @@ public class Utilities {
         }
 
         return projectClasspathList.toArray(new URL[]{});
+    }
+
+    /**
+     * @param classLoaderToSwitchTo which will be used temporarily during the operation
+     * @param actionToPerformOnProvidedClassLoader a ExecutableAction
+     * @param <T> resulting type
+     * @return the result
+     */
+    public static synchronized <T> T executeActionOnSpecifiedClassLoader(final ClassLoader classLoaderToSwitchTo,
+        final ExecutableAction<T> actionToPerformOnProvidedClassLoader) {
+
+        final ClassLoader originalClassLoader = Thread.currentThread().getContextClassLoader();
+
+        try {
+            Thread.currentThread().setContextClassLoader(classLoaderToSwitchTo);
+            for (URL url : ((URLClassLoader) (Thread.currentThread().getContextClassLoader())).getURLs()) {
+                Application.getLogger().debug("Classloader loaded with: " + url.toString());
+            }
+
+            return actionToPerformOnProvidedClassLoader.run();
+        } finally {
+            Thread.currentThread().setContextClassLoader(originalClassLoader);
+        }
+    }
+
+    /**
+     * Encapsulates action to be executed.
+     */
+    public interface ExecutableAction<T> {
+
+        /**
+         * Execute the operation.
+         *
+         * @return Optional value returned by this operation; implementations should document what, if anything, is
+         * returned by implementations of this method.
+         */
+        T run();
     }
 }

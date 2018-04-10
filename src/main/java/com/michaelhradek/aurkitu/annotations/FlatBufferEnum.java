@@ -1,13 +1,9 @@
-/**
- *
- */
 package com.michaelhradek.aurkitu.annotations;
 
+import com.michaelhradek.aurkitu.core.output.EnumType;
 import java.lang.annotation.Documented;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
-
-import com.michaelhradek.aurkitu.core.output.FieldType;
 
 /**
  * @author m.hradek
@@ -20,9 +16,15 @@ import com.michaelhradek.aurkitu.core.output.FieldType;
 public @interface FlatBufferEnum {
   EnumStructureType value() default EnumStructureType.ENUM;
 
-  FieldType enumType() default FieldType.STRING;
+    // Defaulting to the smallest size
+    EnumType enumType() default EnumType.BYTE;
 
-  public enum EnumStructureType {
-    ENUM, UNION
+    enum EnumStructureType {
+        ENUM, UNION;
+
+        @Override
+        public String toString() {
+            return this.name().toLowerCase();
+        }
   }
 }

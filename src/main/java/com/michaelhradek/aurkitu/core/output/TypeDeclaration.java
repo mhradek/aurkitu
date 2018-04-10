@@ -16,10 +16,11 @@ import lombok.Setter;
 @Setter
 public class TypeDeclaration {
 
-    public String name;
-    public boolean isRoot;
-    public TableStructureType structure;
-    public List<Property> properties = new ArrayList<Property>();
+    private String name;
+    private boolean isRoot;
+    private TableStructureType structure;
+    private List<Property> properties = new ArrayList<Property>();
+    private String comment;
 
     public TypeDeclaration(TableStructureType structure) {
         this.structure = structure;
@@ -48,13 +49,21 @@ public class TypeDeclaration {
         public enum PropertyOptionKey {
             ARRAY,
             IDENT,
-            DEFAULT_VALUE
+            DEFAULT_VALUE,
+            COMMENT
         }
     }
 
     @Override
     public String toString() {
-        StringBuilder builder = new StringBuilder(structure.name().toLowerCase());
+        StringBuilder builder = new StringBuilder();
+        if (comment != null && !comment.isEmpty()) {
+            builder.append("// ");
+            builder.append(comment);
+            builder.append(System.lineSeparator());
+        }
+
+        builder.append(structure.name().toLowerCase());
         builder.append(" ");
         builder.append(name);
         builder.append(" {");
@@ -81,6 +90,12 @@ public class TypeDeclaration {
             }
 
             builder.append(";");
+
+            if (property.options.get(PropertyOptionKey.COMMENT) != null) {
+                builder.append("\t// ");
+                builder.append(property.options.get(PropertyOptionKey.COMMENT));
+            }
+
             builder.append(System.lineSeparator());
         }
 

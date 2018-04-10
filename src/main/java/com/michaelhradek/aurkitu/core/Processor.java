@@ -1,15 +1,18 @@
 package com.michaelhradek.aurkitu.core;
 
 import com.michaelhradek.aurkitu.Application;
+import com.michaelhradek.aurkitu.annotations.FlatBufferComment;
 import com.michaelhradek.aurkitu.annotations.FlatBufferEnum;
 import com.michaelhradek.aurkitu.annotations.FlatBufferEnumTypeField;
 import com.michaelhradek.aurkitu.annotations.FlatBufferFieldOptions;
 import com.michaelhradek.aurkitu.annotations.FlatBufferIgnore;
 import com.michaelhradek.aurkitu.annotations.FlatBufferTable;
 import com.michaelhradek.aurkitu.core.output.EnumDeclaration;
+import com.michaelhradek.aurkitu.core.output.EnumType;
 import com.michaelhradek.aurkitu.core.output.FieldType;
 import com.michaelhradek.aurkitu.core.output.Schema;
 import com.michaelhradek.aurkitu.core.output.TypeDeclaration;
+import com.michaelhradek.aurkitu.core.output.TypeDeclaration.Property;
 import com.michaelhradek.aurkitu.core.output.TypeDeclaration.Property.PropertyOptionKey;
 import java.io.File;
 import java.io.IOException;
@@ -164,7 +167,7 @@ public class Processor {
      * @param enumClass Class to test if it is an Enum
      * @return boolean
      */
-    boolean isEnumWorkaround(Class<?> enumClass) {
+    private boolean isEnumWorkaround(Class<?> enumClass) {
         if (enumClass.isAnonymousClass()) {
             enumClass = enumClass.getSuperclass();
         }
@@ -188,11 +191,18 @@ public class Processor {
             Application.getLogger().debug("Enum structure: " + myFlatBufferEnum.value());
             enumD.setStructure(myFlatBufferEnum.value());
             Application.getLogger().debug("Enum type: " + myFlatBufferEnum.enumType());
-            if (myFlatBufferEnum.enumType() != FieldType.STRING) {
-                enumD.setType(myFlatBufferEnum.enumType());
-            }
+            enumD.setType(myFlatBufferEnum.enumType());
         } else {
             Application.getLogger().debug("Not FlatBufferEnum (likely inner class); Generic enum created");
+        }
+
+        annotation = clazz.getAnnotation(FlatBufferComment.class);
+        if (annotation != null) {
+            String comment = ((FlatBufferComment) annotation).comment();
+            if (!comment.isEmpty()) {
+                Application.getLogger().debug("Found a comment assign to enum: " + comment);
+                enumD.setComment(comment);
+            }
         }
 
         Field[] fields = clazz.getDeclaredFields();
@@ -211,7 +221,7 @@ public class Processor {
                     // Verify the declaration on the enum matches the declaration of the field
                     if (enumD.getType() == null) {
                         throw new IllegalArgumentException(
-                            "Missing @FlatBufferEnum(enumType = FieldType.<SELECT>) declaration or remove @FlatBufferEnumTypeField for: "
+                            "Missing @FlatBufferEnum(enumType = EnumType.<SELECT>) declaration or remove @FlatBufferEnumTypeField for: "
                                 + clazz.getName());
                     }
 
@@ -240,37 +250,28 @@ public class Processor {
                 try {
                     final String temp = constant.toString() + " = ";
 
-                    if (enumD.getType() == FieldType.BYTE || enumD.getType() == FieldType.UBYTE) {
+                    if (enumD.getType() == EnumType.BYTE || enumD.getType() == EnumType.UBYTE) {
                         enumD.addValue(temp + valueField.getByte(constant));
                         continue;
                     }
 
-                    if (enumD.getType() == FieldType.SHORT || enumD.getType() == FieldType.USHORT) {
+                    if (enumD.getType() == EnumType.SHORT || enumD.getType() == EnumType.USHORT) {
                         enumD.addValue(temp + valueField.getShort(constant));
                         continue;
                     }
 
-                    if (enumD.getType() == FieldType.LONG || enumD.getType() == FieldType.ULONG) {
+                    if (enumD.getType() == EnumType.LONG || enumD.getType() == EnumType.ULONG) {
                         enumD.addValue(temp + valueField.getLong(constant));
                         continue;
                     }
 
-                    if (enumD.getType() == FieldType.INT || enumD.getType() == FieldType.UINT) {
+                    if (enumD.getType() == EnumType.INT || enumD.getType() == EnumType.UINT) {
                         enumD.addValue(temp + valueField.getInt(constant));
                         continue;
                     }
 
-                    if (enumD.getType() == FieldType.FLOAT) {
-                        enumD.addValue(temp + valueField.getFloat(constant));
-                        continue;
-                    }
-
-                    if (enumD.getType() == FieldType.DOUBLE) {
-                        enumD.addValue(temp + valueField.getDouble(constant));
-                        continue;
-                    }
-
-                    enumD.addValue(temp + valueField.get(constant));
+                    throw new IllegalArgumentException(
+                        "Enum type must be integral (i.e. byte, ubyte, short, ushort, int, unint, long, or ulong");
                 } catch (IllegalAccessException e) {
                     Application.getLogger().error("Not allowed to grab Enum field value: ", e);
                 }
@@ -305,6 +306,15 @@ public class Processor {
             Application.getLogger().debug("Not FlatBufferTable (likely inner class); Generic table created");
         }
 
+        annotation = clazz.getAnnotation(FlatBufferComment.class);
+        if (annotation != null) {
+            String comment = ((FlatBufferComment) annotation).comment();
+            if (comment != null && !comment.isEmpty()) {
+                Application.getLogger().debug("Found a comment assign to type: " + comment);
+                type.setComment(comment);
+            }
+        }
+
         List<Field> fields = getDeclaredAndInheritedPrivateFields(clazz);
         for (Field field : fields) {
             Application.getLogger().debug("Number of annotations found: " + field.getDeclaredAnnotations().length);
@@ -326,7 +336,7 @@ public class Processor {
      *        considered as candidates for declaration
      * @return A list of valid fields
      */
-    List<Field> getDeclaredAndInheritedPrivateFields(Class<?> type) {
+    private List<Field> getDeclaredAndInheritedPrivateFields(Class<?> type) {
         List<Field> result = new ArrayList<Field>();
 
         Class<?> clazz = type;
@@ -348,8 +358,8 @@ public class Processor {
      *         {@link FieldType}. When encountering an array or ident (Indentifier) the options
      *         property is used to store additional information.
      */
-    TypeDeclaration.Property getPropertyForField(final Field field) {
-        TypeDeclaration.Property property = new TypeDeclaration.Property();
+    Property getPropertyForField(final Field field) {
+        Property property = new Property();
 
         // Some uses in which we reference other namespaces require us to declare the entirety of
         // the name
@@ -357,9 +367,18 @@ public class Processor {
         boolean useFullName = false;
         String defaultValue = null;
 
-        if (annotation != null && annotation instanceof FlatBufferFieldOptions) {
+        if (annotation != null) {
             useFullName = ((FlatBufferFieldOptions) annotation).useFullName();
             defaultValue = ((FlatBufferFieldOptions) annotation).defaultValue();
+        }
+
+        annotation = field.getAnnotation(FlatBufferComment.class);
+        if (annotation != null) {
+            String comment = ((FlatBufferComment) annotation).comment();
+            if (!comment.isEmpty()) {
+                Application.getLogger().debug("Found a comment assign to field: " + comment);
+                property.options.put(PropertyOptionKey.COMMENT, comment);
+            }
         }
 
         if (defaultValue != null && !defaultValue.isEmpty()) {
@@ -447,7 +466,7 @@ public class Processor {
             }
 
             // In the end Array[] and List<?> are represented the same way.
-            property.options.put(TypeDeclaration.Property.PropertyOptionKey.ARRAY, name);
+            property.options.put(Property.PropertyOptionKey.ARRAY, name);
             return property;
         }
 
@@ -492,7 +511,7 @@ public class Processor {
                 name = name.toLowerCase();
             }
 
-            property.options.put(TypeDeclaration.Property.PropertyOptionKey.ARRAY, name);
+            property.options.put(Property.PropertyOptionKey.ARRAY, name);
             return property;
         }
 
@@ -503,7 +522,7 @@ public class Processor {
         property.type = FieldType.IDENT;
 
         Type fieldType = field.getGenericType();
-        String identName = fieldType.getTypeName();
+        String identName;
 
         try {
             if (artifactReference != null && artifactReference.getMavenProject() != null) {
@@ -559,7 +578,7 @@ public class Processor {
             }
         }
 
-        property.options.put(TypeDeclaration.Property.PropertyOptionKey.IDENT, identName);
+        property.options.put(Property.PropertyOptionKey.IDENT, identName);
         return property;
     }
 
@@ -610,43 +629,5 @@ public class Processor {
         Application.getLogger().debug("Derived class: " + typeSignature);
 
         return typeSignature;
-    }
-
-    /**
-     *
-     * @param classLoaderToSwitchTo which will be used temporarily during the operation
-     * @param actionToPerformOnProvidedClassLoader a ExecutableAction
-     * @param <T> resulting type
-     * @return the result
-     */
-    public static synchronized <T> T executeActionOnSpecifiedClassLoader(final ClassLoader classLoaderToSwitchTo,
-            final ExecutableAction<T> actionToPerformOnProvidedClassLoader) {
-
-        final ClassLoader originalClassLoader = Thread.currentThread().getContextClassLoader();
-
-        try {
-            Thread.currentThread().setContextClassLoader(classLoaderToSwitchTo);
-            for (URL url : ((URLClassLoader) (Thread.currentThread().getContextClassLoader())).getURLs()) {
-                Application.getLogger().debug("Classloader loaded with: " + url.toString());
-            }
-
-            return actionToPerformOnProvidedClassLoader.run();
-        } finally {
-            Thread.currentThread().setContextClassLoader(originalClassLoader);
-        }
-    }
-
-    /**
-     * Encapsulates action to be executed.
-     *
-     */
-    public interface ExecutableAction<T> {
-        /**
-         * Execute the operation.
-         *
-         * @return Optional value returned by this operation; implementations should document what,
-         *         if anything, is returned by implementations of this method.
-         */
-        T run();
     }
 }

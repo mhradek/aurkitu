@@ -19,7 +19,7 @@ This is a very early proof-of-concept currently being developed in spare time.
 - [x] handle core types
 - [ ] handle options, deprecation, and default values
 - [ ] validate dependencies (optional)
-- [ ] implement as plugin and test against a sample project
+- [x] implement as plugin and test against a sample project
 - [ ] test with flatc
 - [ ] update with current (1.8) feature support (i.e. gRPC, Field, String constant, etc.)
 - [x] release to maven
