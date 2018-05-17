@@ -7,6 +7,7 @@ import com.michaelhradek.aurkitu.annotations.FlatBufferTable;
 import com.michaelhradek.aurkitu.core.output.FieldType;
 import com.michaelhradek.aurkitu.test.SampleClassReferenced.SampleClassTableInnerEnumInt;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author m.hradek
@@ -27,6 +28,7 @@ public class SampleClassTable {
     protected Double weight;
     protected int[] options;
     protected SimpleUndefinedClass[] anomalousSamples;
+    public Map<String, Object> dataMap;
 
     @FlatBufferFieldOptions(fieldType = FieldType.IDENT, useFullName = true)
     protected SampleClassTableInnerEnumInt[] definedInnerEnumArray;

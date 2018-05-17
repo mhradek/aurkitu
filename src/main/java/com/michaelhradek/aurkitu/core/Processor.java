@@ -45,6 +45,7 @@ public class Processor {
     private ArtifactReference artifactReference;
     private Set<String> warnedTypeNames;
     private Map<String, String> namespaceOverrideMap;
+    private Schema schema;
 
     public Processor() {
         sourceAnnotations = new ArrayList<Class<? extends Annotation>>();
@@ -105,7 +106,7 @@ public class Processor {
      * @throws MojoExecutionException when there is a MalformedURLException in the classpathElements
      */
     public Schema buildSchema() throws MojoExecutionException {
-        Schema schema = new Schema();
+        schema = new Schema();
 
         for (Class<? extends Annotation> source : sourceAnnotations) {
             if (artifactReference == null || artifactReference.getMavenProject() == null) {
@@ -466,7 +467,103 @@ public class Processor {
             }
 
             // In the end Array[] and List<?> are represented the same way.
-            property.options.put(Property.PropertyOptionKey.ARRAY, name);
+            property.options.put(PropertyOptionKey.ARRAY, name);
+            return property;
+        }
+
+        // EX: Map<String, Object>
+        if (field.getType().isAssignableFrom(Map.class)) {
+            property.name = field.getName();
+            property.type = FieldType.MAP;
+
+            // Stuff the types into this list
+            List<Property> properties = new ArrayList<Property>();
+
+            // Get the type for the key and value
+            String[] parametrizedTypeStrings = new String[]{String.class.getName(), String.class.getName()};
+            try {
+                parametrizedTypeStrings = parseFieldSignatureForParametrizedTypeStringsOnMap(field);
+            } catch (Exception e) {
+                Application.getLogger().warn("Unable to determine classes for Map<?, ?> parameter types", e);
+            }
+
+            // Attempt to load each type
+            for (int i = 0; i < parametrizedTypeStrings.length; i++) {
+                Class<?> mapTypeClass;
+                Property mapTypeProperty = new Property();
+
+                try {
+                    // Load all paths into custom classloader
+                    ClassLoader urlClassLoader = Thread.currentThread().getContextClassLoader();
+                    if (artifactReference != null && artifactReference.getMavenProject() != null) {
+                        urlClassLoader = URLClassLoader
+                            .newInstance(Utilities.buildProjectClasspathList(artifactReference), urlClassLoader);
+                    }
+
+                    // Parse Field signature
+                    mapTypeClass = urlClassLoader.loadClass(parametrizedTypeStrings[i]);
+
+                    if (mapTypeClass.getName().equals(Object.class.getName())) {
+                        Application.getLogger().warn(
+                            "Using Map<?, ?> where either `?` is `java.lang.Object` is not permitted; using `java.lang.String`");
+                        mapTypeClass = String.class;
+                    }
+                } catch (Exception e) {
+                    Application.getLogger()
+                        .warn("Unable to find and load class for Map<?, ?> parameter, using <String, String> instead: ",
+                            e);
+                    mapTypeClass = String.class;
+                }
+
+                String name = mapTypeClass.getSimpleName();
+                if (useFullName) {
+                    name = mapTypeClass.getName();
+
+                    String simpleName = mapTypeClass.getName()
+                        .substring(mapTypeClass.getName().lastIndexOf(".") + 1);
+                    String packageName = mapTypeClass.getName()
+                        .substring(0, mapTypeClass.getName().lastIndexOf(".") + 1);
+                    Application.getLogger().debug(String
+                        .format("Using full name; reviewing simpleName: %s and package: %s", simpleName,
+                            packageName));
+
+                    if (namespaceOverrideMap != null && namespaceOverrideMap.containsKey(packageName)) {
+                        name = namespaceOverrideMap.get(packageName) + simpleName;
+                        Application.getLogger().debug("Override located; using it: " + name);
+                    }
+                }
+
+                if (Utilities.isLowerCaseType(mapTypeClass)) {
+                    Application.getLogger()
+                        .debug("Array parameter is primative, wrapper, or String: " + field.getName());
+                    name = name.toLowerCase();
+                }
+
+                // Stuffing...
+                if (i == 0) {
+                    mapTypeProperty.name = "key";
+                } else {
+                    mapTypeProperty.name = "value";
+                }
+
+                mapTypeProperty.type = FieldType.IDENT;
+                mapTypeProperty.options.put(PropertyOptionKey.IDENT, name);
+                properties.add(mapTypeProperty);
+            }
+
+            // Create a new type and add it to the list of types
+            TypeDeclaration mapType = new TypeDeclaration();
+            final String mapTypeName = TypeDeclaration.MapValueSet.class.getSimpleName() + "_"
+                + field.getDeclaringClass().getSimpleName() + "_" + field.getName();
+            mapType.setName(mapTypeName);
+            mapType.setComment("Auto-generated type for use with Map<?, ?>");
+
+            // Set in this type the various types for the K/Vs used in this map
+            mapType.setProperties(properties);
+            schema.addTypeDeclaration(mapType);
+
+            // Need a way to reference back to the new generated type
+            property.options.put(PropertyOptionKey.MAP, mapTypeName);
             return property;
         }
 
@@ -484,7 +581,7 @@ public class Processor {
                     urlClassLoader = URLClassLoader.newInstance(Utilities.buildProjectClasspathList(artifactReference), urlClassLoader);
 
                 // Parse Field signature
-                String parametrizedTypeString = parseFieldSignatureForParametrizedTypeString(field);
+                String parametrizedTypeString = parseFieldSignatureForParametrizedTypeStringOnList(field);
                 listTypeClass = urlClassLoader.loadClass(parametrizedTypeString);
             } catch (Exception e) {
                 Application.getLogger().warn("Unable to find and load class for List<?> parameter, using String instead: ", e);
@@ -511,7 +608,7 @@ public class Processor {
                 name = name.toLowerCase();
             }
 
-            property.options.put(Property.PropertyOptionKey.ARRAY, name);
+            property.options.put(PropertyOptionKey.ARRAY, name);
             return property;
         }
 
@@ -616,7 +713,8 @@ public class Processor {
      * @throws NoSuchFieldException if the Field does not exist in the class
      * @throws IllegalAccessException if the Field is inaccessible
      */
-    static String parseFieldSignatureForParametrizedTypeString(Field input) throws NoSuchFieldException, IllegalAccessException {
+    static String parseFieldSignatureForParametrizedTypeStringOnList(Field input)
+        throws NoSuchFieldException, IllegalAccessException {
         Field privateField = input.getClass().getDeclaredField("signature");
         privateField.setAccessible(true);
         String signature = (String) privateField.get(input);
@@ -629,5 +727,31 @@ public class Processor {
         Application.getLogger().debug("Derived class: " + typeSignature);
 
         return typeSignature;
+    }
+
+    /**
+     * @param input The Map with a set of type declarations
+     * @return a list of String which parses {"java.lang.String", "java.lang.Object"} from the following:
+     * Ljava/util/Map<Ljava/lang/String;Ljava/lang/Object;>;
+     * @throws NoSuchFieldException if the Field does not exist in the class
+     * @throws IllegalAccessException if the Field is inaccessible
+     */
+    static String[] parseFieldSignatureForParametrizedTypeStringsOnMap(Field input)
+        throws NoSuchFieldException, IllegalAccessException {
+        Field privateField = input.getClass().getDeclaredField("signature");
+        privateField.setAccessible(true);
+        String signature = (String) privateField.get(input);
+        Application.getLogger().debug("Examining signature: " + signature);
+
+        String typeSignature = signature.substring(signature.indexOf("<") + 1, signature.indexOf(">"));
+        typeSignature = typeSignature.replaceAll("/", ".");
+        String[] listOfTypes = typeSignature.split(";");
+        for (int i = 0; i < listOfTypes.length; i++) {
+            listOfTypes[i] = listOfTypes[i].replaceAll(";", "");
+            listOfTypes[i] = listOfTypes[i].replaceFirst("[a-zA-Z]{1}", "");
+            Application.getLogger().debug(String.format("Derived class #%d: %s", i, listOfTypes[i]));
+        }
+
+        return listOfTypes;
     }
 }

@@ -1,6 +1,8 @@
 package com.michaelhradek.aurkitu.core.output;
 
 /**
+ * These are the acceptable types for Enums. Must be integral C/C++ types.
+ *
  * @author m.hradek
  */
 public enum EnumType {

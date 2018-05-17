@@ -54,6 +54,7 @@ public class Validator {
                     Application.getLogger().debug("  Examining property: " + property.name);
                     Application.getLogger().debug("  with type: " + property.type);
                     if (property.type != FieldType.IDENT && property.type != FieldType.ARRAY
+                        && property.type != FieldType.MAP
                             && Utilities.isLowerCaseType(property.type.targetClass)) {
                         Application.getLogger().debug("    Property is lower case type: " + property.name);
                         continue;

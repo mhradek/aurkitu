@@ -38,7 +38,8 @@ public class TypeDeclaration {
     }
 
     /**
-     *
+     * A TypeDeclaration contains a list of Property in addition to top level fields such as the Type's name, whether or
+     * not it is root, and potentially a comment.
      *
      */
     public static class Property {
@@ -50,7 +51,8 @@ public class TypeDeclaration {
             ARRAY,
             IDENT,
             DEFAULT_VALUE,
-            COMMENT
+            COMMENT,
+            MAP
         }
     }
 
@@ -79,6 +81,10 @@ public class TypeDeclaration {
                 builder.append("]");
             } else if (property.type == FieldType.IDENT) {
                 builder.append(property.options.get(PropertyOptionKey.IDENT));
+            } else if (property.type == FieldType.MAP) {
+                builder.append("[");
+                builder.append(property.options.get(PropertyOptionKey.MAP));
+                builder.append("]");
             } else {
                 builder.append(property.type.toString());
             }
@@ -104,6 +110,12 @@ public class TypeDeclaration {
         builder.append(System.lineSeparator());
 
         return builder.toString();
+    }
+
+    public static class MapValueSet {
+
+        public String key;
+        public String value;
     }
 
     @Override

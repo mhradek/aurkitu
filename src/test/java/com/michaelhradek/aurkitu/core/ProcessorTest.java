@@ -85,7 +85,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
         schema.addInclude("AnotherFile.fbs");
 
         Assert.assertEquals(11, processor.getTargetClasses().size());
-        Assert.assertEquals(8, schema.getTypes().size());
+        Assert.assertEquals(9, schema.getTypes().size());
         Assert.assertEquals(7, schema.getEnums().size());
 
         Assert.assertEquals("SampleClassTable", schema.getRootType());
@@ -158,7 +158,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
         Schema schema = processor.buildSchema();
 
         Assert.assertEquals(6, processor.getTargetClasses().size());
-        Assert.assertEquals(8, schema.getTypes().size());
+        Assert.assertEquals(9, schema.getTypes().size());
         Assert.assertEquals(5, schema.getEnums().size());
 
         Assert.assertEquals("SampleClassTable", schema.getRootType());
@@ -166,7 +166,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
         for (TypeDeclaration type : schema.getTypes()) {
 
             if (type.getName().equals(SampleClassTable.class.getSimpleName())) {
-                Assert.assertEquals(14, type.getProperties().size());
+                Assert.assertEquals(15, type.getProperties().size());
 
                 Assert.assertNotNull(type.getComment());
 
@@ -191,6 +191,12 @@ public class ProcessorTest extends AbstractMojoTestCase {
 
                     if (property.name.equals("level")) {
                         Assert.assertNotNull(property.options.get(PropertyOptionKey.COMMENT));
+                    }
+
+                    if (property.name.equals("dataMap")) {
+                        System.out.println(property.name);
+                        System.out.println(property.type);
+                        System.out.println(property.options);
                     }
                 }
 
@@ -278,6 +284,17 @@ public class ProcessorTest extends AbstractMojoTestCase {
                 continue;
             }
 
+            if (type.getName().startsWith(TypeDeclaration.MapValueSet.class.getSimpleName() + "_")) {
+                Assert.assertEquals(2, type.getProperties().size());
+                // TODO More tests here
+
+                if (Config.DEBUG) {
+                    System.out.println(type.toString());
+                }
+
+                continue;
+            }
+
             Assert.fail("Unaccounted class: " + type.getName());
         }
     }
@@ -341,21 +358,37 @@ public class ProcessorTest extends AbstractMojoTestCase {
     }
 
     @Test
-    public void testParseFieldSignatureForParametrizedTypeString() throws NoSuchFieldException, IllegalAccessException, ClassNotFoundException {
+    public void testParseFieldSignatureForParametrizedTypeStringoOnList()
+        throws NoSuchFieldException, IllegalAccessException, ClassNotFoundException {
         Schema schema = new Schema();
         Field field = schema.getClass().getDeclaredField("enums");
 
         Assert.assertEquals(EnumDeclaration.class.getName(),
-            Processor.parseFieldSignatureForParametrizedTypeString(field));
+            Processor.parseFieldSignatureForParametrizedTypeStringOnList(field));
 
         Class<?> testClass = Class.forName(SampleClassTable.class.getName());
         field = testClass.getDeclaredField("tokens");
-        Assert.assertEquals(String.class.getName(), Processor.parseFieldSignatureForParametrizedTypeString(field));
+        Assert
+            .assertEquals(String.class.getName(), Processor.parseFieldSignatureForParametrizedTypeStringOnList(field));
 
         testClass = Class.forName(SampleClassReferenced.class.getName());
         field = testClass.getDeclaredField("baggage");
         Assert.assertEquals(SampleClassTable.class.getName(),
-            Processor.parseFieldSignatureForParametrizedTypeString(field));
+            Processor.parseFieldSignatureForParametrizedTypeStringOnList(field));
+    }
+
+    @Test
+    public void testParseFieldSignatureForParametrizedTypeStringsOnMap()
+        throws NoSuchFieldException, IllegalAccessException, ClassNotFoundException {
+
+        Class<?> testClass = Class.forName(SampleClassTable.class.getName());
+        Field field = testClass.getDeclaredField("dataMap");
+
+        String[] expected = new String[2];
+        expected[0] = "java.lang.String";
+        expected[1] = "java.lang.Object";
+
+        Assert.assertArrayEquals(expected, Processor.parseFieldSignatureForParametrizedTypeStringsOnMap(field));
     }
 
     @Test
