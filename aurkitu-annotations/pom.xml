@@ -5,9 +5,9 @@
   <groupId>com.michaelhradek</groupId>
   <artifactId>aurkitu-annotations</artifactId>
   <version>0.0.3.3</version>
-  <packaging>maven-plugin</packaging>
+  <packaging>jar</packaging>
 
-  <name>Aurkitu Maven Plugin</name>
+  <name>Aurkitu Annotations</name>
   <description>Maven plugin for parsing annotated code into IDL formatted schema files.</description>
   <url>http://aurkitu.michaelhradek.com</url>
 

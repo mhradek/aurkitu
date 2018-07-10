@@ -3,9 +3,9 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.michaelhradek</groupId>
-  <artifactId>aurkitu-parent</artifactId>
-  <version>0.0.3.3</version>
-    <packaging>maven-plugin</packaging>
+    <artifactId>aurkitu-parent</artifactId>
+    <version>0.0.3.3</version>
+    <packaging>pom</packaging>
 
     <name>Aurkitu Maven Plugin</name>
     <description>Maven plugin for parsing annotated code into IDL formatted schema files.</description>
