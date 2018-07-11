@@ -67,7 +67,7 @@
     <dependency>
       <groupId>com.michaelhradek</groupId>
       <artifactId>aurkitu-annotations</artifactId>
-      <version>0.0.3.3</version>
+      <version>0.0.4</version>
     </dependency>
     <dependency>
       <groupId>org.reflections</groupId>
