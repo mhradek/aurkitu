@@ -9,6 +9,10 @@ import org.eclipse.aether.repository.RemoteRepository;
 
 import java.util.List;
 
+/**
+ * @author m.hradek
+ *
+ */
 @Getter
 @AllArgsConstructor
 public class ArtifactReference {

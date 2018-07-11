@@ -1,6 +1,3 @@
-/**
- *
- */
 package com.michaelhradek.aurkitu.core;
 
 import java.io.File;
@@ -15,6 +12,7 @@ import lombok.Getter;
 
 /**
  * @author m.hradek
+ *
  */
 @Getter
 public class FileGeneration {

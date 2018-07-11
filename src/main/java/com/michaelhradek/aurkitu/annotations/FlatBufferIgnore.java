@@ -1,6 +1,3 @@
-/**
- *
- */
 package com.michaelhradek.aurkitu.annotations;
 
 import java.lang.annotation.*;

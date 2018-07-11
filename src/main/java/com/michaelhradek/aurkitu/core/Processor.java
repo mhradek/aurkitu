@@ -36,6 +36,7 @@ import org.apache.maven.project.MavenProject;
 
 /**
  * @author m.hradek
+ *
  */
 @Getter
 public class Processor {

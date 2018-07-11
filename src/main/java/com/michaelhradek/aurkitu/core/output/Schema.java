@@ -11,6 +11,7 @@ import lombok.Setter;
 
 /**
  * @author m.hradek
+ *
  */
 @Getter
 @Setter

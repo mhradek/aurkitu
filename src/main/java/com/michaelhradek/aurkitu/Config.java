@@ -1,10 +1,8 @@
-/**
- *
- */
 package com.michaelhradek.aurkitu;
 
 /**
  * @author m.hradek
+ *
  */
 public final class Config {
 

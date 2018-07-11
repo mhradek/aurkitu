@@ -1,6 +1,3 @@
-/**
- *
- */
 package com.michaelhradek.aurkitu.core;
 
 import java.lang.annotation.Annotation;
@@ -18,6 +15,7 @@ import com.michaelhradek.aurkitu.Application;
 
 /**
  * @author m.hradek
+ *
  */
 public class AnnotationParser {
 
