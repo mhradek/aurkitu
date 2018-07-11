@@ -4,11 +4,13 @@
 
     <groupId>com.michaelhradek</groupId>
     <artifactId>aurkitu-parent</artifactId>
-    <version>0.0.3.3</version>
+    <version>0.0.4</version>
     <packaging>pom</packaging>
 
-    <name>Aurkitu Maven Plugin</name>
-    <description>Maven plugin for parsing annotated code into IDL formatted schema files.</description>
+    <name>Aurkitu Flatbuffer Annotation and Maven Plugin Parent</name>
+    <description>Annotations and corresponding Maven plugin for parsing annotated code into IDL formatted schema
+        files.
+    </description>
     <url>http://aurkitu.michaelhradek.com</url>
 
     <developers>
