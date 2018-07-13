@@ -4,7 +4,7 @@
 
   <groupId>com.michaelhradek</groupId>
   <artifactId>aurkitu-annotations</artifactId>
-  <version>0.0.4</version>
+  <version>0.0.4.1</version>
   <packaging>jar</packaging>
 
   <name>Aurkitu Annotations</name>
