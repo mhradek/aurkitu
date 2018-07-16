@@ -53,11 +53,13 @@
         <scm.url>scm:git:https://github.com/mhradek/aurkitu.git</scm.url>
     </properties>
 
+    <!--
     <parent>
         <groupId>org.sonatype.oss</groupId>
         <artifactId>oss-parent</artifactId>
         <version>9</version>
     </parent>
+    -->
 
   <modules>
     <module>aurkitu-annotations</module>
