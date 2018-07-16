@@ -36,7 +36,7 @@ Add the following to your dependencies within your `pom.xml`:
 <dependency>
     <groupId>com.michaelhradek</groupId>
     <artifactId>aurkitu-annotations</artifactId>
-    <version>0.0.4</version>
+    <version>0.0.4.1</version>
 </dependency>
 ```
 ### Maven Plugin
@@ -45,7 +45,7 @@ Followed by the following to the `plugins` of your `build` specifications within
 <plugin>
     <groupId>com.michaelhradek</groupId>
     <artifactId>aurkitu-maven-plugin</artifactId>
-    <version>0.0.4</version>
+    <version>0.0.4.1</version>
     <configuration>
         <schemaName>user</schemaName>
         <searchPath>com.company.package.subpackage.*</searchPath>
