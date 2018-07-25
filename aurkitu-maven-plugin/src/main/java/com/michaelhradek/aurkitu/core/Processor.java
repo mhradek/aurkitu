@@ -1,12 +1,7 @@
 package com.michaelhradek.aurkitu.core;
 
 import com.michaelhradek.aurkitu.Application;
-import com.michaelhradek.aurkitu.annotations.FlatBufferComment;
-import com.michaelhradek.aurkitu.annotations.FlatBufferEnum;
-import com.michaelhradek.aurkitu.annotations.FlatBufferEnumTypeField;
-import com.michaelhradek.aurkitu.annotations.FlatBufferFieldOptions;
-import com.michaelhradek.aurkitu.annotations.FlatBufferIgnore;
-import com.michaelhradek.aurkitu.annotations.FlatBufferTable;
+import com.michaelhradek.aurkitu.annotations.*;
 import com.michaelhradek.aurkitu.annotations.types.EnumType;
 import com.michaelhradek.aurkitu.annotations.types.FieldType;
 import com.michaelhradek.aurkitu.core.output.EnumDeclaration;
@@ -14,6 +9,11 @@ import com.michaelhradek.aurkitu.core.output.Schema;
 import com.michaelhradek.aurkitu.core.output.TypeDeclaration;
 import com.michaelhradek.aurkitu.core.output.TypeDeclaration.Property;
 import com.michaelhradek.aurkitu.core.output.TypeDeclaration.Property.PropertyOptionKey;
+import lombok.Getter;
+import org.apache.maven.artifact.DependencyResolutionRequiredException;
+import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.project.MavenProject;
+
 import java.io.File;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
@@ -21,18 +21,8 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
-import lombok.Getter;
-import org.apache.maven.artifact.DependencyResolutionRequiredException;
-import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.project.MavenProject;
 
 /**
  * @author m.hradek
@@ -103,11 +93,20 @@ public class Processor {
 
     /**
      *
-     * @return a completed schema
+     *  @return a completed schema
      * @throws MojoExecutionException when there is a MalformedURLException in the classpathElements
      */
     public Schema buildSchema() throws MojoExecutionException {
-        schema = new Schema();
+        return buildSchema(new Schema());
+    }
+
+    /**
+     * @param schema a preconfigured schema
+     * @return a completed schema
+     * @throws MojoExecutionException when there is a MalformedURLException in the classpathElements
+     */
+    public Schema buildSchema(Schema schema) throws MojoExecutionException {
+        this.schema = schema;
 
         for (Class<? extends Annotation> source : sourceAnnotations) {
             if (artifactReference == null || artifactReference.getMavenProject() == null) {

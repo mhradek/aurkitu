@@ -49,12 +49,13 @@
             <plugin>
                 <groupId>com.michaelhradek</groupId>
                 <artifactId>aurkitu-maven-plugin</artifactId>
-                <version>0.0.4.1</version>
+                <version>0.0.4.2</version>
                 <configuration>
                     <project implementation="com.michaelhradek.aurkitu.stubs.AurkituTestMavenProjectStub"/>
                     <schemaName>test-schema</schemaName>
                     <outputDirectory>target/test-dir</outputDirectory>
                     <validateSchema>true</validateSchema>
+                    <useSchemaCaching>false</useSchemaCaching>
                 </configuration>
                 <executions>
                     <execution>

@@ -2,18 +2,10 @@ package com.michaelhradek.aurkitu;
 
 import com.michaelhradek.aurkitu.annotations.FlatBufferEnum;
 import com.michaelhradek.aurkitu.annotations.FlatBufferTable;
-import com.michaelhradek.aurkitu.core.ArtifactReference;
-import com.michaelhradek.aurkitu.core.FileGeneration;
-import com.michaelhradek.aurkitu.core.Processor;
-import com.michaelhradek.aurkitu.core.Validator;
+import com.michaelhradek.aurkitu.core.*;
 import com.michaelhradek.aurkitu.core.output.Schema;
-import java.io.File;
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.plugin.logging.SystemStreamLog;
 import org.apache.maven.plugins.annotations.Component;
@@ -24,6 +16,11 @@ import org.apache.maven.project.MavenProject;
 import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.RepositorySystemSession;
 import org.eclipse.aether.repository.RemoteRepository;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @author m.hradek
@@ -67,7 +64,7 @@ public class Application extends AbstractMojo {
     private String schemaName;
 
     @Parameter(property = Application.MOJO_NAME + ".schema-file-identifier")
-    private String fileIdentifier;
+    private String schemaFileIdentifier;
 
     @Parameter(property = Application.MOJO_NAME + ".flatc-extention")
     private String fileExtension;
@@ -78,10 +75,14 @@ public class Application extends AbstractMojo {
     @Parameter(property = Application.MOJO_NAME + ".generate-version", defaultValue = "false")
     private Boolean generateVersion;
 
+    @Parameter(property = Application.MOJO_NAME + ".use-schema-caching", defaultValue = "false")
+    private Boolean useSchemaCaching;
+
+
     // allow static access to the log
     private static Log log;
 
-    public void execute() throws MojoExecutionException, MojoFailureException {
+    public void execute() throws MojoExecutionException {
 
         if (log == null)
             log = getLog();
@@ -96,12 +97,27 @@ public class Application extends AbstractMojo {
         log.info(" schemaNamespace: " + schemaNamespace);
         log.info(" schemaName: " + schemaName);
         log.info(" fileExtension: " + fileExtension);
-        log.info(" fileIdentifier: " + fileIdentifier);
+        log.info(" schemaFileIdentifier: " + schemaFileIdentifier);
         log.info(" outputDirectory: " + outputDirectory.getAbsolutePath());
         log.info(" searchPath: " + searchPath);
         log.info(" validateSchema: " + validateSchema);
         log.info(" generateVersion: " + generateVersion);
         log.info(" namespaceOverrideMap: " + (namespaceOverrideMap == null ? "null" : namespaceOverrideMap.toString()));
+        log.info(" useSchemaCaching: " + useSchemaCaching);
+
+
+        Schema schema = new Schema();
+        schema.setNamespace(schemaNamespace);
+        schema.setName(schemaName);
+        schema.setFileExtension(fileExtension);
+        schema.setFileIdentifier(schemaFileIdentifier);
+        schema.setIncludes(schemaIncludes);
+        schema.setGenerateVersion(generateVersion);
+
+        if (useSchemaCaching && Utilities.isSchemaPresent(schema, outputDirectory)) {
+            log.info("Schema found & caching was requested; skipping schema update.");
+            return;
+        }
 
         ArtifactReference reference = new ArtifactReference(project, repoSystem, repoSession, repositories);
 
@@ -112,13 +128,7 @@ public class Application extends AbstractMojo {
                 .withArtifactReference(reference)
                 .withNamespaceOverrideMap(namespaceOverrideMap);
 
-        Schema schema = processor.buildSchema();
-        schema.setNamespace(schemaNamespace);
-        schema.setName(schemaName);
-        schema.setFileExtension(fileExtension);
-        schema.setFileIdentifier(fileIdentifier);
-        schema.setIncludes(schemaIncludes);
-        schema.setGenerateVersion(generateVersion);
+        schema = processor.buildSchema(schema);
 
         if (validateSchema) {
             Validator validator = new Validator().withSchema(schema);

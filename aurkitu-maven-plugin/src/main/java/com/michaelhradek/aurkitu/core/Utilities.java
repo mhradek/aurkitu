@@ -1,13 +1,8 @@
 package com.michaelhradek.aurkitu.core;
 
 import com.michaelhradek.aurkitu.Application;
-import java.io.File;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import com.michaelhradek.aurkitu.Config;
+import com.michaelhradek.aurkitu.core.output.Schema;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -17,21 +12,23 @@ import org.eclipse.aether.resolution.ArtifactResolutionException;
 import org.eclipse.aether.resolution.ArtifactResult;
 import org.reflections.Reflections;
 import org.reflections.adapters.JavassistAdapter;
-import org.reflections.scanners.FieldAnnotationsScanner;
-import org.reflections.scanners.MemberUsageScanner;
-import org.reflections.scanners.MethodAnnotationsScanner;
-import org.reflections.scanners.MethodParameterNamesScanner;
-import org.reflections.scanners.MethodParameterScanner;
-import org.reflections.scanners.SubTypesScanner;
-import org.reflections.scanners.TypeAnnotationsScanner;
+import org.reflections.scanners.*;
 import org.reflections.util.ClasspathHelper;
 import org.reflections.util.ConfigurationBuilder;
+
+import java.io.File;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 
 /**
  * @author m.hradek
  *
  */
-class Utilities {
+public class Utilities {
 
     private static Set<Artifact> dependencyArtifactsCache;
     private static List<String> classpathElementsCache;
@@ -194,5 +191,32 @@ class Utilities {
          * returned by implementations of this method.
          */
         T run();
+    }
+
+    /**
+     * @param schema          The target schema (used to determine filename)
+     * @param outputDirectory Where we have configured the schema to be written to
+     * @return boolean whether or not the schema file exists in the location specified
+     */
+    public static boolean isSchemaPresent(Schema schema, File outputDirectory) {
+        if (!outputDirectory.exists()) {
+            return false;
+        }
+
+        String fileName = "." + Config.FILE_EXTENSION;
+        if (schema.getName() == null || schema.getName().length() < 1) {
+            // The file generation stuff will create a time based file
+            return false;
+        } else {
+            fileName = schema.getName() + fileName;
+        }
+
+        File targetFile = new File(outputDirectory, fileName);
+
+        if (!targetFile.exists()) {
+            return false;
+        }
+
+        return true;
     }
 }

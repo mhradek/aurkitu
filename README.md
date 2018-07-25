@@ -23,6 +23,7 @@ This is a very early proof-of-concept currently being developed in spare time.
 - [ ] update with current (1.8) feature support (i.e. gRPC, Field, String constant, etc.)
 - [x] release to maven
 - [x] split into annotations and plugin
+- [x] add schema caching
 
 ## peculiarities
 While flatbuffers support unsigned primatives (e.g. ubyte, ushort, etc.), Java does not technically support them (though you can use the wrapper types [e.g. `java.lang.Long`, etc.]) to [simulate this behavior](https://docs.oracle.com/javase/tutorial/java/nutsandbolts/datatypes.html). Eventually we could map to the wrapper types when building the schema files. At this time all primatives and their corresponding wrappers are mapped as primatives.
@@ -36,7 +37,7 @@ Add the following to your dependencies within your `pom.xml`:
 <dependency>
     <groupId>com.michaelhradek</groupId>
     <artifactId>aurkitu-annotations</artifactId>
-    <version>0.0.4.1</version>
+    <version>0.0.4.2</version>
 </dependency>
 ```
 ### Maven Plugin
@@ -45,7 +46,7 @@ Followed by the following to the `plugins` of your `build` specifications within
 <plugin>
     <groupId>com.michaelhradek</groupId>
     <artifactId>aurkitu-maven-plugin</artifactId>
-    <version>0.0.4.1</version>
+    <version>0.0.4.2</version>
     <configuration>
         <schemaName>user</schemaName>
         <searchPath>com.company.package.subpackage.*</searchPath>
@@ -56,7 +57,8 @@ Followed by the following to the `plugins` of your `build` specifications within
         <validateSchema>true</validateSchema>
         <namespaceOverrideMap>
 	          <com.company.package.search>com.company.package.replace</com.company.package.search>
-        </namespaceOverrideMap>        
+        </namespaceOverrideMap>   
+        <useSchemaCaching>false</useSchemaCaching>     
     </configuration>
     <executions>
         <execution>
@@ -68,6 +70,22 @@ Followed by the following to the `plugins` of your `build` specifications within
     </executions>
 </plugin>
 ```
+### option definitions
+#### required
+* schemaName: sets the name of the generated schema which is then used for the output filename (e.g. `<schemaName>.<flatcFilename>` or `myschema.fbs`)
+#### optional
+* schemaNamespace: sets the namespace of schema. All objects in this schema will have this namespace (default: `generated.flatbuffers`)
+* flatcExtention: sets the output file extension (default `fbs`)
+* schemaFileIdentifier: flatbuffer file identifier (e.g. `file_identifier "MYFI";`)
+* outputDir: where the generated schema will be written to (default: `${project.build.directory}/aurkitu/schemas`)
+* validateSchema: if true, validate the schema and append the report to the end of the schema file as a list of comments (default: `true`)
+* generateVersion: if true, generate a version for the schema which excludes the validation text and then add it as a comment to the top of the schema file (default: `false`)
+* useSchemaCaching: if true, skip schema generation. The file that is located in the output directory will be used (default: `false`)
+* namespaceOverrideMap: allows for schema namespaces to be overriden. This is handy when using includes and schemas from other projects (e.g `<com.company.package.search>com.company.package.replace</com.company.package.search>`)
+* schemaIncludes: allows for configuration of schema includes
+#### unimplemented
+* searchPath: limit scope of annotation search to a particular path (e.g. `com.company.product.package.*`)
+
 ## usage
 Through the use of annotations:
 ```

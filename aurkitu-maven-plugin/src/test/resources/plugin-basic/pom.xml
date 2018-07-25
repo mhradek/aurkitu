@@ -49,7 +49,7 @@
             <plugin>
                 <groupId>com.michaelhradek</groupId>
                 <artifactId>aurkitu-maven-plugin</artifactId>
-                <version>0.0.4.1</version>
+                <version>0.0.4.2</version>
                 <configuration>
                     <schemaName>test-schema</schemaName>
                     <outputDirectory>target/test-dir</outputDirectory>
@@ -58,6 +58,7 @@
                   <namespaceOverrideMap>
                     <search.namespace>replacement.namespace</search.namespace>
                   </namespaceOverrideMap>
+                    <useSchemaCaching>false</useSchemaCaching>
                 </configuration>
                 <executions>
                     <execution>

@@ -1,16 +1,22 @@
 package com.michaelhradek.aurkitu.core;
 
 import com.michaelhradek.aurkitu.Application;
+import com.michaelhradek.aurkitu.annotations.FlatBufferEnum;
+import com.michaelhradek.aurkitu.annotations.FlatBufferTable;
 import com.michaelhradek.aurkitu.core.output.Schema;
 import com.michaelhradek.aurkitu.test.SampleClassTable;
-import java.net.URLClassLoader;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
 import org.apache.maven.plugin.testing.MojoRule;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 
+import java.io.File;
+import java.net.URLClassLoader;
+
 public class UtilitiesTest extends AbstractMojoTestCase {
+
+    private static String OUTPUT_DIRECTORY = "target/aurkito/utilities/test";
 
     /**
      * @see junit.framework.TestCase#setUp()
@@ -96,6 +102,29 @@ public class UtilitiesTest extends AbstractMojoTestCase {
     @Test
     public void testBuildReflections() {
 
+    }
+
+    @Test
+    public void testIsSchemaPresent() throws Exception {
+
+        // File will not exist
+        Assert.assertFalse(Utilities.isSchemaPresent(new Schema(), new File("/")));
+
+        Processor processor = new Processor().withSourceAnnotation(FlatBufferTable.class)
+                .withSourceAnnotation(FlatBufferEnum.class);
+
+        Schema schema = processor.buildSchema();
+        FileGeneration gen = new FileGeneration(new File(OUTPUT_DIRECTORY));
+        gen.writeSchema(schema);
+
+        // No name set so even with caching it will return false because the filename keeps changing
+        Assert.assertFalse(Utilities.isSchemaPresent(schema, gen.getOutputDirectory()));
+
+        schema.setName("some-test-name");
+        gen.writeSchema(schema);
+
+        // File name is consistent and thus we can check cached file
+        Assert.assertTrue(Utilities.isSchemaPresent(schema, gen.getOutputDirectory()));
     }
 }
 
