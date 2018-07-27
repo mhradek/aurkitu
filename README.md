@@ -72,19 +72,19 @@ Followed by the following to the `plugins` of your `build` specifications within
 ```
 ### option definitions
 #### required
-* schemaName: sets the name of the generated schema which is then used for the output filename (e.g. `<schemaName>.<flatcFilename>` or `myschema.fbs`)
+* __schemaName__: sets the name of the generated schema which is then used for the output filename (e.g. `<schemaName>.<flatcFilename>` or `myschema.fbs`)
 #### optional
-* schemaNamespace: sets the namespace of schema. All objects in this schema will have this namespace (default: `generated.flatbuffers`)
-* flatcExtention: sets the output file extension (default `fbs`)
-* schemaFileIdentifier: flatbuffer file identifier (e.g. `file_identifier "MYFI";`)
-* outputDir: where the generated schema will be written to (default: `${project.build.directory}/aurkitu/schemas`)
-* validateSchema: if true, validate the schema and append the report to the end of the schema file as a list of comments (default: `true`)
-* generateVersion: if true, generate a version for the schema which excludes the validation text and then add it as a comment to the top of the schema file (default: `false`)
-* useSchemaCaching: if true, skip schema generation. The file that is located in the output directory will be used (default: `false`)
-* namespaceOverrideMap: allows for schema namespaces to be overriden. This is handy when using includes and schemas from other projects (e.g `<com.company.package.search>com.company.package.replace</com.company.package.search>`)
-* schemaIncludes: allows for configuration of schema includes
+* __schemaNamespace__: sets the namespace of schema. All objects in this schema will have this namespace (default: `generated.flatbuffers`)
+* __flatcExtention__: sets the output file extension (default `fbs`)
+* __schemaFileIdentifier__: flatbuffer file identifier (e.g. `file_identifier "MYFI";`)
+* __outputDir__: where the generated schema will be written to (default: `${project.build.directory}/aurkitu/schemas`)
+* __validateSchema__: if true, validate the schema and append the report to the end of the schema file as a list of comments (default: `true`)
+* __generateVersion__: if true, generate a version for the schema which excludes the validation text and then add it as a comment to the top of the schema file (default: `false`)
+* __useSchemaCaching__: if true, skip schema generation. The file that is located in the output directory will be used (default: `false`)
+* __namespaceOverrideMap__: allows for schema namespaces to be overriden. This is handy when using includes and schemas from other projects (e.g `<com.company.package.search>com.company.package.replace</com.company.package.search>`)
+* __schemaIncludes__: allows for configuration of schema includes
 #### unimplemented
-* searchPath: limit scope of annotation search to a particular path (e.g. `com.company.product.package.*`)
+* __searchPath__: limit scope of annotation search to a particular path (e.g. `com.company.product.package.*`)
 
 ## usage
 Through the use of annotations:
