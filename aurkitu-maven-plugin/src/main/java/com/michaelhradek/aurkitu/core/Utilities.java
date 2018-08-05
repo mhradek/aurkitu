@@ -113,6 +113,7 @@ public class Utilities {
 
         for (String element : classpathElementsCache) {
             Application.getLogger().debug("Looking at compile classpath element (via MavenProject): " + element);
+            Application.getLogger().debug("  Adding: " + element);
             projectClasspathList.add(new File(element).toURI().toURL());
         }
 
@@ -127,6 +128,12 @@ public class Utilities {
 
         for (Artifact unresolvedArtifact : dependencyArtifactsCache) {
             String artifactId = unresolvedArtifact.getArtifactId();
+
+            if (!isArtifactResolutionRequired(unresolvedArtifact, artifactReference)) {
+                Application.getLogger().debug("  Skipping: " + unresolvedArtifact.toString());
+                continue;
+            }
+
             org.eclipse.aether.artifact.Artifact aetherArtifact = new DefaultArtifact(
                     unresolvedArtifact.getGroupId(),
                     unresolvedArtifact.getArtifactId(),
@@ -137,6 +144,8 @@ public class Utilities {
             ArtifactRequest artifactRequest = new ArtifactRequest()
                     .setRepositories(artifactReference.getRepositories())
                     .setArtifact(aetherArtifact);
+
+            // This takes time; minimizing what needs to be resolved is the goal of the specified dependency code block
             ArtifactResult resolutionResult = artifactReference.getRepoSystem()
                     .resolveArtifact(artifactReference.getRepoSession(), artifactRequest);
 
@@ -198,7 +207,7 @@ public class Utilities {
      * @param outputDirectory Where we have configured the schema to be written to
      * @return boolean whether or not the schema file exists in the location specified
      */
-    public static boolean isSchemaPresent(Schema schema, File outputDirectory) {
+    public static boolean isSchemaPresent(final Schema schema, final File outputDirectory) {
         if (!outputDirectory.exists()) {
             return false;
         }
@@ -213,10 +222,59 @@ public class Utilities {
 
         File targetFile = new File(outputDirectory, fileName);
 
-        if (!targetFile.exists()) {
-            return false;
+        return targetFile.exists();
+    }
+
+    /**
+     * @param unresolvedArtifact an artifact
+     * @param artifactReference  the Maven repo bundle
+     * @return whether or not the artifact should be resolved
+     */
+    public static boolean isArtifactResolutionRequired(final Artifact unresolvedArtifact, final ArtifactReference artifactReference) {
+
+        // if a dependency search is specified, use it
+        if (artifactReference.getSpecifiedDependencies() != null && !artifactReference.getSpecifiedDependencies().isEmpty()) {
+            Application.getLogger().debug("Targeted dependency search requested. Will skip artifacts not specified in configuration.");
+
+            int matchesFound = 0;
+
+            // Loop through all the specified dependencies
+            for (String dependency : artifactReference.getSpecifiedDependencies()) {
+
+                // Using groupId or is artifactId included? Using the Maven notation
+                Application.getLogger().debug("  Testing against: " + dependency);
+                String specifiedGroupId;
+                String specifiedArtifactId;
+                if (dependency.contains(":")) {
+                    String[] temp = dependency.split(":");
+                    specifiedGroupId = temp[0];
+                    specifiedArtifactId = temp[1];
+                } else {
+                    specifiedGroupId = dependency;
+                    specifiedArtifactId = null;
+                }
+
+                Application.getLogger().debug(String.format("  Specified groupId: %s, artifactId: %s", specifiedGroupId, specifiedArtifactId));
+                Application.getLogger().debug(String.format("  Unresolved groupId: %s, artifactId: %s", unresolvedArtifact.getGroupId(), unresolvedArtifact.getArtifactId()));
+
+                // If only a groupId is specified...
+                if (specifiedArtifactId == null && specifiedGroupId.equalsIgnoreCase(unresolvedArtifact.getGroupId())) {
+                    matchesFound++;
+                }
+
+                // If both a group and artifactId are specified...
+                if (specifiedArtifactId != null &&
+                        specifiedArtifactId.equalsIgnoreCase(unresolvedArtifact.getArtifactId()) &&
+                        specifiedGroupId.equalsIgnoreCase(unresolvedArtifact.getGroupId())) {
+                    matchesFound++;
+                }
+            }
+
+            // If the unresolvedArtifact doesn't match any of the specified dependencies then we will skip it from resolution
+            return matchesFound >= 1;
         }
 
+        // If we don't specify dependencies OR if it matched one of the specified group or group:artifact combos resolve it
         return true;
     }
 }

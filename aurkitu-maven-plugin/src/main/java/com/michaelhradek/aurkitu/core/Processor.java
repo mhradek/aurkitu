@@ -36,6 +36,7 @@ public class Processor {
     private ArtifactReference artifactReference;
     private Set<String> warnedTypeNames;
     private Map<String, String> namespaceOverrideMap;
+    private List<String> specifiedDependencies;
     private Schema schema;
 
     public Processor() {
@@ -88,6 +89,19 @@ public class Processor {
         }
 
         this.namespaceOverrideMap = temp;
+        return this;
+    }
+
+    /**
+     * @param specifiedDependencies Override the default target project dependency search and only search these dependencies with this group id
+     * @return an instance of the Processor object
+     */
+    public Processor withSpecifiedDependencies(List<String> specifiedDependencies) {
+        if (specifiedDependencies == null) {
+            return this;
+        }
+
+        this.specifiedDependencies = specifiedDependencies;
         return this;
     }
 

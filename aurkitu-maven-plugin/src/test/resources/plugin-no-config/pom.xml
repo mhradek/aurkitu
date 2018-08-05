@@ -42,7 +42,7 @@
             <plugin>
                 <groupId>com.michaelhradek</groupId>
                 <artifactId>aurkitu-maven-plugin</artifactId>
-                <version>0.0.4.2</version>
+                <version>0.0.5</version>
                 <configuration/>
                 <executions>
                     <execution>

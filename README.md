@@ -23,7 +23,6 @@ This is a very early proof-of-concept currently being developed in spare time.
 - [ ] update with current (1.8) feature support (i.e. gRPC, Field, String constant, etc.)
 - [x] release to maven
 - [x] split into annotations and plugin
-- [x] add schema caching
 
 ## peculiarities
 While flatbuffers support unsigned primatives (e.g. ubyte, ushort, etc.), Java does not technically support them (though you can use the wrapper types [e.g. `java.lang.Long`, etc.]) to [simulate this behavior](https://docs.oracle.com/javase/tutorial/java/nutsandbolts/datatypes.html). Eventually we could map to the wrapper types when building the schema files. At this time all primatives and their corresponding wrappers are mapped as primatives.
@@ -37,7 +36,7 @@ Add the following to your dependencies within your `pom.xml`:
 <dependency>
     <groupId>com.michaelhradek</groupId>
     <artifactId>aurkitu-annotations</artifactId>
-    <version>0.0.4.2</version>
+    <version>0.0.5</version>
 </dependency>
 ```
 ### Maven Plugin
@@ -46,11 +45,14 @@ Followed by the following to the `plugins` of your `build` specifications within
 <plugin>
     <groupId>com.michaelhradek</groupId>
     <artifactId>aurkitu-maven-plugin</artifactId>
-    <version>0.0.4.2</version>
+    <version>0.0.5</version>
     <configuration>
         <schemaName>user</schemaName>
-        <searchPath>com.company.package.subpackage.*</searchPath>
         <schemaNamespace>com.company.package.subpackage.flatbuffers</schemaNamespace>
+        <specifiedDependencies>
+             <depdendency>com.company.department:artifact-id</depdendency>
+             <depdendency>com.other.subteam</depdendency>
+        </specifiedDependencies>
         <schemaIncludes>
              <include>"../../../../target/maven-shared-archive-resources/flatbuffers/other.fbs"</include>
         </schemaIncludes>
@@ -80,11 +82,10 @@ Followed by the following to the `plugins` of your `build` specifications within
 * __outputDir__: where the generated schema will be written to (default: `${project.build.directory}/aurkitu/schemas`)
 * __validateSchema__: if true, validate the schema and append the report to the end of the schema file as a list of comments (default: `true`)
 * __generateVersion__: if true, generate a version for the schema which excludes the validation text and then add it as a comment to the top of the schema file (default: `false`)
-* __useSchemaCaching__: if true, skip schema generation. The file that is located in the output directory will be used (default: `false`)
+* __useSchemaCaching__: if true, skip schema generation. The file that is located in the output directory will be used. Designed for local development build speed improvement (default: `false`)
 * __namespaceOverrideMap__: allows for schema namespaces to be overriden. This is handy when using includes and schemas from other projects (e.g `<com.company.package.search>com.company.package.replace</com.company.package.search>`)
-* __schemaIncludes__: allows for configuration of schema includes
-#### unimplemented
-* __searchPath__: limit scope of annotation search to a particular path (e.g. `com.company.product.package.*`)
+* __schemaIncludes__: allows for configuration of schema includes (e.g. `<include>"../../../../target/maven-shared-archive-resources/flatbuffers/other.fbs"</include>`)
+* __specifiedDependencies__: allows for configuration of targeted dependency searching for specific dependencies for annotations. If this is specified, a artifact resolution will be kept to a minimum greatly increasing build speed. You can specify any number of packages. If you specify the `groupId` only then the entirety of the group will be included in artifact resolution (e.g. `<dependency>com.company.group</dependency>`) . To specify a specific artifact use `groupId:artifactId` (e.g. `<dependency>com.company.group:artifact</dependency>`) 
 
 ## usage
 Through the use of annotations:

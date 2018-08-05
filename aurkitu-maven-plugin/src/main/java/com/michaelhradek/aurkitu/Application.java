@@ -48,8 +48,8 @@ public class Application extends AbstractMojo {
     @Parameter(property = Application.MOJO_NAME + ".ouput-dir", defaultValue = "${project.build.directory}/aurkitu/schemas")
     private File outputDirectory;
 
-    @Parameter(property = Application.MOJO_NAME + ".search-path", defaultValue = ".*")
-    private String searchPath;
+    @Parameter(property = Application.MOJO_NAME + ".specified-dependencies")
+    private List<String> specifiedDependencies;
 
     @Parameter(property = Application.MOJO_NAME + ".schema-namespace", defaultValue = "generated.flatbuffers")
     private String schemaNamespace;
@@ -78,7 +78,6 @@ public class Application extends AbstractMojo {
     @Parameter(property = Application.MOJO_NAME + ".use-schema-caching", defaultValue = "false")
     private Boolean useSchemaCaching;
 
-
     // allow static access to the log
     private static Log log;
 
@@ -99,12 +98,12 @@ public class Application extends AbstractMojo {
         log.info(" fileExtension: " + fileExtension);
         log.info(" schemaFileIdentifier: " + schemaFileIdentifier);
         log.info(" outputDirectory: " + outputDirectory.getAbsolutePath());
-        log.info(" searchPath: " + searchPath);
         log.info(" validateSchema: " + validateSchema);
         log.info(" generateVersion: " + generateVersion);
         log.info(" namespaceOverrideMap: " + (namespaceOverrideMap == null ? "null" : namespaceOverrideMap.toString()));
         log.info(" useSchemaCaching: " + useSchemaCaching);
-
+        log.info(" schemaIncludes: " + (schemaIncludes == null ? "null" : schemaIncludes.toString()));
+        log.info(" specifiedDependencies: " + (specifiedDependencies == null ? "null" : specifiedDependencies.toString()));
 
         Schema schema = new Schema();
         schema.setNamespace(schemaNamespace);
@@ -119,14 +118,15 @@ public class Application extends AbstractMojo {
             return;
         }
 
-        ArtifactReference reference = new ArtifactReference(project, repoSystem, repoSession, repositories);
+        ArtifactReference reference = new ArtifactReference(project, repoSystem, repoSession, repositories, specifiedDependencies);
 
         Processor processor =
             new Processor()
                 .withSourceAnnotation(FlatBufferTable.class)
                 .withSourceAnnotation(FlatBufferEnum.class)
                 .withArtifactReference(reference)
-                .withNamespaceOverrideMap(namespaceOverrideMap);
+                    .withNamespaceOverrideMap(namespaceOverrideMap)
+                    .withSpecifiedDependencies(specifiedDependencies);
 
         schema = processor.buildSchema(schema);
 
