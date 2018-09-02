@@ -32,6 +32,7 @@ public class Utilities {
 
     private static Set<Artifact> dependencyArtifactsCache;
     private static List<String> classpathElementsCache;
+    private static String workingProject;
 
     /**
      * @param type The class which needs to be tested if it is a primative. Also, double and Double are both considered primative within this context.
@@ -106,7 +107,7 @@ public class Utilities {
         List<URL> projectClasspathList = new ArrayList<URL>();
 
         // Load build class path
-        if(classpathElementsCache == null) {
+        if (classpathElementsCache == null || workingProject == null || !workingProject.equalsIgnoreCase(getCurrentProject(artifactReference))) {
             Application.getLogger().debug("Compile Classpath Elements Cache was null; fetching update");
             classpathElementsCache = artifactReference.getMavenProject().getCompileClasspathElements();
         }
@@ -118,7 +119,7 @@ public class Utilities {
         }
 
         // Load artifact(s) jars using resolver
-        if(dependencyArtifactsCache == null) {
+        if (dependencyArtifactsCache == null || workingProject == null || !workingProject.equalsIgnoreCase(getCurrentProject(artifactReference))) {
             Application.getLogger().debug("Dependency Artifacts Cache was null; fetching update");
             dependencyArtifactsCache =  artifactReference.getMavenProject().getDependencyArtifacts();
         }
@@ -162,6 +163,7 @@ public class Utilities {
             projectClasspathList.add(new URL(jarPath));
         }
 
+        workingProject = getCurrentProject(artifactReference);
         return projectClasspathList.toArray(new URL[]{});
     }
 
@@ -276,5 +278,18 @@ public class Utilities {
 
         // If we don't specify dependencies OR if it matched one of the specified group or group:artifact combos resolve it
         return true;
+    }
+
+    /**
+     * The current project name in artifactId:groupId format
+     *
+     * @param artifactReference the Maven repo bundle
+     * @return the project name
+     */
+    public static String getCurrentProject(final ArtifactReference artifactReference) {
+        final String projectName = String.join(":",
+                artifactReference.getMavenProject().getGroupId(), artifactReference.getMavenProject().getArtifactId());
+        Application.getLogger().debug("  Current prject name: " + projectName);
+        return projectName;
     }
 }

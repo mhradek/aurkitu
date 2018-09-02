@@ -15,11 +15,13 @@ import org.apache.maven.artifact.versioning.OverConstrainedVersionException;
 import org.apache.maven.artifact.versioning.VersionRange;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
 import org.apache.maven.plugin.testing.MojoRule;
+import org.apache.maven.project.MavenProject;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.File;
+import java.lang.reflect.Field;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -162,6 +164,22 @@ public class UtilitiesTest extends AbstractMojoTestCase {
 
         Assert.assertFalse(Utilities.isArtifactResolutionRequired(getFauxArtifact("org.ngo.subversive", "blarg"), artifactReference));
         Assert.assertTrue(Utilities.isArtifactResolutionRequired(getFauxArtifact("org.ngo.subversive", "yet-another-project"), artifactReference));
+    }
+
+    @Test
+    public void testGetCurrentProject() throws Exception {
+        File testPom = new File(getBasedir(), "src/test/resources/plugin-basic-with-project/pom.xml");
+        Application mojo = new Application();
+        mojo = (Application) this.configureMojo(
+                mojo, extractPluginConfiguration(Application.MOJO_NAME, testPom)
+        );
+
+        Field projectField = mojo.getClass().getDeclaredField("project");
+        projectField.setAccessible(true);
+        MavenProject mavenProject = (MavenProject) projectField.get(mojo);
+
+        final String projectName = Utilities.getCurrentProject(new ArtifactReference(mavenProject, null, null, null, null));
+        Assert.assertEquals("com.michaelhradek.aurkitu.test:plugin-basic", projectName);
     }
 
     /**
