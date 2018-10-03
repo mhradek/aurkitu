@@ -169,6 +169,7 @@
             <excludes>
               <exclude>**/*Config</exclude>
               <exclude>**/*HelpMojo</exclude>
+                <exclude>**/*Config.class</exclude>
             </excludes>
           </instrumentation>
         </configuration>
