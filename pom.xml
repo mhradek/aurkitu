@@ -62,8 +62,8 @@
     </dependencies>
 
     <modules>
-    <module>aurkitu-annotations</module>
-    <module>aurkitu-maven-plugin</module>
-  </modules>
+        <module>aurkitu-annotations</module>
+        <module>aurkitu-maven-plugin</module>
+    </modules>
 
 </project>
