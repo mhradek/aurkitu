@@ -167,9 +167,9 @@
           <aggregate>true</aggregate>
           <instrumentation>
             <excludes>
-              <exclude>**/*Config</exclude>
               <exclude>**/*HelpMojo</exclude>
                 <exclude>**/*Config.class</exclude>
+                <exclude>**/*aurkitu/annotations</exclude>
             </excludes>
           </instrumentation>
         </configuration>
