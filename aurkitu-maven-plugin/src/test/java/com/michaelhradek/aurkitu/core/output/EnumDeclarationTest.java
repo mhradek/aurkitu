@@ -1,11 +1,23 @@
 package com.michaelhradek.aurkitu.core.output;
 
-import java.util.ArrayList;
-import java.util.List;
+import com.michaelhradek.aurkitu.annotations.FlatBufferEnum;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
 public class EnumDeclarationTest {
+
+    @Test
+    public void testConstructor() {
+        EnumDeclaration declaration = new EnumDeclaration();
+        Assert.assertEquals(FlatBufferEnum.EnumStructureType.ENUM, declaration.getStructure());
+
+        declaration = new EnumDeclaration(FlatBufferEnum.EnumStructureType.UNION);
+        Assert.assertEquals(FlatBufferEnum.EnumStructureType.UNION, declaration.getStructure());
+    }
 
     @Test
     public void testHashCode() {
@@ -40,5 +52,7 @@ public class EnumDeclarationTest {
         Assert.assertTrue(list.contains(declarationBeta));
         Assert.assertFalse(list.contains(declarationAlpha));
         Assert.assertEquals(1, list.size());
+
+        Assert.assertFalse(declarationAlpha.equals(UUID.randomUUID()));
     }
 }
