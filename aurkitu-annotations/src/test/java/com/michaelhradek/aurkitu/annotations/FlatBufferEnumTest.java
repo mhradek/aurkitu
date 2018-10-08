@@ -37,6 +37,8 @@ public class FlatBufferEnumTest {
 
         Assert.assertEquals(EnumType.BYTE, ((FlatBufferEnum) classAnnotation).enumType());
         Assert.assertEquals(FlatBufferEnum.EnumStructureType.ENUM, ((FlatBufferEnum) classAnnotation).value());
+
+        Assert.assertEquals("enum", ((FlatBufferEnum) classAnnotation).value().toString());
     }
 
     @Test
@@ -51,6 +53,8 @@ public class FlatBufferEnumTest {
 
         Assert.assertEquals(EnumType.ULONG, ((FlatBufferEnum) classAnnotation).enumType());
         Assert.assertEquals(FlatBufferEnum.EnumStructureType.UNION, ((FlatBufferEnum) classAnnotation).value());
+
+        Assert.assertEquals("union", ((FlatBufferEnum) classAnnotation).value().toString());
     }
 
     @FlatBufferEnum
