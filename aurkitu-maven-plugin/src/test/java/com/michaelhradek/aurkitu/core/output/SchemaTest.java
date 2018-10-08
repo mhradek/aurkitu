@@ -171,4 +171,23 @@ public class SchemaTest {
         schema.addTypeDeclaration(declarationBeta);
         Assert.assertEquals(2, schema.getTypes().size());
     }
+
+    @Test
+    public void testFields() {
+        Schema schema = new Schema();
+
+        Assert.assertNotNull(schema.getIncludes());
+        Assert.assertTrue(schema.getIncludes().isEmpty());
+
+        Assert.assertNotNull(schema.getIntegerConstants());
+        Assert.assertTrue(schema.getIntegerConstants().isEmpty());
+
+        Assert.assertNotNull(schema.getFloatConstants());
+        Assert.assertTrue(schema.getFloatConstants().isEmpty());
+
+        Assert.assertNotNull(schema.isGenerateVersion());
+        Assert.assertFalse(schema.isGenerateVersion());
+
+        Assert.assertNull(schema.getValidator());
+    }
 }
