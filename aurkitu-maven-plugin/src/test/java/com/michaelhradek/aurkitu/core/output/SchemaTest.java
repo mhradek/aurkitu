@@ -119,4 +119,22 @@ public class SchemaTest {
             }
         }
     }
+
+    @Test
+    public void testAddTypeDeclaration() {
+        Schema schema = new Schema();
+        TypeDeclaration declarationAlpha = new TypeDeclaration();
+        declarationAlpha.setName("alpha");
+        schema.addTypeDeclaration(declarationAlpha);
+        Assert.assertEquals(1, schema.getTypes().size());
+
+        TypeDeclaration declarationBeta = new TypeDeclaration();
+        declarationBeta.setName("alpha"); // Testing collision
+        schema.addTypeDeclaration(declarationBeta);
+        Assert.assertEquals(1, schema.getTypes().size());
+
+        declarationBeta.setName("beta"); // Testing collision
+        schema.addTypeDeclaration(declarationBeta);
+        Assert.assertEquals(2, schema.getTypes().size());
+    }
 }

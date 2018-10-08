@@ -10,6 +10,10 @@ import java.util.UUID;
 
 public class TypeDeclarationTest {
 
+    private static final String TEST_COMMENT = "Comment for test purposes";
+    private static final String TEST_MAPVALUESET_KEY = "Test Key";
+    private static final String TEST_MAPVALUESET_VALUE = "Test Value";
+
     @Test
     public void testConstructor() {
         TypeDeclaration declaration = new TypeDeclaration();
@@ -54,5 +58,36 @@ public class TypeDeclarationTest {
         Assert.assertEquals(1, list.size());
 
         Assert.assertFalse(declarationAlpha.equals(UUID.randomUUID()));
+    }
+
+    @Test
+    public void testCommentLogicToString() {
+        TypeDeclaration declaration = new TypeDeclaration();
+        Assert.assertEquals("table null {\n}\n\n", declaration.toString());
+
+        Assert.assertNull(declaration.getComment());
+        declaration.setComment("");
+        Assert.assertNotNull(declaration.getComment());
+        Assert.assertEquals("table null {\n}\n\n", declaration.toString());
+
+        declaration.setComment(TEST_COMMENT);
+        Assert.assertEquals("// " + TEST_COMMENT + "\ntable null {\n}\n\n", declaration.toString());
+    }
+
+    @Test
+    public void testMapValueSet() {
+        TypeDeclaration.MapValueSet mapValueSet = new TypeDeclaration.MapValueSet();
+        Assert.assertNotNull(mapValueSet);
+        Assert.assertNull(mapValueSet.key);
+        Assert.assertNull(mapValueSet.value);
+
+        mapValueSet.key = TEST_MAPVALUESET_KEY;
+        mapValueSet.value = TEST_MAPVALUESET_VALUE;
+
+        Assert.assertNotNull(mapValueSet.key);
+        Assert.assertNotNull(mapValueSet.value);
+
+        Assert.assertEquals(TEST_MAPVALUESET_KEY, mapValueSet.key);
+        Assert.assertEquals(TEST_MAPVALUESET_VALUE, mapValueSet.value);
     }
 }

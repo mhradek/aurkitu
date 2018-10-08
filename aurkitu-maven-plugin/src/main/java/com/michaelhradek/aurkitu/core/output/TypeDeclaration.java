@@ -3,12 +3,13 @@ package com.michaelhradek.aurkitu.core.output;
 import com.michaelhradek.aurkitu.annotations.FlatBufferTable.TableStructureType;
 import com.michaelhradek.aurkitu.annotations.types.FieldType;
 import com.michaelhradek.aurkitu.core.output.TypeDeclaration.Property.PropertyOptionKey;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import lombok.Getter;
-import lombok.Setter;
 
 /**
  * @author m.hradek
@@ -73,38 +74,40 @@ public class TypeDeclaration {
         builder.append(" {");
         builder.append(System.lineSeparator());
 
-        for (Property property : properties) {
-            builder.append("  ");
-            builder.append(property.name);
-            builder.append(":");
-            if (property.type == FieldType.ARRAY) {
-                builder.append("[");
-                builder.append(property.options.get(PropertyOptionKey.ARRAY));
-                builder.append("]");
-            } else if (property.type == FieldType.IDENT) {
-                builder.append(property.options.get(PropertyOptionKey.IDENT));
-            } else if (property.type == FieldType.MAP) {
-                builder.append("[");
-                builder.append(property.options.get(PropertyOptionKey.MAP));
-                builder.append("]");
-            } else {
-                builder.append(property.type.toString());
+        if (!properties.isEmpty()) {
+            for (Property property : properties) {
+                builder.append("  ");
+                builder.append(property.name);
+                builder.append(":");
+                if (property.type == FieldType.ARRAY) {
+                    builder.append("[");
+                    builder.append(property.options.get(PropertyOptionKey.ARRAY));
+                    builder.append("]");
+                } else if (property.type == FieldType.IDENT) {
+                    builder.append(property.options.get(PropertyOptionKey.IDENT));
+                } else if (property.type == FieldType.MAP) {
+                    builder.append("[");
+                    builder.append(property.options.get(PropertyOptionKey.MAP));
+                    builder.append("]");
+                } else {
+                    builder.append(property.type.toString());
+                }
+
+                // This needs to be right before the property terminating character (i.e. ";")
+                if (property.options.get(PropertyOptionKey.DEFAULT_VALUE) != null) {
+                    builder.append(" = ");
+                    builder.append(property.options.get(PropertyOptionKey.DEFAULT_VALUE));
+                }
+
+                builder.append(";");
+
+                if (property.options.get(PropertyOptionKey.COMMENT) != null) {
+                    builder.append("\t// ");
+                    builder.append(property.options.get(PropertyOptionKey.COMMENT));
+                }
+
+                builder.append(System.lineSeparator());
             }
-
-            // This needs to be right before the property terminating character (i.e. ";")
-            if (property.options.get(PropertyOptionKey.DEFAULT_VALUE) != null) {
-                builder.append(" = ");
-                builder.append(property.options.get(PropertyOptionKey.DEFAULT_VALUE));
-            }
-
-            builder.append(";");
-
-            if (property.options.get(PropertyOptionKey.COMMENT) != null) {
-                builder.append("\t// ");
-                builder.append(property.options.get(PropertyOptionKey.COMMENT));
-            }
-
-            builder.append(System.lineSeparator());
         }
 
         builder.append("}");
