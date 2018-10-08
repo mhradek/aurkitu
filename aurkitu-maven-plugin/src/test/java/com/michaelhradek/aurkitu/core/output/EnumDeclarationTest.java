@@ -10,6 +10,8 @@ import java.util.UUID;
 
 public class EnumDeclarationTest {
 
+    private static final String TEST_COMMENT = "Comment for test purposes";
+
     @Test
     public void testConstructor() {
         EnumDeclaration declaration = new EnumDeclaration();
@@ -54,5 +56,19 @@ public class EnumDeclarationTest {
         Assert.assertEquals(1, list.size());
 
         Assert.assertFalse(declarationAlpha.equals(UUID.randomUUID()));
+    }
+
+    @Test
+    public void testCommentLogicToString() {
+        EnumDeclaration declaration = new EnumDeclaration();
+        Assert.assertEquals("enum null { }\n\n", declaration.toString());
+
+        Assert.assertNull(declaration.getComment());
+        declaration.setComment("");
+        Assert.assertNotNull(declaration.getComment());
+        Assert.assertEquals("enum null { }\n\n", declaration.toString());
+
+        declaration.setComment(TEST_COMMENT);
+        Assert.assertEquals("// " + TEST_COMMENT + "\nenum null { }\n\n", declaration.toString());
     }
 }

@@ -1,11 +1,12 @@
 package com.michaelhradek.aurkitu.core.output;
 
-import com.michaelhradek.aurkitu.annotations.types.EnumType;
 import com.michaelhradek.aurkitu.annotations.FlatBufferEnum.EnumStructureType;
-import java.util.ArrayList;
-import java.util.List;
+import com.michaelhradek.aurkitu.annotations.types.EnumType;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author m.hradek
@@ -60,7 +61,9 @@ public class EnumDeclaration {
             builder.append(", ");
         }
 
-        builder.deleteCharAt(builder.lastIndexOf(","));
+        if (builder.toString().contains(",")) {
+            builder.deleteCharAt(builder.lastIndexOf(","));
+        }
 
         builder.append("}");
         builder.append(System.lineSeparator());
