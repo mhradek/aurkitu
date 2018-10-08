@@ -1,11 +1,23 @@
 package com.michaelhradek.aurkitu.core.output;
 
-import java.util.ArrayList;
-import java.util.List;
+import com.michaelhradek.aurkitu.annotations.FlatBufferTable;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
 public class TypeDeclarationTest {
+
+    @Test
+    public void testConstructor() {
+        TypeDeclaration declaration = new TypeDeclaration();
+        Assert.assertEquals(FlatBufferTable.TableStructureType.TABLE, declaration.getStructure());
+
+        declaration = new TypeDeclaration(FlatBufferTable.TableStructureType.STRUCT);
+        Assert.assertEquals(FlatBufferTable.TableStructureType.STRUCT, declaration.getStructure());
+    }
 
     @Test
     public void testHashCode() {
@@ -40,5 +52,7 @@ public class TypeDeclarationTest {
         Assert.assertTrue(list.contains(declarationBeta));
         Assert.assertFalse(list.contains(declarationAlpha));
         Assert.assertEquals(1, list.size());
+
+        Assert.assertFalse(declarationAlpha.equals(UUID.randomUUID()));
     }
 }
