@@ -3,6 +3,16 @@
  */
 package com.michaelhradek.aurkitu.core;
 
+import com.michaelhradek.aurkitu.Config;
+import com.michaelhradek.aurkitu.annotations.FlatBufferEnum;
+import com.michaelhradek.aurkitu.annotations.FlatBufferTable;
+import com.michaelhradek.aurkitu.core.output.Schema;
+import org.apache.maven.plugin.MojoExecutionException;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -10,23 +20,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.maven.plugin.MojoExecutionException;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-
-import com.michaelhradek.aurkitu.Config;
-import com.michaelhradek.aurkitu.annotations.FlatBufferEnum;
-import com.michaelhradek.aurkitu.annotations.FlatBufferTable;
-import com.michaelhradek.aurkitu.core.output.Schema;
-
 /**
  * @author m.hradek
  */
 public class FileGenerationTest {
 
-    private static String OUTPUT_DIRECTORY = "target/aurkito";
+    private static String OUTPUT_DIRECTORY = "target/aurkitu/test";
 
     /**
      * @throws java.lang.Exception
@@ -58,14 +57,17 @@ public class FileGenerationTest {
         schema.setGenerateVersion(true);
 
         File outputDirectory = new File(OUTPUT_DIRECTORY);
+        Assert.assertFalse(outputDirectory.exists());
+        Assert.assertFalse(outputDirectory.isDirectory());
+
         FileGeneration fg = new FileGeneration(outputDirectory);
         fg.writeSchema(schema);
         schema.setName("test");
         fg.writeSchema(schema);
 
         // TODO Rigorous testing
-        Assert.assertEquals(true, outputDirectory.exists());
-        Assert.assertEquals(true, outputDirectory.isDirectory());
+        Assert.assertTrue(outputDirectory.exists());
+        Assert.assertTrue(outputDirectory.isDirectory());
 
         File resultingFile = new File(OUTPUT_DIRECTORY + File.separator + fg.getFileName());
 

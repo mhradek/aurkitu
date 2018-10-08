@@ -3,7 +3,12 @@ package com.michaelhradek.aurkitu.core.output;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.ArrayList;
+
 public class SchemaTest {
+
+    private static final String TEST_SCHEMA_HEADER = "// Aurkitu automatically generated IDL FlatBuffer Schema\n\n";
+    private static final String TEST_NAMESPACE = "com.company.test.package";
 
     @Test
     public void testSetFileIdentifier() {
@@ -118,6 +123,35 @@ public class SchemaTest {
                 continue;
             }
         }
+    }
+
+    @Test
+    public void testAttributesToString() {
+        Schema schema = new Schema();
+        Assert.assertTrue(schema.getAttributes().isEmpty());
+        Assert.assertEquals(TEST_SCHEMA_HEADER, schema.toString());
+        schema.setAttributes(null);
+        Assert.assertNull(schema.getAttributes());
+        Assert.assertEquals(TEST_SCHEMA_HEADER, schema.toString());
+        schema.setAttributes(new ArrayList<String>());
+        Assert.assertNotNull(schema.getAttributes());
+        Assert.assertEquals(TEST_SCHEMA_HEADER, schema.toString());
+
+        schema.addAttribute("Test Attribute");
+        Assert.assertEquals(TEST_SCHEMA_HEADER + "attribute \"Test Attribute\";\n\n", schema.toString());
+    }
+
+    @Test
+    public void testNamespaceToString() {
+        Schema schema = new Schema();
+        Assert.assertNull(schema.getNamespace());
+        Assert.assertEquals(TEST_SCHEMA_HEADER, schema.toString());
+
+        schema.setNamespace(TEST_NAMESPACE);
+        Assert.assertEquals(TEST_SCHEMA_HEADER + "namespace " + TEST_NAMESPACE + ";\n\n", schema.toString());
+
+        schema.setNamespace(TEST_NAMESPACE + ";");
+        Assert.assertEquals(TEST_SCHEMA_HEADER + "namespace " + TEST_NAMESPACE + ";\n\n", schema.toString());
     }
 
     @Test
