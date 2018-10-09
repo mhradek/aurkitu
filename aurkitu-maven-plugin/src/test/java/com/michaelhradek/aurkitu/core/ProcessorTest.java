@@ -4,6 +4,7 @@ import com.michaelhradek.aurkitu.Application;
 import com.michaelhradek.aurkitu.Config;
 import com.michaelhradek.aurkitu.annotations.FlatBufferComment;
 import com.michaelhradek.aurkitu.annotations.FlatBufferEnum;
+import com.michaelhradek.aurkitu.annotations.FlatBufferEnumTypeField;
 import com.michaelhradek.aurkitu.annotations.FlatBufferTable;
 import com.michaelhradek.aurkitu.annotations.types.EnumType;
 import com.michaelhradek.aurkitu.annotations.types.FieldType;
@@ -90,9 +91,9 @@ public class ProcessorTest extends AbstractMojoTestCase {
         schema.addAttribute("ConsiderThis");
         schema.addInclude("AnotherFile.fbs");
 
-        Assert.assertEquals(12, processor.getTargetClasses().size());
+        Assert.assertEquals(13, processor.getTargetClasses().size());
         Assert.assertEquals(9, schema.getTypes().size());
-        Assert.assertEquals(8, schema.getEnums().size());
+        Assert.assertEquals(9, schema.getEnums().size());
 
         Assert.assertEquals("SampleClassTable", schema.getRootType());
 
@@ -112,9 +113,9 @@ public class ProcessorTest extends AbstractMojoTestCase {
         Assert.assertEquals(1, processor.getSourceAnnotations().size());
         Schema schema = processor.buildSchema();
 
-        Assert.assertEquals(6, processor.getTargetClasses().size());
+        Assert.assertEquals(7, processor.getTargetClasses().size());
         Assert.assertEquals(0, schema.getTypes().size());
-        Assert.assertEquals(6, schema.getEnums().size());
+        Assert.assertEquals(7, schema.getEnums().size());
 
         Assert.assertEquals(null, schema.getRootType());
 
@@ -517,16 +518,35 @@ public class ProcessorTest extends AbstractMojoTestCase {
     }
 
     @Test
-    public void testBuildEnumDelaration() {
+    public void testBuildEnumDelarationComment() {
         Processor processor = new Processor();
-        EnumDeclaration declaration = processor.buildEnumDeclaration(TestEnum.class);
+        EnumDeclaration declaration = processor.buildEnumDeclaration(TestEnumCommentEmpty.class);
         Assert.assertNotNull(declaration);
         Assert.assertNull(declaration.getComment());
     }
 
+    @Test
+    public void testBuildEnumDelarationMultipleTypes() {
+        Processor processor = new Processor();
+        EnumDeclaration declaration = processor.buildEnumDeclaration(TestEnumMultipleType.class);
+        Assert.assertNotNull(declaration);
+    }
+
     @FlatBufferComment(comment = "")
     @FlatBufferEnum
-    enum TestEnum {
+    enum TestEnumCommentEmpty {
 
+    }
+
+    @FlatBufferEnum
+    enum TestEnumMultipleType {
+
+        VALUE_ONE, VALUE_TWO;
+
+        @FlatBufferEnumTypeField
+        int key;
+
+        @FlatBufferEnumTypeField
+        String value;
     }
 }

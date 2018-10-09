@@ -14,10 +14,10 @@ public class SchemaTest {
     @Test
     public void testSetFileIdentifier() {
         Schema schema = new Schema();
-        Assert.assertEquals(null, schema.getFileIdentifier());
+        Assert.assertNull(schema.getFileIdentifier());
 
         schema.setFileIdentifier("INVALID_LENGTH");
-        Assert.assertEquals(null, schema.getFileIdentifier());
+        Assert.assertNull(schema.getFileIdentifier());
 
         final String validFileIdentifier = "VLID";
         schema.setFileIdentifier(validFileIdentifier);
@@ -27,22 +27,22 @@ public class SchemaTest {
     @Test
     public void testSetFileExtension() {
         Schema schema = new Schema();
-        Assert.assertEquals(null, schema.getFileExtension());
+        Assert.assertNull(schema.getFileExtension());
 
         schema.setFileExtension(null);
-        Assert.assertEquals(null, schema.getFileExtension());
+        Assert.assertNull(schema.getFileExtension());
 
         schema.setFileExtension("");
-        Assert.assertEquals(null, schema.getFileExtension());
+        Assert.assertNull(schema.getFileExtension());
 
         schema.setFileExtension("ABC");
         Assert.assertEquals("abc", schema.getFileExtension());
 
         schema.setFileExtension(null);
-        Assert.assertEquals(null, schema.getFileExtension());
+        Assert.assertNull(schema.getFileExtension());
 
         schema.setFileExtension("");
-        Assert.assertEquals(null, schema.getFileExtension());
+        Assert.assertNull(schema.getFileExtension());
     }
 
     @Test
@@ -89,25 +89,20 @@ public class SchemaTest {
                 continue;
             }
 
-            if(line.contains(INCLUDE_2)) {
-                Assert.assertEquals("include " + INCLUDE_2, line);
-                continue;
-            }
-
             if(line.contains(ATTRIBUTE)) {
                 Assert.assertEquals("attribute \"" + ATTRIBUTE + "\";", line);
                 continue;
             }
 
-//            if(line.contains(INT_CONST_NAME)) {
-//                Assert.assertEquals("attribute " + ATTRIBUTE, line);
-//                continue;
-//            }
-//
-//            if(line.contains(FLOAT_CONST_NAME)) {
-//                Assert.assertEquals("attribute " + ATTRIBUTE, line);
-//                continue;
-//            }
+            if (line.contains(INT_CONST_NAME)) {
+                Assert.assertEquals("int " + INT_CONST_NAME + " " + INT_CONST_VALUE + ";", line);
+                continue;
+            }
+
+            if (line.contains(FLOAT_CONST_NAME)) {
+                Assert.assertEquals("float " + FLOAT_CONST_NAME + " " + FLOAT_CONST_VALUE + ";", line);
+                continue;
+            }
 
             if(line.contains(FILE_ID)) {
                 Assert.assertEquals("file_identifier \"" + FILE_ID + "\";", line);
@@ -123,6 +118,13 @@ public class SchemaTest {
                 Assert.assertEquals("namespace " + NAMESPACE + ";", line);
                 continue;
             }
+
+            // Ignore these
+            if (line.contains(Config.SCHEMA_INTRO_COMMENT) || line.equalsIgnoreCase("")) {
+                continue;
+            }
+
+            Assert.fail("Line not tested: [" + line + "]");
         }
     }
 
