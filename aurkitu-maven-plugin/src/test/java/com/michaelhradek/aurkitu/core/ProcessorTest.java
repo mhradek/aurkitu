@@ -494,5 +494,24 @@ public class ProcessorTest extends AbstractMojoTestCase {
 
         result = (Boolean) privateIsEnumWorkAround.invoke(processor, SampleClassTableInnerEnumInt.class);
         Assert.assertTrue(result);
+
+        result = (Boolean) privateIsEnumWorkAround.invoke(processor, TestAnonymousClass.class);
+        Assert.assertFalse(result);
+
+        result = (Boolean) privateIsEnumWorkAround.invoke(processor, TestInterface.class);
+        Assert.assertFalse(result);
+    }
+
+    class TestAnonymousClass {
+
+        TestInterface innerAnonymousField;
+
+        public void someClassMethod(TestInterface input) {
+            innerAnonymousField = input;
+        }
+    }
+
+    interface TestInterface {
+        public void someTestMethod();
     }
 }
