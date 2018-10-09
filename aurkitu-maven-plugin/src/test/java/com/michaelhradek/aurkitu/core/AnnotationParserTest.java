@@ -1,34 +1,45 @@
 package com.michaelhradek.aurkitu.core;
 
 import com.michaelhradek.aurkitu.annotations.FlatBufferTable;
-import com.michaelhradek.aurkitu.test.BogusAnnotation;
-import com.michaelhradek.aurkitu.test.SampleClassReferenced;
-import com.michaelhradek.aurkitu.test.SampleClassTable;
-import com.michaelhradek.aurkitu.test.SampleEnumByte;
-import com.michaelhradek.aurkitu.test.SampleEnumNull;
-import java.util.Set;
-import org.junit.After;
+import com.michaelhradek.aurkitu.test.*;
+import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.project.MavenProject;
+import org.eclipse.aether.RepositorySystem;
+import org.eclipse.aether.RepositorySystemSession;
+import org.eclipse.aether.repository.RemoteRepository;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.runners.MockitoJUnitRunner;
 
-/**
- * @author m.hradek
- */
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+
+@RunWith(MockitoJUnitRunner.class)
 public class AnnotationParserTest {
 
-    /**
-     * @throws java.lang.Exception
-     */
-    @Before
-    public void setUp() throws Exception {
-    }
+    @Mock
+    private MavenProject mockProject;
 
-    /**
-     * @throws java.lang.Exception
-     */
-    @After
-    public void tearDown() throws Exception {
+    @Mock
+    private RepositorySystem mockRepositorySystem;
+
+    @Mock
+    private RepositorySystemSession mockRepositorySystemSession;
+
+    @Mock
+    private List<RemoteRepository> mockRemoteRepositories;
+
+    @Mock
+    private List<String> mockSpecifiedDependencies;
+
+    @Before
+    public void before() {
+
     }
 
     /**
@@ -51,5 +62,22 @@ public class AnnotationParserTest {
     public void testFindAnnotatedClassesWithPath() {
         Set<Class<?>> annotated = AnnotationParser.findAnnotatedClasses(".*", BogusAnnotation.class);
         Assert.assertEquals(true, annotated.isEmpty());
+    }
+
+    @Test
+    public void testFindAnnotatedClassesExtended() throws Exception {
+        Mockito.when(mockProject.getCompileClasspathElements()).thenReturn(new ArrayList<String>());
+
+        ArtifactReference artifactReference = new ArtifactReference(mockProject, mockRepositorySystem, mockRepositorySystemSession, mockRemoteRepositories, mockSpecifiedDependencies);
+        Set<Class<?>> annotated = AnnotationParser.findAnnotatedClasses(artifactReference, FlatBufferTable.class);
+        Assert.assertEquals(true, annotated.isEmpty());
+
+        Mockito.when(mockProject.getCompileClasspathElements()).thenReturn(null);
+        try {
+            annotated = AnnotationParser.findAnnotatedClasses(artifactReference, FlatBufferTable.class);
+            Assert.fail("Expected MojoExecutionException; Compile Classpath Elements returned null");
+        } catch (MojoExecutionException e) {
+            Assert.assertEquals("No valid compile classpath elements exist; is there source code for this project?", e.getMessage());
+        }
     }
 }

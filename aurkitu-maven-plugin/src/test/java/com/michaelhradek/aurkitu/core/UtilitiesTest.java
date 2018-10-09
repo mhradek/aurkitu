@@ -26,7 +26,6 @@ import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 
 public class UtilitiesTest extends AbstractMojoTestCase {
 
@@ -53,18 +52,6 @@ public class UtilitiesTest extends AbstractMojoTestCase {
         protected void after() {
         }
     };
-
-    interface B<E> {
-        Optional<E> method();
-    }
-
-    class A implements B<Void> {
-
-        public Optional<Void> method() {
-
-            return Optional.empty();
-        }
-    }
 
     @Test
     public void testIsLowerCaseType() {
@@ -101,8 +88,7 @@ public class UtilitiesTest extends AbstractMojoTestCase {
 
         Assert.assertFalse(Utilities.isLowerCaseType(Application.class));
 
-        Optional<Void> test = new A().method();
-        Assert.assertFalse(Utilities.isLowerCaseType(test.getClass()));
+        Assert.assertFalse(Utilities.isLowerCaseType(void.class));
     }
 
     @Test
