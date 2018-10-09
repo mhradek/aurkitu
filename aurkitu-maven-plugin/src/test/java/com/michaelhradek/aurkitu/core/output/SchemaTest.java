@@ -1,5 +1,6 @@
 package com.michaelhradek.aurkitu.core.output;
 
+import com.michaelhradek.aurkitu.Config;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -7,7 +8,7 @@ import java.util.ArrayList;
 
 public class SchemaTest {
 
-    private static final String TEST_SCHEMA_HEADER = "// Aurkitu automatically generated IDL FlatBuffer Schema\n\n";
+    private static final String TEST_SCHEMA_HEADER = Config.SCHEMA_INTRO_COMMENT + "\n\n";
     private static final String TEST_NAMESPACE = "com.company.test.package";
 
     @Test
@@ -185,9 +186,7 @@ public class SchemaTest {
         Assert.assertNotNull(schema.getFloatConstants());
         Assert.assertTrue(schema.getFloatConstants().isEmpty());
 
-        Assert.assertNotNull(schema.isGenerateVersion());
         Assert.assertFalse(schema.isGenerateVersion());
-
         Assert.assertNull(schema.getValidator());
     }
 }

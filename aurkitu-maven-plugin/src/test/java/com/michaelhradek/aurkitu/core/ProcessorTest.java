@@ -13,18 +13,10 @@ import com.michaelhradek.aurkitu.core.output.TypeDeclaration.Property;
 import com.michaelhradek.aurkitu.core.output.TypeDeclaration.Property.PropertyOptionKey;
 import com.michaelhradek.aurkitu.stubs.AurkituTestMavenProjectStub;
 import com.michaelhradek.aurkitu.stubs.AurkituTestSettingsStub;
-import com.michaelhradek.aurkitu.test.SampleClassReferenced;
+import com.michaelhradek.aurkitu.test.*;
 import com.michaelhradek.aurkitu.test.SampleClassReferenced.SampleClassTableInnerEnumInt;
-import com.michaelhradek.aurkitu.test.SampleClassStruct;
-import com.michaelhradek.aurkitu.test.SampleClassTable;
-import com.michaelhradek.aurkitu.test.SampleClassTableWithUndefined;
-import com.michaelhradek.aurkitu.test.SampleEnumByte;
-import com.michaelhradek.aurkitu.test.SampleEnumNull;
 import com.michaelhradek.aurkitu.test.other.SampleAnonymousEnum;
 import com.michaelhradek.aurkitu.test.other.SampleClassNamespaceMap;
-import java.io.File;
-import java.lang.reflect.Field;
-import java.util.HashMap;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
 import org.apache.maven.plugin.testing.MojoRule;
@@ -33,10 +25,23 @@ import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 
+import java.io.File;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 /**
  * @author m.hradek
  */
 public class ProcessorTest extends AbstractMojoTestCase {
+
+    private static final String TEST_NAMESPACE_OVERRIDE_KEY = "com.test.company.key";
+    private static final String TEST_NAMESPACE_OVERRIDE_VALUE = "com.test.company.value";
+    private static final String TEST_SPECIFIED_DEPENDENCY = TEST_NAMESPACE_OVERRIDE_KEY;
 
     /**
      * @see junit.framework.TestCase#setUp()
@@ -434,5 +439,60 @@ public class ProcessorTest extends AbstractMojoTestCase {
         Class<?> clazz = Processor.getClassForClassName(mavenProject, AurkituTestSettingsStub.class.getName());
         Assert.assertNotNull(clazz);
         Assert.assertEquals(AurkituTestSettingsStub.class.getName(), clazz.getName());
+    }
+
+    @Test
+    public void testWithNamespaceOverrideMap() {
+        Processor processor = new Processor();
+        Assert.assertNotNull(processor.getNamespaceOverrideMap());
+        Assert.assertEquals(0, processor.getNamespaceOverrideMap().size());
+        Assert.assertNotNull(processor.withNamespaceOverrideMap(null));
+
+        Map<String, String> testMap = new HashMap<String, String>();
+        testMap.put(TEST_NAMESPACE_OVERRIDE_KEY, TEST_NAMESPACE_OVERRIDE_VALUE);
+        processor.withNamespaceOverrideMap(testMap);
+        Assert.assertEquals(1, processor.getNamespaceOverrideMap().size());
+
+        // Updated with trailing period (.)
+        Assert.assertNull(processor.getNamespaceOverrideMap().get(TEST_NAMESPACE_OVERRIDE_KEY));
+
+        String testValue = processor.getNamespaceOverrideMap().get(TEST_NAMESPACE_OVERRIDE_KEY + ".");
+        Assert.assertNotNull(testValue);
+        Assert.assertEquals(TEST_NAMESPACE_OVERRIDE_VALUE + ".", testValue);
+
+        testMap.put(TEST_NAMESPACE_OVERRIDE_KEY + ".", TEST_NAMESPACE_OVERRIDE_VALUE + ".");
+        processor.withNamespaceOverrideMap(testMap);
+        Assert.assertEquals(1, processor.getNamespaceOverrideMap().size());
+
+        testValue = processor.getNamespaceOverrideMap().get(TEST_NAMESPACE_OVERRIDE_KEY + ".");
+        Assert.assertNotNull(testValue);
+        Assert.assertEquals(TEST_NAMESPACE_OVERRIDE_VALUE + ".", testValue);
+    }
+
+    @Test
+    public void testWithSpecifiedDependencies() {
+        Processor processor = new Processor();
+        Assert.assertNull(processor.getSpecifiedDependencies());
+        Assert.assertNotNull(processor.withSpecifiedDependencies(null));
+
+        List<String> testList = new ArrayList<String>();
+        testList.add(TEST_SPECIFIED_DEPENDENCY);
+        Assert.assertNotNull(processor.withSpecifiedDependencies(testList));
+        Assert.assertEquals(1, processor.getSpecifiedDependencies().size());
+        Assert.assertFalse(processor.getSpecifiedDependencies().isEmpty());
+        Assert.assertEquals(TEST_SPECIFIED_DEPENDENCY, processor.getSpecifiedDependencies().get(0));
+    }
+
+    @Test
+    public void testIsEnumWorkAround() throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+        Processor processor = new Processor();
+        Method privateIsEnumWorkAround = Processor.class.getDeclaredMethod("isEnumWorkaround", Class.class);
+        privateIsEnumWorkAround.setAccessible(true);
+
+        Boolean result = (Boolean) privateIsEnumWorkAround.invoke(processor, SampleClassReferenced.class);
+        Assert.assertFalse(result);
+
+        result = (Boolean) privateIsEnumWorkAround.invoke(processor, SampleClassTableInnerEnumInt.class);
+        Assert.assertTrue(result);
     }
 }
