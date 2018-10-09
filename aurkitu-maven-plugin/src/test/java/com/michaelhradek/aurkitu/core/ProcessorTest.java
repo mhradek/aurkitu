@@ -2,6 +2,7 @@ package com.michaelhradek.aurkitu.core;
 
 import com.michaelhradek.aurkitu.Application;
 import com.michaelhradek.aurkitu.Config;
+import com.michaelhradek.aurkitu.annotations.FlatBufferComment;
 import com.michaelhradek.aurkitu.annotations.FlatBufferEnum;
 import com.michaelhradek.aurkitu.annotations.FlatBufferTable;
 import com.michaelhradek.aurkitu.annotations.types.EnumType;
@@ -89,9 +90,9 @@ public class ProcessorTest extends AbstractMojoTestCase {
         schema.addAttribute("ConsiderThis");
         schema.addInclude("AnotherFile.fbs");
 
-        Assert.assertEquals(11, processor.getTargetClasses().size());
+        Assert.assertEquals(12, processor.getTargetClasses().size());
         Assert.assertEquals(9, schema.getTypes().size());
-        Assert.assertEquals(7, schema.getEnums().size());
+        Assert.assertEquals(8, schema.getEnums().size());
 
         Assert.assertEquals("SampleClassTable", schema.getRootType());
 
@@ -106,14 +107,14 @@ public class ProcessorTest extends AbstractMojoTestCase {
      * {@link com.michaelhradek.aurkitu.core.Processor#buildEnumDeclaration(java.lang.Class)}.
      */
     @Test
-    public void testBuildEnumDeclaration() throws MojoExecutionException {
+    public void testBuildEnumDeclarationPass() throws MojoExecutionException {
         Processor processor = new Processor().withSourceAnnotation(FlatBufferEnum.class);
         Assert.assertEquals(1, processor.getSourceAnnotations().size());
         Schema schema = processor.buildSchema();
 
-        Assert.assertEquals(5, processor.getTargetClasses().size());
+        Assert.assertEquals(6, processor.getTargetClasses().size());
         Assert.assertEquals(0, schema.getTypes().size());
-        Assert.assertEquals(5, schema.getEnums().size());
+        Assert.assertEquals(6, schema.getEnums().size());
 
         Assert.assertEquals(null, schema.getRootType());
 
@@ -157,7 +158,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
      * {@link com.michaelhradek.aurkitu.core.Processor#buildTypeDeclaration(java.lang.Class)}.
      */
     @Test
-    public void testBuildTypeDeclaration() throws MojoExecutionException {
+    public void testBuildTypeDeclarationPass() throws MojoExecutionException {
         Processor processor = new Processor().withSourceAnnotation(FlatBufferTable.class);
         Assert.assertEquals(1, processor.getSourceAnnotations().size());
         Schema schema = processor.buildSchema();
@@ -513,5 +514,19 @@ public class ProcessorTest extends AbstractMojoTestCase {
 
     interface TestInterface {
         public void someTestMethod();
+    }
+
+    @Test
+    public void testBuildEnumDelaration() {
+        Processor processor = new Processor();
+        EnumDeclaration declaration = processor.buildEnumDeclaration(TestEnum.class);
+        Assert.assertNotNull(declaration);
+        Assert.assertNull(declaration.getComment());
+    }
+
+    @FlatBufferComment(comment = "")
+    @FlatBufferEnum
+    enum TestEnum {
+
     }
 }
