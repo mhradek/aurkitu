@@ -224,7 +224,20 @@ public class UtilitiesTest extends AbstractMojoTestCase {
 
     @Test
     public void testClasspathElements() {
-        // TODO
+//        URL.setURLStreamHandlerFactory(protocol -> {
+//            throw new UnsupportedOperationException();
+//        });
+//
+//        try {
+//            Utilities.buildProjectClasspathList(artifactReference);
+//            Assert.fail("MalformedURLException required");
+//        } catch (MalformedURLException e) {
+//            // Good
+//        } catch (DependencyResolutionRequiredException e) {
+//            Assert.fail("DependencyResolutionRequiredException unexpected");
+//        } catch (ArtifactResolutionException e) {
+//            Assert.fail("ArtifactResolutionException unexpected");
+//        }
     }
 
     /**
