@@ -172,6 +172,12 @@ public class UtilitiesTest extends AbstractMojoTestCase {
         // The directory is not present
         gen = new FileGeneration(new File(OUTPUT_DIRECTORY + "/missing"));
         Assert.assertFalse(Utilities.isSchemaPresent(schema, gen.getOutputDirectory()));
+
+        gen = new FileGeneration(new File(OUTPUT_DIRECTORY));
+        schema.setName("");
+        Assert.assertFalse(Utilities.isSchemaPresent(schema, gen.getOutputDirectory()));
+        schema.setName(null);
+        Assert.assertFalse(Utilities.isSchemaPresent(schema, gen.getOutputDirectory()));
     }
 
     @Test

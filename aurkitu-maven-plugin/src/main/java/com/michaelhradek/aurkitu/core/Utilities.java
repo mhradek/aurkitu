@@ -289,7 +289,7 @@ public class Utilities {
     public static String getCurrentProject(final ArtifactReference artifactReference) {
         final String projectName = String.join(":",
                 artifactReference.getMavenProject().getGroupId(), artifactReference.getMavenProject().getArtifactId());
-        Application.getLogger().debug("  Current prject name: " + projectName);
+        Application.getLogger().debug("  Current project name: " + projectName);
         return projectName;
     }
 }
