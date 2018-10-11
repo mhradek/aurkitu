@@ -38,6 +38,7 @@ import java.util.Map;
 
 /**
  * @author m.hradek
+ *
  */
 public class ProcessorTest extends AbstractMojoTestCase {
 
