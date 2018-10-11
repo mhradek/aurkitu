@@ -48,4 +48,13 @@ public class ValidatorTest {
         }
     }
 
+    @Test
+    public void testValidateSchemaNullSchema() throws NoSuchFieldException, IllegalAccessException {
+        Validator validator = new Validator();
+        Assert.assertNull(validator.schema);
+        validator.validateSchema();
+        Assert.assertNull(validator.schema);
+        validator.withSchema(null).validateSchema();
+        Assert.assertNull(validator.schema);
+    }
 }

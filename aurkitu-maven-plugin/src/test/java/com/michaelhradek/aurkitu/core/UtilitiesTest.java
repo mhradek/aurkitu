@@ -16,9 +16,14 @@ import org.apache.maven.artifact.versioning.VersionRange;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
 import org.apache.maven.plugin.testing.MojoRule;
 import org.apache.maven.project.MavenProject;
+import org.eclipse.aether.RepositorySystem;
+import org.eclipse.aether.RepositorySystemSession;
+import org.eclipse.aether.repository.RemoteRepository;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.mockito.Mock;
 
 import java.io.File;
 import java.lang.reflect.Field;
@@ -30,6 +35,28 @@ import java.util.List;
 public class UtilitiesTest extends AbstractMojoTestCase {
 
     private static String OUTPUT_DIRECTORY = "target/aurkitu/utilities/test";
+
+    ArtifactReference artifactReference;
+
+    @Mock
+    private MavenProject mockProject;
+
+    @Mock
+    private RepositorySystem mockRepositorySystem;
+
+    @Mock
+    private RepositorySystemSession mockRepositorySystemSession;
+
+    @Mock
+    private List<RemoteRepository> mockRemoteRepositories;
+
+    @Mock
+    private List<String> mockSpecifiedDependencies;
+
+    @Before
+    public void before() {
+        artifactReference = new ArtifactReference(mockProject, mockRepositorySystem, mockRepositorySystemSession, mockRemoteRepositories, mockSpecifiedDependencies);
+    }
 
     /**
      * @see junit.framework.TestCase#setUp()
@@ -89,6 +116,7 @@ public class UtilitiesTest extends AbstractMojoTestCase {
         Assert.assertFalse(Utilities.isLowerCaseType(Application.class));
 
         Assert.assertFalse(Utilities.isLowerCaseType(void.class));
+        Assert.assertFalse(Utilities.isLowerCaseType(Void.class));
     }
 
     @Test
@@ -182,6 +210,16 @@ public class UtilitiesTest extends AbstractMojoTestCase {
 
         final String projectName = Utilities.getCurrentProject(new ArtifactReference(mavenProject, null, null, null, null));
         Assert.assertEquals("com.michaelhradek.aurkitu.test:plugin-basic", projectName);
+    }
+
+    @Test
+    public void testClasspathElements() {
+        // TODO
+    }
+
+    @Test
+    public void testBuildProhectClasspathList() {
+        // TODO
     }
 
     /**
