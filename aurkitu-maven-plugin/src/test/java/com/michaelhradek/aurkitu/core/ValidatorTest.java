@@ -57,4 +57,11 @@ public class ValidatorTest {
         validator.withSchema(null).validateSchema();
         Assert.assertNull(validator.schema);
     }
+
+    @Test
+    public void testGetErrorComments() {
+        Validator validator = new Validator();
+        Assert.assertTrue(validator.errors.isEmpty());
+        Assert.assertTrue(validator.getErrorComments().equalsIgnoreCase("// Schema passed validation"));
+    }
 }
