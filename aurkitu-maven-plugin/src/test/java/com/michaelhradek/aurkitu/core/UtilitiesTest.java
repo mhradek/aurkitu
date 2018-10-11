@@ -139,12 +139,12 @@ public class UtilitiesTest extends AbstractMojoTestCase {
 
     @Test
     public void testBuildProjectClasspathList() throws Exception {
-
+        // TODO
     }
 
     @Test
     public void testBuildReflections() {
-
+        // TODO
     }
 
     @Test
@@ -168,6 +168,10 @@ public class UtilitiesTest extends AbstractMojoTestCase {
 
         // File name is consistent and thus we can check cached file
         Assert.assertTrue(Utilities.isSchemaPresent(schema, gen.getOutputDirectory()));
+
+        // The directory is not present
+        gen = new FileGeneration(new File(OUTPUT_DIRECTORY + "/missing"));
+        Assert.assertFalse(Utilities.isSchemaPresent(schema, gen.getOutputDirectory()));
     }
 
     @Test
@@ -214,11 +218,6 @@ public class UtilitiesTest extends AbstractMojoTestCase {
 
     @Test
     public void testClasspathElements() {
-        // TODO
-    }
-
-    @Test
-    public void testBuildProhectClasspathList() {
         // TODO
     }
 
