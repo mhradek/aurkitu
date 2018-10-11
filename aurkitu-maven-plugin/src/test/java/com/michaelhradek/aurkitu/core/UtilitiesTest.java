@@ -16,14 +16,9 @@ import org.apache.maven.artifact.versioning.VersionRange;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
 import org.apache.maven.plugin.testing.MojoRule;
 import org.apache.maven.project.MavenProject;
-import org.eclipse.aether.RepositorySystem;
-import org.eclipse.aether.RepositorySystemSession;
-import org.eclipse.aether.repository.RemoteRepository;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.mockito.Mock;
 
 import java.io.File;
 import java.lang.reflect.Field;
@@ -35,28 +30,6 @@ import java.util.List;
 public class UtilitiesTest extends AbstractMojoTestCase {
 
     private static String OUTPUT_DIRECTORY = "target/aurkitu/utilities/test";
-
-    ArtifactReference artifactReference;
-
-    @Mock
-    private MavenProject mockProject;
-
-    @Mock
-    private RepositorySystem mockRepositorySystem;
-
-    @Mock
-    private RepositorySystemSession mockRepositorySystemSession;
-
-    @Mock
-    private List<RemoteRepository> mockRemoteRepositories;
-
-    @Mock
-    private List<String> mockSpecifiedDependencies;
-
-    @Before
-    public void before() {
-        artifactReference = new ArtifactReference(mockProject, mockRepositorySystem, mockRepositorySystemSession, mockRemoteRepositories, mockSpecifiedDependencies);
-    }
 
     /**
      * @see junit.framework.TestCase#setUp()
@@ -204,6 +177,13 @@ public class UtilitiesTest extends AbstractMojoTestCase {
 
         Assert.assertFalse(Utilities.isArtifactResolutionRequired(getFauxArtifact("org.ngo.subversive", "blarg"), artifactReference));
         Assert.assertTrue(Utilities.isArtifactResolutionRequired(getFauxArtifact("org.ngo.subversive", "yet-another-project"), artifactReference));
+
+        // Skip the check because the specified dependencies list was empty or null
+        artifactReference = new ArtifactReference(null, null, null, null, null);
+        Assert.assertTrue(Utilities.isArtifactResolutionRequired(getFauxArtifact("com.somecompany.team", "blah-blah"), artifactReference));
+        specifiedDependencies = new ArrayList<String>();
+        artifactReference = new ArtifactReference(null, null, null, null, specifiedDependencies);
+        Assert.assertTrue(Utilities.isArtifactResolutionRequired(getFauxArtifact("com.somecompany.team", "blah-blah"), artifactReference));
     }
 
     @Test
@@ -220,24 +200,6 @@ public class UtilitiesTest extends AbstractMojoTestCase {
 
         final String projectName = Utilities.getCurrentProject(new ArtifactReference(mavenProject, null, null, null, null));
         Assert.assertEquals("com.michaelhradek.aurkitu.test:plugin-basic", projectName);
-    }
-
-    @Test
-    public void testClasspathElements() {
-//        URL.setURLStreamHandlerFactory(protocol -> {
-//            throw new UnsupportedOperationException();
-//        });
-//
-//        try {
-//            Utilities.buildProjectClasspathList(artifactReference);
-//            Assert.fail("MalformedURLException required");
-//        } catch (MalformedURLException e) {
-//            // Good
-//        } catch (DependencyResolutionRequiredException e) {
-//            Assert.fail("DependencyResolutionRequiredException unexpected");
-//        } catch (ArtifactResolutionException e) {
-//            Assert.fail("ArtifactResolutionException unexpected");
-//        }
     }
 
     /**

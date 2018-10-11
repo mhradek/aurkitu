@@ -65,12 +65,6 @@ public class Utilities {
                 throw new MojoExecutionException("No valid compile classpath elements exist; is there source code for this project?");
             }
 
-            List<URL> projectClasspathList = new ArrayList<URL>();
-            for (String element : classpathElements) {
-                Application.getLogger().debug("Considering compile classpath element (via MavenProject): " + element);
-                projectClasspathList.add(new File(element).toURI().toURL());
-            }
-
             // Load all paths into custom classloader
             ClassLoader urlClassLoader = URLClassLoader.newInstance(buildProjectClasspathList(artifactReference),
                     Thread.currentThread().getContextClassLoader());
