@@ -64,4 +64,27 @@ public class ValidatorTest {
         Assert.assertTrue(validator.errors.isEmpty());
         Assert.assertTrue(validator.getErrorComments().equalsIgnoreCase("// Schema passed validation"));
     }
+
+    @Test
+    public void testValidateSchemaCheckTables() throws MojoExecutionException {
+        Processor processor = new Processor().withSourceAnnotation(FlatBufferTable.class)
+                .withSourceAnnotation(FlatBufferEnum.class);
+
+        Schema schema = processor.buildSchema();
+
+        Validator validator = new Validator().withSchema(schema);
+
+        Assert.assertTrue(validator.isCheckTables());
+        Assert.assertTrue(validator.isCheckEnums());
+        Assert.assertEquals(0, validator.getErrors().size());
+
+        validator.setCheckTables(false);
+        validator.setCheckEnums(false);
+
+        Assert.assertFalse(validator.isCheckTables());
+        Assert.assertFalse(validator.isCheckEnums());
+        validator.validateSchema();
+
+        Assert.assertEquals(0, validator.getErrors().size());
+    }
 }
