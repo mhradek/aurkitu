@@ -37,7 +37,9 @@ public class Processor {
     private Set<String> warnedTypeNames;
     private Map<String, String> namespaceOverrideMap;
     private List<String> specifiedDependencies;
+    private boolean consolidatedSchemas;
     private Schema schema;
+    private Map<String, Schema> depedencySchemas;
 
     public Processor() {
         sourceAnnotations = new ArrayList<Class<? extends Annotation>>();
@@ -93,6 +95,7 @@ public class Processor {
     }
 
     /**
+     *
      * @param specifiedDependencies Override the default target project dependency search and only search these dependencies with this group id
      * @return an instance of the Processor object
      */
@@ -102,6 +105,19 @@ public class Processor {
         }
 
         this.specifiedDependencies = specifiedDependencies;
+        return this;
+    }
+
+    /**
+     * @param consolidatedSchemas
+     * @return
+     */
+    public Processor withConsolidatedSchemas(Boolean consolidatedSchemas) {
+        if (consolidatedSchemas == null) {
+            return this;
+        }
+
+        this.consolidatedSchemas = consolidatedSchemas;
         return this;
     }
 
@@ -131,6 +147,7 @@ public class Processor {
             }
         }
 
+        // The targetClasses includes ALL annotated classes including those inside dependnecies
         int rootTypeCount = 0;
         for (Class<?> clazz : targetClasses) {
             if (isEnumWorkaround(clazz)) {
@@ -138,39 +155,37 @@ public class Processor {
                 continue;
             }
 
-            if (clazz instanceof Class) {
-                TypeDeclaration temp = buildTypeDeclaration(clazz);
-                if (temp.isRoot()) {
-                    Application.getLogger().debug("  Found root: " + temp.getName());
-                    rootTypeCount++;
-                    if (rootTypeCount > 1) {
-                        throw new IllegalArgumentException("Only one rootType declaration is allowed");
-                    }
-
-                    schema.setRootType(temp.getName());
+            TypeDeclaration temp = buildTypeDeclaration(clazz);
+            if (temp.isRoot()) {
+                Application.getLogger().debug("  Found root: " + temp.getName());
+                rootTypeCount++;
+                if (rootTypeCount > 1) {
+                    throw new IllegalArgumentException("Only one rootType declaration is allowed");
                 }
 
-                schema.addTypeDeclaration(temp);
+                schema.setRootType(temp.getName());
+            }
 
-                // Now examine inner classes
-                Class<?>[] innerClasses = clazz.getDeclaredClasses();
-                for (Class<?> inner : innerClasses) {
-                    Application.getLogger().debug("  Processing inner class: " + inner.getSimpleName());
-                    if (inner.isSynthetic()) {
-                        Application.getLogger().debug("  Found synthetic...");
-                        continue;
-                    }
+            schema.addTypeDeclaration(temp);
 
-                    if (isEnumWorkaround(inner)) {
-                        Application.getLogger().debug("  Found enum...");
-                        schema.addEnumDeclaration(buildEnumDeclaration(inner));
-                        continue;
-                    }
-
-                    Application.getLogger().debug("  Found type...");
-                    // Inner classes cannot be root type
-                    schema.addTypeDeclaration(buildTypeDeclaration(inner));
+            // Now examine inner classes
+            Class<?>[] innerClasses = clazz.getDeclaredClasses();
+            for (Class<?> inner : innerClasses) {
+                Application.getLogger().debug("  Processing inner class: " + inner.getSimpleName());
+                if (inner.isSynthetic()) {
+                    Application.getLogger().debug("  Found synthetic...");
+                    continue;
                 }
+
+                if (isEnumWorkaround(inner)) {
+                    Application.getLogger().debug("  Found enum...");
+                    schema.addEnumDeclaration(buildEnumDeclaration(inner));
+                    continue;
+                }
+
+                Application.getLogger().debug("  Found type...");
+                // Inner classes cannot be root type
+                schema.addTypeDeclaration(buildTypeDeclaration(inner));
             }
         }
 

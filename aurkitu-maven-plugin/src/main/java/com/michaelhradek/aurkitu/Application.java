@@ -51,6 +51,9 @@ public class Application extends AbstractMojo {
     @Parameter(property = Application.MOJO_NAME + ".specified-dependencies")
     private List<String> specifiedDependencies;
 
+    @Parameter(property = Application.MOJO_NAME + ".consolidated-schemas", defaultValue = "true")
+    private Boolean consolidatedSchemas;
+
     @Parameter(property = Application.MOJO_NAME + ".schema-namespace", defaultValue = "generated.flatbuffers")
     private String schemaNamespace;
 
@@ -104,6 +107,7 @@ public class Application extends AbstractMojo {
         log.info(" useSchemaCaching: " + useSchemaCaching);
         log.info(" schemaIncludes: " + (schemaIncludes == null ? "null" : schemaIncludes.toString()));
         log.info(" specifiedDependencies: " + (specifiedDependencies == null ? "null" : specifiedDependencies.toString()));
+        log.info(" consolidatedSchemas: " + consolidatedSchemas);
 
         Schema schema = new Schema();
         schema.setNamespace(schemaNamespace);
@@ -126,7 +130,8 @@ public class Application extends AbstractMojo {
                 .withSourceAnnotation(FlatBufferEnum.class)
                 .withArtifactReference(reference)
                     .withNamespaceOverrideMap(namespaceOverrideMap)
-                    .withSpecifiedDependencies(specifiedDependencies);
+                    .withSpecifiedDependencies(specifiedDependencies)
+                    .withConsolidatedSchemas(consolidatedSchemas);
 
         schema = processor.buildSchema(schema);
 
@@ -147,6 +152,12 @@ public class Application extends AbstractMojo {
         FileGeneration fg = new FileGeneration(outputDirectory);
         try {
             fg.writeSchema(schema);
+
+            if (consolidatedSchemas != null && consolidatedSchemas == false) {
+                for (Schema dependencySchema : processor.getDepedencySchemas().values()) {
+                    fg.writeSchema(dependencySchema);
+                }
+            }
         } catch (IOException e) {
             log.error("Unable to write schemas to disk", e);
         }

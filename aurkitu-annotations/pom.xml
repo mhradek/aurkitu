@@ -3,7 +3,6 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>aurkitu-annotations</artifactId>
-    <version>0.0.5.1</version>
     <packaging>jar</packaging>
 
     <name>Aurkitu Annotations</name>
@@ -53,7 +52,8 @@
     <parent>
         <groupId>com.michaelhradek</groupId>
         <artifactId>aurkitu-parent</artifactId>
-        <version>0.0.5.1</version>
+        <version>0.0.6</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
     <build>
