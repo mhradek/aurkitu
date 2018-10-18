@@ -182,9 +182,9 @@ table SampleClassTable {
   options:[int];
   anomalousSamples:[SimpleUndefinedClass];
   dataMap:[MapValueSet_SampleClassTable_dataMap];
-  definedInnerEnumArray:[com.michaelhradek.aurkitu.test.SampleClassReferenced$SampleClassTableInnerEnumInt];
+  definedInnerEnumArray:[SampleClassReferenced$SampleClassTableInnerEnumInt];
   innerEnum:SampleClassTableInnerEnumInt = SHORT_SWORD;
-  fullnameClass:com.michaelhradek.aurkitu.test.SampleClassReferenced;
+  fullnameClass:SampleClassReferenced;
 }
 
 table SampleAnonymousEnum {
@@ -203,7 +203,7 @@ table SampleClassTableWithUndefined {
 table SampleClassReferenced {
   id:long;
   baggage:[SampleClassTable];
-  samples:[com.michaelhradek.aurkitu.test.other.SampleClassNamespaceMap];
+  samples:[SampleClassNamespaceMap];
   abstractField:string;
 }
 
@@ -224,7 +224,7 @@ root_type SampleClassTable;
 
 // Schema failed validation (i.e. flatc will likely fail): 
 // Issue : TYPE_DEFINITION_NOT_DEFINED, Location: SampleClassTable, Name: anomalousSamples
-// Issue : INVALID_PATH, Location: SampleClassTable, Name: definedInnerEnumArray, Comment: Array type name contains '$'; using '@FlatBufferOptions(useFullName = true)' on inner not recommended: com.michaelhradek.aurkitu.test.SampleClassReferenced$SampleClassTableInnerEnumInt
+// Issue : INVALID_PATH, Location: SampleClassTable, Name: definedInnerEnumArray, Comment: Array type name contains '$'; using '@FlatBufferOptions(useFullName = true)' on inner not recommended: SampleClassReferenced$SampleClassTableInnerEnumInt
 // Issue : TYPE_DEFINITION_NOT_DEFINED, Location: SampleClassTableWithUndefined, Name: awesomeUndefinedClass
 // Issue : MISCONFIGURED_DEFINITION, Location: Option, Name: null
 // Issue : MISCONFIGURED_DEFINITION, Location: SampleClassTableInnerEnumInt, Name: null

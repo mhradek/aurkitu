@@ -51,7 +51,7 @@
                 <artifactId>aurkitu-maven-plugin</artifactId>
                 <version>0.0.6</version>
                 <configuration>
-                    <project implementation="com.michaelhradek.aurkitu.stubs.AurkituTestMavenProjectStub"/>
+                    <project implementation="com.michaelhradek.aurkitu.plugin.stubs.AurkituTestMavenProjectStub"/>
                     <schemaName>test-schema</schemaName>
                     <outputDirectory>target/test-dir</outputDirectory>
                     <validateSchema>true</validateSchema>

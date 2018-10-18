@@ -70,6 +70,8 @@
     <modules>
         <module>aurkitu-annotations</module>
         <module>aurkitu-maven-plugin</module>
+        <module>aurkitu-test-service</module>
+        <module>aurkitu-test-dependency</module>
     </modules>
 
 </project>

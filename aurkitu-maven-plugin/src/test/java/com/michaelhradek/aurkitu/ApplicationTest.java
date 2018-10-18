@@ -1,13 +1,15 @@
 package com.michaelhradek.aurkitu;
 
-import java.io.File;
-import java.lang.reflect.Field;
+import com.michaelhradek.aurkitu.plugin.Application;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
 import org.apache.maven.plugin.testing.MojoRule;
 import org.apache.maven.project.MavenProject;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
+
+import java.io.File;
+import java.lang.reflect.Field;
 
 /**
  * @author m.hradek
