@@ -1,6 +1,3 @@
-/**
- *
- */
 package com.michaelhradek.aurkitu.plugin.core;
 
 import com.michaelhradek.aurkitu.annotations.FlatBufferEnum;
@@ -8,9 +5,7 @@ import com.michaelhradek.aurkitu.annotations.FlatBufferTable;
 import com.michaelhradek.aurkitu.plugin.Config;
 import com.michaelhradek.aurkitu.plugin.core.output.Schema;
 import org.apache.maven.plugin.MojoExecutionException;
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.io.BufferedReader;
@@ -25,27 +20,14 @@ import java.util.List;
  */
 public class FileGenerationTest {
 
-    private static String OUTPUT_DIRECTORY = "target/aurkitu/test";
-
-    /**
-     * @throws java.lang.Exception
-     */
-    @Before
-    public void setUp() throws Exception {
-    }
-
-    /**
-     * @throws java.lang.Exception
-     */
-    @After
-    public void tearDown() throws Exception {
-    }
+    private static final String OUTPUT_DIRECTORY = "target/aurkitu/test";
 
     /**
      * Test method for
      * {@link com.michaelhradek.aurkitu.plugin.core.FileGeneration#writeSchema(com.michaelhradek.aurkitu.plugin.core.output.Schema)}.
      *
-     * @throws IOException
+     * @throws IOException if unable to locate directory/file used in tests
+     * @throws MojoExecutionException if an error occurs attempting to execute plugin
      */
     @Test
     public void testWriteSchema() throws IOException, MojoExecutionException {
@@ -75,14 +57,14 @@ public class FileGenerationTest {
             System.out.println("RESULTING FILE: " + resultingFile.getPath());
         }
 
-        Assert.assertEquals(true, resultingFile.exists());
-        Assert.assertEquals(true, resultingFile.isFile());
+        Assert.assertTrue(resultingFile.exists());
+        Assert.assertTrue(resultingFile.isFile());
         Assert.assertEquals("test." + Config.FILE_EXTENSION, fg.getFileName());
         Assert.assertEquals(outputDirectory, fg.getOutputDirectory());
 
         BufferedReader reader =
                 new BufferedReader(new FileReader(OUTPUT_DIRECTORY + File.separator + fg.getFileName()));
-        List<String> lines = new ArrayList<String>();
+        List<String> lines = new ArrayList<>();
 
         String line;
         while ((line = reader.readLine()) != null) {

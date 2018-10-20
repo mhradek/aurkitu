@@ -30,7 +30,6 @@ import java.util.Map;
 public class Application extends AbstractMojo {
 
     public static final String MOJO_NAME = "aurkitu-maven-plugin";
-
     public static final String MOJO_GOAL = "build-schema";
 
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
@@ -141,6 +140,16 @@ public class Application extends AbstractMojo {
             schema.setIsValidSchema(validator.getErrors().isEmpty());
             schema.setValidator(validator);
             Application.getLogger().info(validator.getErrorComments());
+
+            if (consolidatedSchemas != null && !consolidatedSchemas) {
+                for (Schema dependencySchema : processor.getDepedencySchemas().values()) {
+                    validator = new Validator().withSchema(dependencySchema);
+                    validator.validateSchema();
+                    dependencySchema.setIsValidSchema(validator.getErrors().isEmpty());
+                    dependencySchema.setValidator(validator);
+                    Application.getLogger().info(validator.getErrorComments());
+                }
+            }
         }
 
         if (outputDirectory == null) {
@@ -153,7 +162,7 @@ public class Application extends AbstractMojo {
         try {
             fg.writeSchema(schema);
 
-            if (consolidatedSchemas != null && consolidatedSchemas == false) {
+            if (consolidatedSchemas != null && !consolidatedSchemas) {
                 for (Schema dependencySchema : processor.getDepedencySchemas().values()) {
                     fg.writeSchema(dependencySchema);
                 }
@@ -167,8 +176,10 @@ public class Application extends AbstractMojo {
      * @return the application logger defaulting to {@link}SystemStreamLog
      */
     public static Log getLogger() {
-        if (log == null)
+        if (log == null) {
             log = new SystemStreamLog();
+        }
+
         return log;
     }
 }

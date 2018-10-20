@@ -42,12 +42,13 @@ public class Processor {
     private Map<String, Schema> depedencySchemas;
 
     public Processor() {
-        sourceAnnotations = new ArrayList<Class<? extends Annotation>>();
-        targetClasses = new HashSet<Class<?>>();
-        warnedTypeNames = new HashSet<String>();
+        sourceAnnotations = new ArrayList<>();
+        targetClasses = new HashSet<>();
+        warnedTypeNames = new HashSet<>();
 
         // This could be null as the value via Application could be overriden here
-        namespaceOverrideMap = new HashMap<String, String>();
+        namespaceOverrideMap = new HashMap<>();
+        depedencySchemas = new HashMap<>();
     }
 
     /**
@@ -109,8 +110,8 @@ public class Processor {
     }
 
     /**
-     * @param consolidatedSchemas
-     * @return
+     * @param consolidatedSchemas boolean if we should consolidate the schema
+     * @return an instance of the Processor object
      */
     public Processor withConsolidatedSchemas(Boolean consolidatedSchemas) {
         if (consolidatedSchemas == null) {
@@ -123,7 +124,7 @@ public class Processor {
 
     /**
      *
-     *  @return a completed schema
+     * @return a completed schema
      * @throws MojoExecutionException when there is a MalformedURLException in the classpathElements
      */
     public Schema buildSchema() throws MojoExecutionException {
@@ -216,7 +217,7 @@ public class Processor {
         enumD.setName(clazz.getSimpleName());
 
         Annotation annotation = clazz.getAnnotation(FlatBufferEnum.class);
-        if (annotation instanceof FlatBufferEnum) {
+        if (annotation != null) {
             FlatBufferEnum myFlatBufferEnum = (FlatBufferEnum) annotation;
             Application.getLogger().debug("Enum structure: " + myFlatBufferEnum.value());
             enumD.setStructure(myFlatBufferEnum.value());
@@ -326,7 +327,7 @@ public class Processor {
 
         Annotation annotation = clazz.getAnnotation(FlatBufferTable.class);
         Application.getLogger().debug("Number of annotations of clazz: " + clazz.getDeclaredAnnotations().length);
-        if (annotation instanceof FlatBufferTable) {
+        if (annotation != null) {
             FlatBufferTable myFlatBufferTable = (FlatBufferTable) annotation;
             Application.getLogger().debug("Declared root: " + myFlatBufferTable.rootType());
             type.setRoot(myFlatBufferTable.rootType());
@@ -339,7 +340,7 @@ public class Processor {
         annotation = clazz.getAnnotation(FlatBufferComment.class);
         if (annotation != null) {
             String comment = ((FlatBufferComment) annotation).comment();
-            if (comment != null && !comment.isEmpty()) {
+            if (!comment.isEmpty()) {
                 Application.getLogger().debug("Found a comment assign to type: " + comment);
                 type.setComment(comment);
             }
@@ -367,7 +368,7 @@ public class Processor {
      * @return A list of valid fields
      */
     private List<Field> getDeclaredAndInheritedPrivateFields(Class<?> type) {
-        List<Field> result = new ArrayList<Field>();
+        List<Field> result = new ArrayList<>();
 
         Class<?> clazz = type;
         while (clazz != null && clazz != Object.class) {
@@ -506,7 +507,7 @@ public class Processor {
             property.type = FieldType.MAP;
 
             // Stuff the types into this list
-            List<Property> properties = new ArrayList<Property>();
+            List<Property> properties = new ArrayList<>();
 
             // Get the type for the key and value
             String[] parametrizedTypeStrings = new String[]{String.class.getName(), String.class.getName()};
@@ -721,7 +722,7 @@ public class Processor {
         throws ClassNotFoundException, DependencyResolutionRequiredException, IOException {
 
         List<String> classpathElements = mavenProject.getCompileClasspathElements();
-        List<URL> projectClasspathList = new ArrayList<URL>();
+        List<URL> projectClasspathList = new ArrayList<>();
         for (String element : classpathElements) {
             Application.getLogger().debug("Adding compiled classpath element (via MavenProject): " + element);
             projectClasspathList.add(new File(element).toURI().toURL());

@@ -45,8 +45,22 @@
     <parent>
         <groupId>com.michaelhradek</groupId>
         <artifactId>aurkitu-parent</artifactId>
-        <version>0.0.6</version>
+        <version>0.0.5.1</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.16.22</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.michaelhradek</groupId>
+            <artifactId>aurkitu-annotations</artifactId>
+            <version>0.0.6</version>
+        </dependency>
+    </dependencies>
 
 </project>

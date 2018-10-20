@@ -52,7 +52,7 @@
     <parent>
         <groupId>com.michaelhradek</groupId>
         <artifactId>aurkitu-parent</artifactId>
-        <version>0.0.6</version>
+        <version>0.0.5.1</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -66,7 +66,7 @@
         <dependency>
             <groupId>com.michaelhradek</groupId>
             <artifactId>aurkitu-annotations</artifactId>
-            <version>0.0.6</version>
+            <version>0.0.5.1</version>
         </dependency>
         <dependency>
             <groupId>org.reflections</groupId>

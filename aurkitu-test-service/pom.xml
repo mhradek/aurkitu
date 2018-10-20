@@ -45,11 +45,16 @@
     <parent>
         <groupId>com.michaelhradek</groupId>
         <artifactId>aurkitu-parent</artifactId>
-        <version>0.0.6</version>
+        <version>0.0.5.1</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
     <dependencies>
+        <dependency>
+            <groupId>com.michaelhradek</groupId>
+            <artifactId>aurkitu-test-dependency</artifactId>
+            <version>0.0.5.1</version>
+        </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
@@ -59,7 +64,7 @@
         <dependency>
             <groupId>com.michaelhradek</groupId>
             <artifactId>aurkitu-annotations</artifactId>
-            <version>0.0.6</version>
+            <version>0.0.5.1</version>
         </dependency>
     </dependencies>
 
@@ -68,19 +73,33 @@
             <plugin>
                 <groupId>com.michaelhradek</groupId>
                 <artifactId>aurkitu-maven-plugin</artifactId>
-                <version>0.0.6</version>
-                <configuration>
-                    <schemaName>test</schemaName>
-                    <schemaNamespace>com.michaelhradek.aurkitu.test.flatbuffers</schemaNamespace>
-                    <consolidatedSchemas>true</consolidatedSchemas>
-                    <useSchemaCaching>false</useSchemaCaching>
-                </configuration>
+                <version>0.0.5.1</version>
                 <executions>
                     <execution>
+                        <id>execution1</id>
                         <phase>process-classes</phase>
                         <goals>
                             <goal>build-schema</goal>
                         </goals>
+                        <configuration>
+                            <schemaName>test-service-consolidated</schemaName>
+                            <schemaNamespace>com.michaelhradek.aurkitu.test.flatbuffers</schemaNamespace>
+                            <consolidatedSchemas>true</consolidatedSchemas>
+                            <useSchemaCaching>false</useSchemaCaching>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>execution2</id>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>build-schema</goal>
+                        </goals>
+                        <configuration>
+                            <schemaName>test-service-seperated</schemaName>
+                            <schemaNamespace>com.michaelhradek.aurkitu.test.flatbuffers</schemaNamespace>
+                            <consolidatedSchemas>false</consolidatedSchemas>
+                            <useSchemaCaching>false</useSchemaCaching>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
