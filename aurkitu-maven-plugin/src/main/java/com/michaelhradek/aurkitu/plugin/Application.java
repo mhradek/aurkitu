@@ -50,9 +50,6 @@ public class Application extends AbstractMojo {
     @Parameter(property = Application.MOJO_NAME + ".specified-dependencies")
     private List<String> specifiedDependencies;
 
-    @Parameter(property = Application.MOJO_NAME + ".consolidated-schemas", defaultValue = "true")
-    private Boolean consolidatedSchemas;
-
     @Parameter(property = Application.MOJO_NAME + ".schema-namespace", defaultValue = "generated.flatbuffers")
     private String schemaNamespace;
 
@@ -76,6 +73,9 @@ public class Application extends AbstractMojo {
 
     @Parameter(property = Application.MOJO_NAME + ".generate-version", defaultValue = "false")
     private Boolean generateVersion;
+
+    @Parameter(property = Application.MOJO_NAME + ".consolidated-schemas", defaultValue = "true")
+    private Boolean consolidatedSchemas;
 
     @Parameter(property = Application.MOJO_NAME + ".use-schema-caching", defaultValue = "false")
     private Boolean useSchemaCaching;

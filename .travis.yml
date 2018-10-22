@@ -1,3 +1,5 @@
+warnings_are_errors: false
+
 language: java
 
 jdk: openjdk8
@@ -5,5 +7,5 @@ jdk: openjdk8
 script: mvn test -B
 
 after_success:
-  - mvn cobertura:cobertura
-  - bash <(curl -s https://codecov.io/bash)
+- mvn cobertura:cobertura
+- bash <(curl -s https://codecov.io/bash)

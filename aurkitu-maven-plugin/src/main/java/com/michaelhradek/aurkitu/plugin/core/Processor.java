@@ -82,7 +82,7 @@ public class Processor {
         }
 
         // Formatting the input so it is consistent
-        Map<String, String> temp = new HashMap<String, String>();
+        Map<String, String> temp = new HashMap<>();
         for (Entry<String, String> item : namespaceOverrideMap.entrySet()) {
             Application.getLogger().debug(String.format("Reviewing namespaceOverrideMap item key: %s, value %s",
                 item.getKey(), item.getValue()));
@@ -127,7 +127,7 @@ public class Processor {
      * @return a completed schema
      * @throws MojoExecutionException when there is a MalformedURLException in the classpathElements
      */
-    public Schema buildSchema() throws MojoExecutionException {
+    Schema buildSchema() throws MojoExecutionException {
         return buildSchema(new Schema());
     }
 
