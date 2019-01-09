@@ -9,6 +9,9 @@ import com.michaelhradek.aurkitu.plugin.core.output.Schema;
 import com.michaelhradek.aurkitu.plugin.core.output.TypeDeclaration;
 import com.michaelhradek.aurkitu.plugin.core.output.TypeDeclaration.Property;
 import com.michaelhradek.aurkitu.plugin.core.output.TypeDeclaration.Property.PropertyOptionKey;
+import com.michaelhradek.aurkitu.plugin.core.parsing.AnnotationParser;
+import com.michaelhradek.aurkitu.plugin.core.parsing.ArtifactReference;
+import com.michaelhradek.aurkitu.plugin.core.parsing.ClasspathSearchType;
 import lombok.Getter;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -39,7 +42,19 @@ public class Processor {
     private List<String> specifiedDependencies;
     private boolean consolidatedSchemas;
     private Schema schema;
-    private Map<String, Schema> depedencySchemas;
+
+    /**
+     * An unconsolidated schema means that we do not grab and build all the various inherited models into the target
+     * schema.
+     * Therefore, each schema will need to be aware of which dependencies it has and what models in that schema refer
+     * to these dependencies.
+     * <p>
+     * The schema namespace will be the decider of the dependency/schema ownership. If the artifact & group ids do
+     * not match
+     * then a new schema is assumed. Then those models will be marked as requiring a full path. Finally, a new schema
+     * is added.
+     */
+    private Map<String, Schema> dependencySchemas;
 
     public Processor() {
         sourceAnnotations = new ArrayList<>();
@@ -48,7 +63,7 @@ public class Processor {
 
         // This could be null as the value via Application could be overriden here
         namespaceOverrideMap = new HashMap<>();
-        depedencySchemas = new HashMap<>();
+        dependencySchemas = new HashMap<>();
     }
 
     /**
@@ -123,6 +138,13 @@ public class Processor {
     }
 
     /**
+     * @param schema
+     */
+    public void addDependencySchema(Schema schema) {
+        dependencySchemas.put(schema.getNamespace(), schema);
+    }
+
+    /**
      *
      * @return a completed schema
      * @throws MojoExecutionException when there is a MalformedURLException in the classpathElements
@@ -144,7 +166,8 @@ public class Processor {
                 Application.getLogger().debug("MavenProject is null; falling back to built in class scanner");
                 targetClasses.addAll(AnnotationParser.findAnnotatedClasses(source));
             } else {
-                targetClasses.addAll(AnnotationParser.findAnnotatedClasses(artifactReference, source));
+                targetClasses.addAll(AnnotationParser.findAnnotatedClasses(artifactReference,
+                        schema.getClasspathReferenceList(), source));
             }
         }
 
@@ -156,38 +179,45 @@ public class Processor {
                 continue;
             }
 
-            TypeDeclaration temp = buildTypeDeclaration(clazz);
-            if (temp.isRoot()) {
-                Application.getLogger().debug("  Found root: " + temp.getName());
-                rootTypeCount++;
-                if (rootTypeCount > 1) {
-                    throw new IllegalArgumentException("Only one rootType declaration is allowed");
+            if (clazz instanceof Class) {
+                TypeDeclaration temp = buildTypeDeclaration(clazz);
+                if (temp.isRoot()) {
+                    Application.getLogger().debug("  Found root: " + temp.getName());
+                    rootTypeCount++;
+                    if (rootTypeCount > 1) {
+                        throw new IllegalArgumentException("Only one rootType declaration is allowed");
+                    }
+
+                    schema.setRootType(temp.getName());
                 }
 
-                schema.setRootType(temp.getName());
+                schema.addTypeDeclaration(temp);
+
+                // Now examine inner classes
+                Class<?>[] innerClasses = clazz.getDeclaredClasses();
+                for (Class<?> inner : innerClasses) {
+                    Application.getLogger().debug("  Processing inner class: " + inner.getSimpleName());
+                    if (inner.isSynthetic()) {
+                        Application.getLogger().debug("  Found synthetic...");
+                        continue;
+                    }
+
+                    if (isEnumWorkaround(inner)) {
+                        Application.getLogger().debug("  Found enum...");
+                        schema.addEnumDeclaration(buildEnumDeclaration(inner));
+                        continue;
+                    }
+
+                    Application.getLogger().debug("  Found type...");
+                    // Inner classes cannot be root type
+                    schema.addTypeDeclaration(buildTypeDeclaration(inner));
+                }
             }
+        }
 
-            schema.addTypeDeclaration(temp);
-
-            // Now examine inner classes
-            Class<?>[] innerClasses = clazz.getDeclaredClasses();
-            for (Class<?> inner : innerClasses) {
-                Application.getLogger().debug("  Processing inner class: " + inner.getSimpleName());
-                if (inner.isSynthetic()) {
-                    Application.getLogger().debug("  Found synthetic...");
-                    continue;
-                }
-
-                if (isEnumWorkaround(inner)) {
-                    Application.getLogger().debug("  Found enum...");
-                    schema.addEnumDeclaration(buildEnumDeclaration(inner));
-                    continue;
-                }
-
-                Application.getLogger().debug("  Found type...");
-                // Inner classes cannot be root type
-                schema.addTypeDeclaration(buildTypeDeclaration(inner));
-            }
+        for (Entry<String, Schema> dependencyEntrySet : dependencySchemas.entrySet()) {
+            Schema dependencySchema = dependencyEntrySet.getValue();
+            dependencyEntrySet.setValue(buildSchema(dependencySchema));
         }
 
         return schema;
@@ -217,7 +247,7 @@ public class Processor {
         enumD.setName(clazz.getSimpleName());
 
         Annotation annotation = clazz.getAnnotation(FlatBufferEnum.class);
-        if (annotation != null) {
+        if (annotation instanceof FlatBufferEnum) {
             FlatBufferEnum myFlatBufferEnum = (FlatBufferEnum) annotation;
             Application.getLogger().debug("Enum structure: " + myFlatBufferEnum.value());
             enumD.setStructure(myFlatBufferEnum.value());
@@ -327,7 +357,7 @@ public class Processor {
 
         Annotation annotation = clazz.getAnnotation(FlatBufferTable.class);
         Application.getLogger().debug("Number of annotations of clazz: " + clazz.getDeclaredAnnotations().length);
-        if (annotation != null) {
+        if (annotation instanceof FlatBufferTable) {
             FlatBufferTable myFlatBufferTable = (FlatBufferTable) annotation;
             Application.getLogger().debug("Declared root: " + myFlatBufferTable.rootType());
             type.setRoot(myFlatBufferTable.rootType());
@@ -527,7 +557,10 @@ public class Processor {
                     ClassLoader urlClassLoader = Thread.currentThread().getContextClassLoader();
                     if (artifactReference != null && artifactReference.getMavenProject() != null) {
                         urlClassLoader = URLClassLoader
-                            .newInstance(Utilities.buildProjectClasspathList(artifactReference), urlClassLoader);
+
+                                // TODO This needs thought
+                                .newInstance(Utilities.arrayForClasspathReferenceList(
+                                        Utilities.buildProjectClasspathList(artifactReference, ClasspathSearchType.BOTH)), urlClassLoader);
                     }
 
                     // Parse Field signature
@@ -608,7 +641,13 @@ public class Processor {
                 // Load all paths into custom classloader
                 ClassLoader urlClassLoader = Thread.currentThread().getContextClassLoader();
                 if (artifactReference != null && artifactReference.getMavenProject() != null)
-                    urlClassLoader = URLClassLoader.newInstance(Utilities.buildProjectClasspathList(artifactReference), urlClassLoader);
+                    if (consolidatedSchemas) {
+                        urlClassLoader =
+                                URLClassLoader.newInstance(Utilities.buildProjectClasspathList(artifactReference,
+                                ClasspathSearchType.BOTH).toArray(new URL[]{}), urlClassLoader);
+                    } else {
+                        // TODO This needs thought
+                    }
 
                 // Parse Field signature
                 String parametrizedTypeString = parseFieldSignatureForParametrizedTypeStringOnList(field);

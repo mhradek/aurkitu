@@ -2,8 +2,15 @@ package com.michaelhradek.aurkitu.plugin;
 
 import com.michaelhradek.aurkitu.annotations.FlatBufferEnum;
 import com.michaelhradek.aurkitu.annotations.FlatBufferTable;
-import com.michaelhradek.aurkitu.plugin.core.*;
+import com.michaelhradek.aurkitu.plugin.core.FileGeneration;
+import com.michaelhradek.aurkitu.plugin.core.Processor;
+import com.michaelhradek.aurkitu.plugin.core.Utilities;
+import com.michaelhradek.aurkitu.plugin.core.Validator;
 import com.michaelhradek.aurkitu.plugin.core.output.Schema;
+import com.michaelhradek.aurkitu.plugin.core.parsing.ArtifactReference;
+import com.michaelhradek.aurkitu.plugin.core.parsing.ClasspathReference;
+import com.michaelhradek.aurkitu.plugin.core.parsing.ClasspathSearchType;
+import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.logging.Log;
@@ -16,9 +23,11 @@ import org.apache.maven.project.MavenProject;
 import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.RepositorySystemSession;
 import org.eclipse.aether.repository.RemoteRepository;
+import org.eclipse.aether.resolution.ArtifactResolutionException;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -132,6 +141,25 @@ public class Application extends AbstractMojo {
                     .withSpecifiedDependencies(specifiedDependencies)
                     .withConsolidatedSchemas(consolidatedSchemas);
 
+        try {
+            if (consolidatedSchemas == null || consolidatedSchemas) {
+                schema.setClasspathReferenceList(Utilities.buildProjectClasspathList(reference,
+                        ClasspathSearchType.BOTH));
+            } else {
+                schema.setClasspathReferenceList(Utilities.buildProjectClasspathList(reference,
+                        ClasspathSearchType.PROJECT));
+                List<ClasspathReference> classpathReferenceList = Utilities.buildProjectClasspathList(reference,
+                        ClasspathSearchType.DEPENDENCIES);
+                for (ClasspathReference classpathReference : classpathReferenceList) {
+                    Schema dependencySchema = new Schema();
+                    dependencySchema.setClasspathReferenceList(Arrays.asList(classpathReference));
+                    processor.addDependencySchema(dependencySchema);
+                }
+            }
+        } catch (IOException | DependencyResolutionRequiredException | ArtifactResolutionException e) {
+            throw new MojoExecutionException(e.getMessage(), e.getCause());
+        }
+
         schema = processor.buildSchema(schema);
 
         if (validateSchema) {
@@ -142,7 +170,7 @@ public class Application extends AbstractMojo {
             Application.getLogger().info(validator.getErrorComments());
 
             if (consolidatedSchemas != null && !consolidatedSchemas) {
-                for (Schema dependencySchema : processor.getDepedencySchemas().values()) {
+                for (Schema dependencySchema : processor.getDependencySchemas().values()) {
                     validator = new Validator().withSchema(dependencySchema);
                     validator.validateSchema();
                     dependencySchema.setIsValidSchema(validator.getErrors().isEmpty());
@@ -163,7 +191,7 @@ public class Application extends AbstractMojo {
             fg.writeSchema(schema);
 
             if (consolidatedSchemas != null && !consolidatedSchemas) {
-                for (Schema dependencySchema : processor.getDepedencySchemas().values()) {
+                for (Schema dependencySchema : processor.getDependencySchemas().values()) {
                     fg.writeSchema(dependencySchema);
                 }
             }

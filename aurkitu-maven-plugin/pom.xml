@@ -52,7 +52,7 @@
     <parent>
         <groupId>com.michaelhradek</groupId>
         <artifactId>aurkitu-parent</artifactId>
-        <version>0.0.5.1</version>
+        <version>0.0.6</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -66,7 +66,7 @@
         <dependency>
             <groupId>com.michaelhradek</groupId>
             <artifactId>aurkitu-annotations</artifactId>
-            <version>0.0.5.1</version>
+            <version>0.0.6</version>
         </dependency>
         <dependency>
             <groupId>org.reflections</groupId>
@@ -114,6 +114,12 @@
             <artifactId>mockito-all</artifactId>
             <version>1.9.5</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jetbrains</groupId>
+            <artifactId>annotations</artifactId>
+            <version>RELEASE</version>
+            <scope>compile</scope>
         </dependency>
     </dependencies>
 

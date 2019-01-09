@@ -1,4 +1,4 @@
-package com.michaelhradek.aurkitu.plugin.core;
+package com.michaelhradek.aurkitu.plugin.core.parsing;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

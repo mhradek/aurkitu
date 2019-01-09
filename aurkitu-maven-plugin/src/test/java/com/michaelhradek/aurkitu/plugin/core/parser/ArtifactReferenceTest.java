@@ -1,5 +1,6 @@
-package com.michaelhradek.aurkitu.plugin.core;
+package com.michaelhradek.aurkitu.plugin.core.parser;
 
+import com.michaelhradek.aurkitu.plugin.core.parsing.ArtifactReference;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;

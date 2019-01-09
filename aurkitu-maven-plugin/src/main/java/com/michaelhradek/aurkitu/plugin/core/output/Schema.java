@@ -3,6 +3,7 @@ package com.michaelhradek.aurkitu.plugin.core.output;
 import com.michaelhradek.aurkitu.plugin.Application;
 import com.michaelhradek.aurkitu.plugin.Config;
 import com.michaelhradek.aurkitu.plugin.core.Validator;
+import com.michaelhradek.aurkitu.plugin.core.parsing.ClasspathReference;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -36,6 +37,9 @@ public class Schema {
     boolean generateVersion;
     Boolean isValidSchema;
     Validator validator;
+
+    // Classpath references used to create this schema
+    private List<ClasspathReference> classpathReferenceList;
 
     public Schema() {
         enums = new ArrayList<EnumDeclaration>();
@@ -252,5 +256,23 @@ public class Schema {
         }
 
         return result;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof Schema)) {
+            return false;
+        }
+
+        final Schema schemaO = (Schema) o;
+        if (!namespace.equals(schemaO.namespace)) {
+            return false;
+        }
+
+        if (!name.equals(schemaO.name)) {
+            return false;
+        }
+
+        return true;
     }
 }

@@ -1,6 +1,8 @@
-package com.michaelhradek.aurkitu.plugin.core;
+package com.michaelhradek.aurkitu.plugin.core.parser;
 
 import com.michaelhradek.aurkitu.annotations.FlatBufferTable;
+import com.michaelhradek.aurkitu.plugin.core.parsing.AnnotationParser;
+import com.michaelhradek.aurkitu.plugin.core.parsing.ArtifactReference;
 import com.michaelhradek.aurkitu.plugin.test.*;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;
@@ -13,6 +15,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import java.util.ArrayList;
@@ -39,12 +42,12 @@ public class AnnotationParserTest {
 
     @Before
     public void before() {
-
+        MockitoAnnotations.initMocks(this);
     }
 
     /**
      * Test method for
-     * {@link com.michaelhradek.aurkitu.plugin.core.AnnotationParser#findAnnotatedClasses(java.lang.Class)}.
+     * {@link AnnotationParser#findAnnotatedClasses(java.lang.Class)}.
      */
     @Test
     public void testFindAnnotatedClasses() {
@@ -69,12 +72,13 @@ public class AnnotationParserTest {
         Mockito.when(mockProject.getCompileClasspathElements()).thenReturn(new ArrayList<String>());
 
         ArtifactReference artifactReference = new ArtifactReference(mockProject, mockRepositorySystem, mockRepositorySystemSession, mockRemoteRepositories, mockSpecifiedDependencies);
-        Set<Class<?>> annotated = AnnotationParser.findAnnotatedClasses(artifactReference, FlatBufferTable.class);
+        Set<Class<?>> annotated = AnnotationParser.findAnnotatedClasses(artifactReference, new ArrayList<>(),
+                FlatBufferTable.class);
         Assert.assertEquals(true, annotated.isEmpty());
 
         Mockito.when(mockProject.getCompileClasspathElements()).thenReturn(null);
         try {
-            annotated = AnnotationParser.findAnnotatedClasses(artifactReference, FlatBufferTable.class);
+            annotated = AnnotationParser.findAnnotatedClasses(artifactReference, new ArrayList<>(), FlatBufferTable.class);
             Assert.fail("Expected MojoExecutionException; Compile Classpath Elements returned null");
         } catch (MojoExecutionException e) {
             Assert.assertEquals("No valid compile classpath elements exist; is there source code for this project?", e.getMessage());

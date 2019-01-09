@@ -3,9 +3,13 @@ package com.michaelhradek.aurkitu.plugin.core;
 import com.michaelhradek.aurkitu.plugin.Application;
 import com.michaelhradek.aurkitu.plugin.Config;
 import com.michaelhradek.aurkitu.plugin.core.output.Schema;
+import com.michaelhradek.aurkitu.plugin.core.parsing.ArtifactReference;
+import com.michaelhradek.aurkitu.plugin.core.parsing.ClasspathReference;
+import com.michaelhradek.aurkitu.plugin.core.parsing.ClasspathSearchType;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.project.MavenProject;
 import org.eclipse.aether.artifact.DefaultArtifact;
 import org.eclipse.aether.resolution.ArtifactRequest;
 import org.eclipse.aether.resolution.ArtifactResolutionException;
@@ -26,7 +30,6 @@ import java.util.Set;
 
 /**
  * @author m.hradek
- *
  */
 public class Utilities {
 
@@ -35,7 +38,8 @@ public class Utilities {
     private static String workingProject;
 
     /**
-     * @param type The class which needs to be tested if it is a primative. Also, double and Double are both considered primative within this context.
+     * @param type The class which needs to be tested if it is a primative. Also, double and Double are both
+     *             considered primative within this context.
      * @return boolean
      */
     public static boolean isLowerCaseType(Class<?> type) {
@@ -46,129 +50,145 @@ public class Utilities {
     }
 
     /**
-     *
-     * @param artifactReference Our helper which contains all the goodies needed from the MavenProject and the other artifact handling stuff
+     * @param artifactReference Our helper which contains all the goodies needed from the MavenProject and the other
+     *                          artifact handling stuff
      * @return initialized Reflections object
      * @throws DependencyResolutionRequiredException if unable to MavenProject#getCompileClasspathElements()
-     * @throws ArtifactResolutionException if unable to Utilities#buildProjectClasspathList#resolveArtifact via Repo System
-     * @throws MalformedURLException if unable to convert paths for classes to URL format
-     * @throws MojoExecutionException if getting NULL from MavenProject#getCompileClasspathElements()
+     * @throws ArtifactResolutionException           if unable to Utilities#buildProjectClasspathList#resolveArtifact
+     * via Repo System
+     * @throws MalformedURLException                 if unable to convert paths for classes to URL format
+     * @throws MojoExecutionException                if getting NULL from MavenProject#getCompileClasspathElements()
      */
-    public static Reflections buildReflections(ArtifactReference artifactReference) throws DependencyResolutionRequiredException,
-            ArtifactResolutionException, MalformedURLException, MojoExecutionException {
+    public static Reflections buildReflections(ArtifactReference artifactReference,
+                                               List<ClasspathReference> classpathReferenceList) throws DependencyResolutionRequiredException, MojoExecutionException {
 
         List<String> classpathElements;
 
-            // Load build class path
-            classpathElements = artifactReference.getMavenProject().getCompileClasspathElements();
-            if(classpathElements == null) {
-                throw new MojoExecutionException("No valid compile classpath elements exist; is there source code for this project?");
-            }
+        // Load build class path
+        classpathElements = artifactReference.getMavenProject().getCompileClasspathElements();
+        if (classpathElements == null) {
+            throw new MojoExecutionException("No valid compile classpath elements exist; is there source code for " +
+                    "this project?");
+        }
 
-            // Load all paths into custom classloader
-            ClassLoader urlClassLoader = URLClassLoader.newInstance(buildProjectClasspathList(artifactReference),
-                    Thread.currentThread().getContextClassLoader());
+        // Load all paths into custom classloader
+        ClassLoader urlClassLoader = URLClassLoader.newInstance(arrayForClasspathReferenceList(classpathReferenceList),
+                Thread.currentThread().getContextClassLoader());
 
-            // Retain annotations
-            JavassistAdapter javassistAdapter = new JavassistAdapter();
-            javassistAdapter.includeInvisibleTag = false;
+        // Retain annotations
+        JavassistAdapter javassistAdapter = new JavassistAdapter();
+        javassistAdapter.includeInvisibleTag = false;
 
-            return new Reflections(
-                    new ConfigurationBuilder().setUrls(
-                            ClasspathHelper.forClassLoader(urlClassLoader)
-                    ).addClassLoader(urlClassLoader).setScanners(
-                            new SubTypesScanner(false),
-                            new TypeAnnotationsScanner(),
-                            new FieldAnnotationsScanner(),
-                            new MethodAnnotationsScanner(),
-                            new MethodParameterScanner(),
-                            new MethodParameterNamesScanner(),
-                            new MemberUsageScanner()
-                    ).setMetadataAdapter(javassistAdapter)
-            );
+        return new Reflections(
+                new ConfigurationBuilder().setUrls(
+                        ClasspathHelper.forClassLoader(urlClassLoader)
+                ).addClassLoader(urlClassLoader).setScanners(
+                        new SubTypesScanner(false),
+                        new TypeAnnotationsScanner(),
+                        new FieldAnnotationsScanner(),
+                        new MethodAnnotationsScanner(),
+                        new MethodParameterScanner(),
+                        new MethodParameterNamesScanner(),
+                        new MemberUsageScanner()
+                ).setMetadataAdapter(javassistAdapter)
+        );
     }
 
     /**
-     *
-     * @param artifactReference Our helper which contains all the goodies needed from the MavenProject and the other artifact handling stuff
+     * @param artifactReference Our helper which contains all the goodies needed from the MavenProject and the other
+     *                          artifact handling stuff
      * @return an array of URLs which will be used to attempt to initialize our classes
-     * @throws ArtifactResolutionException if unable to Utilities#buildProjectClasspathList#resolveArtifact via Repo System
-     * @throws MalformedURLException if unable to convert paths for classes to URL format
+     * @throws ArtifactResolutionException           if unable to Utilities#buildProjectClasspathList#resolveArtifact
+     * via Repo System
+     * @throws MalformedURLException                 if unable to convert paths for classes to URL format
      * @throws DependencyResolutionRequiredException if unable to MavenProject#getCompileClasspathElements()
      */
-    public static URL[] buildProjectClasspathList(ArtifactReference artifactReference)  throws ArtifactResolutionException, MalformedURLException, DependencyResolutionRequiredException {
+    public static List<ClasspathReference> buildProjectClasspathList(ArtifactReference artifactReference,
+                                                                     ClasspathSearchType classpathSearchType) throws ArtifactResolutionException, MalformedURLException, DependencyResolutionRequiredException {
 
-        List<URL> projectClasspathList = new ArrayList<URL>();
+        List<ClasspathReference> classpathReferenceList = new ArrayList<ClasspathReference>();
+        final MavenProject mavenProject = artifactReference.getMavenProject();
 
-        // Load build class path
-        if (classpathElementsCache == null || workingProject == null || !workingProject.equalsIgnoreCase(getCurrentProject(artifactReference))) {
-            Application.getLogger().debug("Compile Classpath Elements Cache was null; fetching update");
-            classpathElementsCache = artifactReference.getMavenProject().getCompileClasspathElements();
-        }
-
-        for (String element : classpathElementsCache) {
-            Application.getLogger().debug("Looking at compile classpath element (via MavenProject): " + element);
-            Application.getLogger().debug("  Adding: " + element);
-            projectClasspathList.add(new File(element).toURI().toURL());
-        }
-
-        // Load artifact(s) jars using resolver
-        if (dependencyArtifactsCache == null || workingProject == null || !workingProject.equalsIgnoreCase(getCurrentProject(artifactReference))) {
-            Application.getLogger().debug("Dependency Artifacts Cache was null; fetching update");
-            dependencyArtifactsCache =  artifactReference.getMavenProject().getDependencyArtifacts();
-        }
-
-        Application.getLogger().debug("Number of artifacts to resolve: "
-                + dependencyArtifactsCache.size());
-
-        for (Artifact unresolvedArtifact : dependencyArtifactsCache) {
-            String artifactId = unresolvedArtifact.getArtifactId();
-
-            if (!isArtifactResolutionRequired(unresolvedArtifact, artifactReference)) {
-                Application.getLogger().debug("  Skipping: " + unresolvedArtifact.toString());
-                continue;
+        if (classpathSearchType == ClasspathSearchType.BOTH || classpathSearchType == ClasspathSearchType.PROJECT) {
+            // Load build class path
+            if (classpathElementsCache == null || workingProject == null || !workingProject.equalsIgnoreCase(getCurrentProject(artifactReference))) {
+                Application.getLogger().debug("Compile Classpath Elements Cache was null; fetching update");
+                classpathElementsCache = mavenProject.getCompileClasspathElements();
             }
 
-            org.eclipse.aether.artifact.Artifact aetherArtifact = new DefaultArtifact(
-                    unresolvedArtifact.getGroupId(),
-                    unresolvedArtifact.getArtifactId(),
-                    unresolvedArtifact.getClassifier(),
-                    unresolvedArtifact.getType(),
-                    unresolvedArtifact.getVersion());
+            for (String element : classpathElementsCache) {
+                Application.getLogger().debug("Looking at compile classpath element (via MavenProject): " + element);
+                Application.getLogger().debug("  Adding: " + element);
+                final ClasspathReference classpathReference = new ClasspathReference(
+                        new File(element).toURI().toURL(), mavenProject.getArtifactId(),
+                        mavenProject.getGroupId());
+                classpathReferenceList.add(classpathReference);
+            }
+        }
 
-            ArtifactRequest artifactRequest = new ArtifactRequest()
-                    .setRepositories(artifactReference.getRepositories())
-                    .setArtifact(aetherArtifact);
-
-            // This takes time; minimizing what needs to be resolved is the goal of the specified dependency code block
-            ArtifactResult resolutionResult = artifactReference.getRepoSystem()
-                    .resolveArtifact(artifactReference.getRepoSession(), artifactRequest);
-
-            // The file should exist, but we never know.
-            File file = resolutionResult.getArtifact().getFile();
-            if (file == null || !file.exists()) {
-                Application.getLogger().warn("Artifact " + artifactId +
-                        " has no attached file. Its content will not be copied in the target model directory.");
-                continue;
+        if (classpathSearchType == ClasspathSearchType.BOTH || classpathSearchType == ClasspathSearchType.DEPENDENCIES) {
+            // Load artifact(s) jars using resolver
+            if (dependencyArtifactsCache == null || workingProject == null || !workingProject.equalsIgnoreCase(getCurrentProject(artifactReference))) {
+                Application.getLogger().debug("Dependency Artifacts Cache was null; fetching update");
+                dependencyArtifactsCache = artifactReference.getMavenProject().getDependencyArtifacts();
             }
 
-            String jarPath = "jar:file:" + file.getAbsolutePath() + "!/";
-            Application.getLogger().debug("Adding resolved artifact: " + file.getAbsolutePath());
-            projectClasspathList.add(new URL(jarPath));
+            Application.getLogger().debug("Number of artifacts to resolve: "
+                    + dependencyArtifactsCache.size());
+
+            for (Artifact unresolvedArtifact : dependencyArtifactsCache) {
+                String artifactId = unresolvedArtifact.getArtifactId();
+
+                if (!isArtifactResolutionRequired(unresolvedArtifact, artifactReference)) {
+                    Application.getLogger().debug("  Skipping: " + unresolvedArtifact.toString());
+                    continue;
+                }
+
+                org.eclipse.aether.artifact.Artifact aetherArtifact = new DefaultArtifact(
+                        unresolvedArtifact.getGroupId(),
+                        unresolvedArtifact.getArtifactId(),
+                        unresolvedArtifact.getClassifier(),
+                        unresolvedArtifact.getType(),
+                        unresolvedArtifact.getVersion());
+
+                ArtifactRequest artifactRequest = new ArtifactRequest()
+                        .setRepositories(artifactReference.getRepositories())
+                        .setArtifact(aetherArtifact);
+
+                // This takes time; minimizing what needs to be resolved is the goal of the specified dependency code
+                // block
+                ArtifactResult resolutionResult = artifactReference.getRepoSystem()
+                        .resolveArtifact(artifactReference.getRepoSession(), artifactRequest);
+
+                // The file should exist, but we never know.
+                File file = resolutionResult.getArtifact().getFile();
+                if (file == null || !file.exists()) {
+                    Application.getLogger().warn("Artifact " + artifactId +
+                            " has no attached file. Its content will not be copied in the target model directory.");
+                    continue;
+                }
+
+                String jarPath = "jar:file:" + file.getAbsolutePath() + "!/";
+                Application.getLogger().debug("Adding resolved artifact: " + file.getAbsolutePath());
+                final ClasspathReference classpathReference = new ClasspathReference(
+                        new URL(jarPath), resolutionResult.getArtifact().getArtifactId(),
+                        resolutionResult.getArtifact().getGroupId());
+                classpathReferenceList.add(classpathReference);
+            }
         }
 
         workingProject = getCurrentProject(artifactReference);
-        return projectClasspathList.toArray(new URL[]{});
+        return classpathReferenceList;
     }
 
     /**
-     * @param classLoaderToSwitchTo which will be used temporarily during the operation
+     * @param classLoaderToSwitchTo                which will be used temporarily during the operation
      * @param actionToPerformOnProvidedClassLoader a ExecutableAction
-     * @param <T> resulting type
+     * @param <T>                                  resulting type
      * @return the result
      */
     public static synchronized <T> T executeActionOnSpecifiedClassLoader(final ClassLoader classLoaderToSwitchTo,
-        final ExecutableAction<T> actionToPerformOnProvidedClassLoader) {
+                                                                         final ExecutableAction<T> actionToPerformOnProvidedClassLoader) {
 
         final ClassLoader originalClassLoader = Thread.currentThread().getContextClassLoader();
 
@@ -226,11 +246,13 @@ public class Utilities {
      * @param artifactReference  the Maven repo bundle
      * @return whether or not the artifact should be resolved
      */
-    public static boolean isArtifactResolutionRequired(final Artifact unresolvedArtifact, final ArtifactReference artifactReference) {
+    public static boolean isArtifactResolutionRequired(final Artifact unresolvedArtifact,
+                                                       final ArtifactReference artifactReference) {
 
         // if a dependency search is specified, use it
         if (artifactReference.getSpecifiedDependencies() != null && !artifactReference.getSpecifiedDependencies().isEmpty()) {
-            Application.getLogger().debug("Targeted dependency search requested. Will skip artifacts not specified in configuration.");
+            Application.getLogger().debug("Targeted dependency search requested. Will skip artifacts not specified in" +
+                    " configuration.");
 
             int matchesFound = 0;
 
@@ -250,8 +272,10 @@ public class Utilities {
                     specifiedArtifactId = null;
                 }
 
-                Application.getLogger().debug(String.format("  Specified groupId: %s, artifactId: %s", specifiedGroupId, specifiedArtifactId));
-                Application.getLogger().debug(String.format("  Unresolved groupId: %s, artifactId: %s", unresolvedArtifact.getGroupId(), unresolvedArtifact.getArtifactId()));
+                Application.getLogger().debug(String.format("  Specified groupId: %s, artifactId: %s",
+                        specifiedGroupId, specifiedArtifactId));
+                Application.getLogger().debug(String.format("  Unresolved groupId: %s, artifactId: %s",
+                        unresolvedArtifact.getGroupId(), unresolvedArtifact.getArtifactId()));
 
                 // If only a groupId is specified...
                 if (specifiedArtifactId == null && specifiedGroupId.equalsIgnoreCase(unresolvedArtifact.getGroupId())) {
@@ -266,11 +290,13 @@ public class Utilities {
                 }
             }
 
-            // If the unresolvedArtifact doesn't match any of the specified dependencies then we will skip it from resolution
+            // If the unresolvedArtifact doesn't match any of the specified dependencies then we will skip it from
+            // resolution
             return matchesFound >= 1;
         }
 
-        // If we don't specify dependencies OR if it matched one of the specified group or group:artifact combos resolve it
+        // If we don't specify dependencies OR if it matched one of the specified group or group:artifact combos
+        // resolve it
         return true;
     }
 
@@ -285,5 +311,14 @@ public class Utilities {
                 artifactReference.getMavenProject().getGroupId(), artifactReference.getMavenProject().getArtifactId());
         Application.getLogger().debug("  Current project name: " + projectName);
         return projectName;
+    }
+
+    public static URL[] arrayForClasspathReferenceList(List<ClasspathReference> classpathReferenceList) {
+        URL[] urls = new URL[classpathReferenceList.size()];
+        for (int i = 0; i < classpathReferenceList.size(); i++) {
+            urls[i] = classpathReferenceList.get(i).getUrl();
+        }
+
+        return urls;
     }
 }

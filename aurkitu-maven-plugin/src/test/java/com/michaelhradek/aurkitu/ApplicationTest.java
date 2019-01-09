@@ -5,16 +5,27 @@ import org.apache.maven.plugin.testing.AbstractMojoTestCase;
 import org.apache.maven.plugin.testing.MojoRule;
 import org.apache.maven.project.MavenProject;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
+import org.mockito.runners.MockitoJUnitRunner;
 
 import java.io.File;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 
 /**
  * @author m.hradek
  */
+@RunWith(MockitoJUnitRunner.class)
 public class ApplicationTest extends AbstractMojoTestCase {
+
+    @Mock
+    private MavenProject mockProject;
 
     /**
      * @see junit.framework.TestCase#setUp()
@@ -36,11 +47,18 @@ public class ApplicationTest extends AbstractMojoTestCase {
         protected void after() {}
     };
 
+    @Before
+    public void before() {
+        MockitoAnnotations.initMocks(this);
+    }
+
     /**
      * @throws Exception Unable to locate file.
      */
     @Test
     public void testBasicRead() throws Exception {
+        Mockito.when(mockProject.getCompileClasspathElements()).thenReturn(new ArrayList<String>());
+
         File testPom = new File(getBasedir(),"src/test/resources/plugin-basic/pom.xml");
         Assert.assertNotNull(testPom);
         Assert.assertTrue(testPom.exists());

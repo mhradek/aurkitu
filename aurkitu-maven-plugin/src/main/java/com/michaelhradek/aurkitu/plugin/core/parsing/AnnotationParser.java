@@ -1,15 +1,15 @@
-package com.michaelhradek.aurkitu.plugin.core;
+package com.michaelhradek.aurkitu.plugin.core.parsing;
 
 import com.michaelhradek.aurkitu.plugin.Application;
+import com.michaelhradek.aurkitu.plugin.core.Utilities;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.plugin.MojoExecutionException;
-import org.eclipse.aether.resolution.ArtifactResolutionException;
 import org.reflections.Reflections;
 import org.reflections.util.ClasspathHelper;
 import org.reflections.util.ConfigurationBuilder;
 
 import java.lang.annotation.Annotation;
-import java.net.MalformedURLException;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -21,19 +21,18 @@ public class AnnotationParser {
     /**
      *
      * @param artifactReference The ArtifactReference
-     * @param input A list of Aurkitu annotations.
+     * @param classpathReferenceList A list of paths to consider when searching for annotations
+     * @param input A list of Aurkitu annotations to search for
      * @return A list of classes which are annotated with the above annotations.
      * @throws MojoExecutionException when there is a MalformedURLException in the classpathElements
      */
-    public static Set<Class<?>> findAnnotatedClasses(ArtifactReference artifactReference, Class<? extends Annotation> input) throws MojoExecutionException {
+    public static Set<Class<?>> findAnnotatedClasses(ArtifactReference artifactReference,
+                                                     List<ClasspathReference> classpathReferenceList, Class<?
+            extends Annotation> input) throws MojoExecutionException {
         try {
-            return findAnnotatedClasses(Utilities.buildReflections(artifactReference), input);
+            return findAnnotatedClasses(Utilities.buildReflections(artifactReference, classpathReferenceList), input);
         } catch (DependencyResolutionRequiredException e) {
             throw new MojoExecutionException("Dependency resolution failed", e);
-        } catch (ArtifactResolutionException e) {
-            throw new MojoExecutionException("Artifact resolution failed", e);
-        } catch (MalformedURLException e) {
-            throw new MojoExecutionException("Malformed URL", e);
         }
     }
 
