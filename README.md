@@ -1,5 +1,6 @@
 # aurkitu 
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/706cead2b38643d2be38efbae95f40ed)](https://app.codacy.com/app/mhradek/aurkitu?utm_source=github.com&utm_medium=referral&utm_content=mhradek/aurkitu&utm_campaign=Badge_Grade_Dashboard)
 [![Build Status](https://travis-ci.org/mhradek/aurkitu.svg?branch=master)](https://travis-ci.org/mhradek/aurkitu)
 [![codecov](https://codecov.io/gh/mhradek/aurkitu/branch/master/graph/badge.svg)](https://codecov.io/gh/mhradek/aurkitu)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.michaelhradek/aurkitu-maven-plugin/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.michaelhradek/aurkitu-maven-plugin)
