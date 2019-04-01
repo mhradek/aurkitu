@@ -52,11 +52,9 @@ public class Utilities {
     /**
      * @param artifactReference Our helper which contains all the goodies needed from the MavenProject and the other
      *                          artifact handling stuff
+     * @param classpathReferenceList List of classpath references to consider when building the class list
      * @return initialized Reflections object
      * @throws DependencyResolutionRequiredException if unable to MavenProject#getCompileClasspathElements()
-     * @throws ArtifactResolutionException           if unable to Utilities#buildProjectClasspathList#resolveArtifact
-     * via Repo System
-     * @throws MalformedURLException                 if unable to convert paths for classes to URL format
      * @throws MojoExecutionException                if getting NULL from MavenProject#getCompileClasspathElements()
      */
     public static Reflections buildReflections(ArtifactReference artifactReference,

@@ -138,7 +138,8 @@ public class Processor {
     }
 
     /**
-     * @param schema
+     * @param schema A schema to be added to this parent as a dependency. Used in conjunction with the consolidation
+     *               flags in the plugin set up.
      */
     public void addDependencySchema(Schema schema) {
         dependencySchemas.put(schema.getNamespace(), schema);

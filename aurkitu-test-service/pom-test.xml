@@ -71,12 +71,37 @@
     <build>
         <plugins>
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>2.12.4</version>
-                <configuration>
-                    <skipTests>true</skipTests>
-                </configuration>
+                <groupId>com.michaelhradek</groupId>
+                <artifactId>aurkitu-maven-plugin</artifactId>
+                <version>0.0.6</version>
+                <executions>
+                    <execution>
+                        <id>execution1</id>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>build-schema</goal>
+                        </goals>
+                        <configuration>
+                            <schemaName>test-service-consolidated</schemaName>
+                            <schemaNamespace>com.michaelhradek.aurkitu.test.flatbuffers</schemaNamespace>
+                            <consolidatedSchemas>true</consolidatedSchemas>
+                            <useSchemaCaching>false</useSchemaCaching>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>execution2</id>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>build-schema</goal>
+                        </goals>
+                        <configuration>
+                            <schemaName>test-service-seperated</schemaName>
+                            <schemaNamespace>com.michaelhradek.aurkitu.test.flatbuffers</schemaNamespace>
+                            <consolidatedSchemas>false</consolidatedSchemas>
+                            <useSchemaCaching>false</useSchemaCaching>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
