@@ -7,8 +7,8 @@
 
 Aurkitu is the Basque word for for the English phrase "to find". This project is intended to assist in the automatic generation of FlatBuffer IDL/schemas from Java source. But isn't this backwards? Shouldn't the schema generate the models for both client and service? Unfortunately, when using models which are stored in cloud based storage mechanisms (e.g. AWS Dynamo DB, annotations, etc.) requires that table definitions, keys, and other attributes to be declared within the model. Hence with this project the aim is to allow the server implementation to remain as the master version of these models making the schema, flatbuffers, and client code as auxillery. 
 
-*   FlatBuffers: https://google.github.io/flatbuffers/
-*   Building schemas with Maven: https://github.com/davidmoten/flatbuffers
+*   FlatBuffers: <https://google.github.io/flatbuffers/>
+*   Building schemas with Maven: <https://github.com/davidmoten/flatbuffers>
 
 Aurkitu currently supports Flatbuffers version 1.3.
 
@@ -16,14 +16,14 @@ Aurkitu currently supports Flatbuffers version 1.3.
 This is a very early proof-of-concept currently being developed in spare time.
 
 ## roadmap
--  [x] handle core types
--  [ ] handle options, deprecation, and default values
--  [ ] validate dependencies (optional)
--  [x] implement as plugin and test against a sample project
--  [ ] test with flatc (started)
--  [ ] update with current (1.8) feature support (i.e. gRPC, Field, String constant, etc.)
--  [x] release to maven
--  [x] split into annotations and plugin
+*   [x] handle core types
+*   [ ] handle options, deprecation, and default values
+*   [ ] validate dependencies (optional)
+*   [x] implement as plugin and test against a sample project
+*   [ ] test with flatc (started)
+*   [ ] update with current (1.8) feature support (i.e. gRPC, Field, String constant, etc.)
+*   [x] release to maven
+*   [x] split into annotations and plugin
 
 ## peculiarities
 While flatbuffers support unsigned primatives (e.g. ubyte, ushort, etc.), Java does not technically support them (though you can use the wrapper types \[e.g. `java.lang.Long`, etc.]) to [simulate this behavior](https://docs.oracle.com/javase/tutorial/java/nutsandbolts/datatypes.html). Eventually we could map to the wrapper types when building the schema files. At this time all primatives and their corresponding wrappers are mapped as primatives.
