@@ -45,6 +45,12 @@ public class ProcessorTest extends AbstractMojoTestCase {
     private static final String TEST_NAMESPACE_OVERRIDE_KEY = "com.test.company.key";
     private static final String TEST_NAMESPACE_OVERRIDE_VALUE = "com.test.company.value";
     private static final String TEST_SPECIFIED_DEPENDENCY = TEST_NAMESPACE_OVERRIDE_KEY;
+    private static final Map<String, String> TEST_NAMESPACE_OVERRIDE_MAP = new HashMap<String, String>() {
+        {
+            put("com.michaelhradek.aurkitu.plugin.test.other", "com.michaelhradek.aurkitu.plugin.test" +
+                    ".flatbuffer");
+        }
+    };
 
     /**
      * @see junit.framework.TestCase#setUp()
@@ -58,14 +64,6 @@ public class ProcessorTest extends AbstractMojoTestCase {
 
     @Rule
     public MojoRule rule = new MojoRule() {
-
-        @Override
-        protected void before() {
-        }
-
-        @Override
-        protected void after() {
-        }
     };
 
     /**
@@ -176,29 +174,29 @@ public class ProcessorTest extends AbstractMojoTestCase {
                 Assert.assertNotNull(type.getComment());
 
                 for (Property property : type.getProperties()) {
-                    if (property.name.equals("innerEnum")) {
+                    if ("innerEnum".equals(property.name)) {
                         Assert.assertEquals("SHORT_SWORD",
                             property.options.get(PropertyOptionKey.DEFAULT_VALUE));
                         Assert.assertNull(property.options.get(PropertyOptionKey.COMMENT));
                     }
 
-                    if (property.name.equals("definedInnerEnumArray")) {
+                    if ("definedInnerEnumArray".equals(property.name)) {
                         Assert.assertEquals(SampleClassTableInnerEnumInt.class.getName(),
                             property.options.get(PropertyOptionKey.ARRAY));
                         Assert.assertNull(property.options.get(PropertyOptionKey.COMMENT));
                     }
 
-                    if (property.name.equals("fullnameClass")) {
+                    if ("fullnameClass".equals(property.name)) {
                         Assert.assertEquals(SampleClassReferenced.class.getName(),
                             property.options.get(PropertyOptionKey.IDENT));
                         Assert.assertNull(property.options.get(PropertyOptionKey.COMMENT));
                     }
 
-                    if (property.name.equals("level")) {
+                    if ("level".equals(property.name)) {
                         Assert.assertNotNull(property.options.get(PropertyOptionKey.COMMENT));
                     }
 
-                    if (property.name.equals("dataMap")) {
+                    if ("dataMap".equals(property.name)) {
                         System.out.println(property.name);
                         System.out.println(property.type);
                         System.out.println(property.options);
@@ -401,12 +399,8 @@ public class ProcessorTest extends AbstractMojoTestCase {
     public void testProcessNamespaceOverride() throws MojoExecutionException, NoSuchFieldException {
         Processor processor = new Processor()
             .withSourceAnnotation(FlatBufferTable.class)
-            .withNamespaceOverrideMap(new HashMap<String, String>() {
-                {
-                    put("com.michaelhradek.aurkitu.plugin.test.other", "com.michaelhradek.aurkitu.plugin.test" +
-                            ".flatbuffer");
-                }
-            }).withSchema(new Schema());
+                .withNamespaceOverrideMap(TEST_NAMESPACE_OVERRIDE_MAP)
+                .withSchema(new Schema());
 
         processor.execute();
         Schema schema = processor.getProcessedSchemas().get(0);
@@ -507,7 +501,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
 
     class TestAnonymousClass {
 
-        TestInterface innerAnonymousField;
+        public TestInterface innerAnonymousField;
 
         public void someClassMethod(TestInterface input) {
             innerAnonymousField = input;
