@@ -15,7 +15,6 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import java.io.File;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 
 /**
@@ -84,7 +83,7 @@ public class ApplicationTest extends AbstractMojoTestCase {
         Assert.assertTrue(testPom.exists());
         Assert.assertTrue(testPom.isFile());
 
-        Application mojo = new Application();
+//        Application mojo = new Application();
 //        mojo = (Application) this.configureMojo(
 //            mojo, extractPluginConfiguration(Application.MOJO_NAME, testPom)
 //        );
