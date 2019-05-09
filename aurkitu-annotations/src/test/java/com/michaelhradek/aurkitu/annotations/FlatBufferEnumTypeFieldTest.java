@@ -8,7 +8,6 @@ import java.lang.reflect.Field;
 
 public class FlatBufferEnumTypeFieldTest {
 
-
     @Test
     public void testDefault() throws NoSuchFieldException {
         TestEnumDefault testEnum = TestEnumDefault.VALUE;
