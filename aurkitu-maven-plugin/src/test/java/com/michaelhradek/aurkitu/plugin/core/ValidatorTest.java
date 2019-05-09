@@ -13,15 +13,17 @@ public class ValidatorTest {
     @Test
     public void testValidateSchema() throws MojoExecutionException {
         Processor processor = new Processor().withSourceAnnotation(FlatBufferTable.class)
-                .withSourceAnnotation(FlatBufferEnum.class);
+                .withSourceAnnotation(FlatBufferEnum.class).withSchema(new Schema());
 
-        Schema schema = processor.buildSchema();
+        processor.execute();
+
+        Schema schema = processor.getProcessedSchemas().get(0);
 
         Validator validator = new Validator().withSchema(schema);
         validator.validateSchema();
-        schema.setIsValidSchema(validator.getErrors().isEmpty());
+        schema.setIsValid(validator.getErrors().isEmpty());
 
-        Assert.assertEquals(false, schema.getIsValidSchema());
+        Assert.assertEquals(false, schema.getIsValid());
 
         // Issue : TYPE_DEFINITION_NOT_DEFINED, Location: SampleClassTable, Name: anomalousSamples
         // Issue : TYPE_DEFINITION_NOT_DEFINED, Location: SampleClassTable, Name: dataMap
@@ -53,7 +55,7 @@ public class ValidatorTest {
     }
 
     @Test
-    public void testValidateSchemaNullSchema() throws NoSuchFieldException, IllegalAccessException {
+    public void testValidateSchemaNullSchema() {
         Validator validator = new Validator();
         Assert.assertNull(validator.schema);
         validator.validateSchema();
@@ -72,9 +74,11 @@ public class ValidatorTest {
     @Test
     public void testValidateSchemaCheckTables() throws MojoExecutionException {
         Processor processor = new Processor().withSourceAnnotation(FlatBufferTable.class)
-                .withSourceAnnotation(FlatBufferEnum.class);
+                .withSourceAnnotation(FlatBufferEnum.class).withSchema(new Schema());
 
-        Schema schema = processor.buildSchema();
+        processor.execute();
+
+        Schema schema = processor.getProcessedSchemas().get(0);
 
         Validator validator = new Validator().withSchema(schema);
 

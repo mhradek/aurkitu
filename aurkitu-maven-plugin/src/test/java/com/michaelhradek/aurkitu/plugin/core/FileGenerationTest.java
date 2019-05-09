@@ -32,10 +32,11 @@ public class FileGenerationTest {
     @Test
     public void testWriteSchema() throws IOException, MojoExecutionException {
         Processor processor = new Processor().withSourceAnnotation(FlatBufferTable.class)
-                .withSourceAnnotation(FlatBufferEnum.class);
+                .withSourceAnnotation(FlatBufferEnum.class).withSchema(new Schema());
         Assert.assertEquals(2, processor.getSourceAnnotations().size());
 
-        Schema schema = processor.buildSchema();
+        processor.execute();
+        Schema schema = processor.getProcessedSchemas().get(0);
         schema.setGenerateVersion(true);
 
         File outputDirectory = new File(OUTPUT_DIRECTORY);

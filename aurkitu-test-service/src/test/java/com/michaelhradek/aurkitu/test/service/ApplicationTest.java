@@ -50,7 +50,7 @@ public class ApplicationTest {
     }
 
     @Test
-    public void testSeperatedSchemas() throws IOException {
+    public void testSeparatedSchemas() throws IOException {
 
         // File should exist at this point as the plugin runs during the Maven process-classes stage
         BufferedReader br = new BufferedReader(new FileReader(OUTPUT_DIRECTORY + File.separator + FILENAME_SEPERATED));

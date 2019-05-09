@@ -25,9 +25,9 @@ public class EnumDeclarationTest {
     public void testHashCode() {
         EnumDeclaration declarationAlpha = new EnumDeclaration();
         EnumDeclaration declarationBeta = new EnumDeclaration();
-        Assert.assertNotEquals(declarationAlpha.hashCode(), declarationBeta.hashCode());
-        Assert.assertNotNull(declarationAlpha.hashCode());
-        Assert.assertNotNull(declarationBeta.hashCode());
+        Assert.assertEquals(declarationAlpha.hashCode(), declarationBeta.hashCode());
+        Assert.assertNotEquals(0, declarationAlpha.hashCode());
+        Assert.assertNotEquals(0, declarationBeta.hashCode());
 
         declarationAlpha.setName("declarationAlpha");
         declarationBeta.setName("declarationAlpha");
@@ -49,13 +49,18 @@ public class EnumDeclarationTest {
         EnumDeclaration declarationBeta = new EnumDeclaration();
         declarationBeta.setName("declarationBeta");
 
-        List<EnumDeclaration> list = new ArrayList<EnumDeclaration>();
+        List<EnumDeclaration> list = new ArrayList<>();
         list.add(declarationBeta);
         Assert.assertTrue(list.contains(declarationBeta));
         Assert.assertFalse(list.contains(declarationAlpha));
         Assert.assertEquals(1, list.size());
 
         Assert.assertFalse(declarationAlpha.equals(UUID.randomUUID()));
+        Assert.assertNotEquals(declarationAlpha, declarationBeta);
+        Assert.assertFalse(declarationAlpha.equals(declarationBeta));
+        Assert.assertFalse(declarationBeta.equals(declarationAlpha));
+        Assert.assertFalse(declarationAlpha.equals(null));
+        Assert.assertFalse(declarationBeta.equals(null));
     }
 
     @Test

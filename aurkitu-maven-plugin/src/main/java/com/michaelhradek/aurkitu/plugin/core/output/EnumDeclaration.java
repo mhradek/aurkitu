@@ -2,6 +2,7 @@ package com.michaelhradek.aurkitu.plugin.core.output;
 
 import com.michaelhradek.aurkitu.annotations.FlatBufferEnum.EnumStructureType;
 import com.michaelhradek.aurkitu.annotations.types.EnumType;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -14,12 +15,13 @@ import java.util.List;
  */
 @Getter
 @Setter
+@EqualsAndHashCode
 public class EnumDeclaration {
 
     private String name;
     private EnumStructureType structure;
     private EnumType type;
-    private List<String> values = new ArrayList<String>();
+    private List<String> values = new ArrayList<>();
     private String comment;
 
     public EnumDeclaration(EnumStructureType structure) {
@@ -70,24 +72,5 @@ public class EnumDeclaration {
         builder.append(System.lineSeparator());
 
         return builder.toString();
-    }
-
-    @Override
-    public int hashCode() {
-        if (name == null) {
-            return super.hashCode();
-        }
-
-        return name.hashCode();
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (o instanceof EnumDeclaration) {
-            EnumDeclaration toCompare = (EnumDeclaration) o;
-            return this.hashCode() == o.hashCode();
-        }
-
-        return false;
     }
 }

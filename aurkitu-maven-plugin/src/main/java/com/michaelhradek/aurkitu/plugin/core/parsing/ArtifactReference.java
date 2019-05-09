@@ -1,6 +1,7 @@
 package com.michaelhradek.aurkitu.plugin.core.parsing;
 
 import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import org.apache.maven.project.MavenProject;
 import org.eclipse.aether.RepositorySystem;
@@ -15,6 +16,7 @@ import java.util.List;
  */
 @Getter
 @AllArgsConstructor
+@EqualsAndHashCode
 public class ArtifactReference {
     private MavenProject mavenProject;
     private RepositorySystem repoSystem;

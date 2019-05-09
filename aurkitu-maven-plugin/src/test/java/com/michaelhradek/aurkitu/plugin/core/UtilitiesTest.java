@@ -46,7 +46,7 @@ public class UtilitiesTest extends AbstractMojoTestCase {
     public MojoRule rule = new MojoRule() {
 
         @Override
-        protected void before() throws Throwable {
+        protected void before() {
         }
 
         @Override
@@ -128,9 +128,10 @@ public class UtilitiesTest extends AbstractMojoTestCase {
         Assert.assertFalse(Utilities.isSchemaPresent(new Schema(), new File("/")));
 
         Processor processor = new Processor().withSourceAnnotation(FlatBufferTable.class)
-                .withSourceAnnotation(FlatBufferEnum.class);
+                .withSourceAnnotation(FlatBufferEnum.class).withSchema(new Schema());
 
-        Schema schema = processor.buildSchema();
+        processor.execute();
+        Schema schema = processor.getProcessedSchemas().get(0);
         FileGeneration gen = new FileGeneration(new File(OUTPUT_DIRECTORY));
         gen.writeSchema(schema);
 
@@ -162,7 +163,7 @@ public class UtilitiesTest extends AbstractMojoTestCase {
         Assert.assertTrue(Utilities.isArtifactResolutionRequired(getFauxArtifact("org.some-group", null), artifactReference));
         Assert.assertTrue(Utilities.isArtifactResolutionRequired(getFauxArtifact("org.some-group", "blah-blah"), artifactReference));
 
-        List<String> specifiedDependencies = new ArrayList<String>();
+        List<String> specifiedDependencies = new ArrayList<>();
         specifiedDependencies.add("bork_kasjf:j2;3jr");
         specifiedDependencies.add("com.somecompany.team");
         specifiedDependencies.add("com.othercompany.clan:the-project");
@@ -182,7 +183,7 @@ public class UtilitiesTest extends AbstractMojoTestCase {
         // Skip the check because the specified dependencies list was empty or null
         artifactReference = new ArtifactReference(null, null, null, null, null);
         Assert.assertTrue(Utilities.isArtifactResolutionRequired(getFauxArtifact("com.somecompany.team", "blah-blah"), artifactReference));
-        specifiedDependencies = new ArrayList<String>();
+        specifiedDependencies = new ArrayList<>();
         artifactReference = new ArtifactReference(null, null, null, null, specifiedDependencies);
         Assert.assertTrue(Utilities.isArtifactResolutionRequired(getFauxArtifact("com.somecompany.team", "blah-blah"), artifactReference));
     }

@@ -5,7 +5,6 @@ import com.michaelhradek.aurkitu.annotations.FlatBufferTable;
 import com.michaelhradek.aurkitu.plugin.core.FileGeneration;
 import com.michaelhradek.aurkitu.plugin.core.Processor;
 import com.michaelhradek.aurkitu.plugin.core.Utilities;
-import com.michaelhradek.aurkitu.plugin.core.Validator;
 import com.michaelhradek.aurkitu.plugin.core.output.Schema;
 import com.michaelhradek.aurkitu.plugin.core.parsing.ArtifactReference;
 import com.michaelhradek.aurkitu.plugin.core.parsing.ClasspathReference;
@@ -27,9 +26,7 @@ import org.eclipse.aether.resolution.ArtifactResolutionException;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * @author m.hradek
@@ -63,7 +60,7 @@ public class Application extends AbstractMojo {
     private String schemaNamespace;
 
     @Parameter(property = Application.MOJO_NAME + ".schema-includes")
-    private List<String> schemaIncludes;
+    private Set<String> schemaIncludes;
 
     @Parameter(property = Application.MOJO_NAME + ".validate-schema", defaultValue = "true")
     private Boolean validateSchema;
@@ -92,6 +89,9 @@ public class Application extends AbstractMojo {
     // allow static access to the log
     private static Log log;
 
+    /**
+     * @throws MojoExecutionException if anything goes wrong
+     */
     public void execute() throws MojoExecutionException {
 
         if (log == null)
@@ -125,6 +125,8 @@ public class Application extends AbstractMojo {
         schema.setIncludes(schemaIncludes);
         schema.setGenerateVersion(generateVersion);
 
+        List<Schema> dependencySchemas = new ArrayList<>();
+
         if (useSchemaCaching && Utilities.isSchemaPresent(schema, outputDirectory)) {
             log.info("Schema found & caching was requested; skipping schema update.");
             return;
@@ -132,54 +134,50 @@ public class Application extends AbstractMojo {
 
         ArtifactReference reference = new ArtifactReference(project, repoSystem, repoSession, repositories, specifiedDependencies);
 
+        // Setup the processor
         Processor processor =
-            new Processor()
-                .withSourceAnnotation(FlatBufferTable.class)
-                .withSourceAnnotation(FlatBufferEnum.class)
-                .withArtifactReference(reference)
-                    .withNamespaceOverrideMap(namespaceOverrideMap)
-                    .withSpecifiedDependencies(specifiedDependencies)
-                    .withConsolidatedSchemas(consolidatedSchemas);
+                new Processor()
+                        .withSourceAnnotation(FlatBufferTable.class)
+                        .withSourceAnnotation(FlatBufferEnum.class)
+                        .withArtifactReference(reference)
+                        .withNamespaceOverrideMap(namespaceOverrideMap)
+                        .withSpecifiedDependencies(specifiedDependencies)
+                        .withConsolidatedSchemas(consolidatedSchemas)
+                        .withValidateSchemas(validateSchema);
 
+        // Set up the class paths
         try {
-            if (consolidatedSchemas == null || consolidatedSchemas) {
-                schema.setClasspathReferenceList(Utilities.buildProjectClasspathList(reference,
-                        ClasspathSearchType.BOTH));
-            } else {
-                schema.setClasspathReferenceList(Utilities.buildProjectClasspathList(reference,
-                        ClasspathSearchType.PROJECT));
+            schema.setClasspathReferenceList(Utilities.buildProjectClasspathList(reference,
+                    ClasspathSearchType.BOTH));
+
+            if (consolidatedSchemas != null && !consolidatedSchemas) {
                 List<ClasspathReference> classpathReferenceList = Utilities.buildProjectClasspathList(reference,
                         ClasspathSearchType.DEPENDENCIES);
+                log.debug("Dependencies found: " + classpathReferenceList.size());
                 for (ClasspathReference classpathReference : classpathReferenceList) {
                     Schema dependencySchema = new Schema();
-                    dependencySchema.setClasspathReferenceList(Arrays.asList(classpathReference));
-                    processor.addDependencySchema(dependencySchema);
+                    log.debug(" namespace: " + classpathReference.getDerivedNamespace());
+                    dependencySchema.setName(classpathReference.getArtifact());
+                    dependencySchema.setNamespace(classpathReference.getDerivedNamespace());
+                    dependencySchema.setClasspathReferenceList((Arrays.asList(classpathReference));
+                    dependencySchema.setDependency(true);
+                    dependencySchemas.add(dependencySchema);
                 }
             }
         } catch (IOException | DependencyResolutionRequiredException | ArtifactResolutionException e) {
             throw new MojoExecutionException(e.getMessage(), e.getCause());
         }
 
-        schema = processor.buildSchema(schema);
+        // Add the scehma
+        processor.addSchema(schema);
 
-        if (validateSchema) {
-            Validator validator = new Validator().withSchema(schema);
-            validator.validateSchema();
-            schema.setIsValidSchema(validator.getErrors().isEmpty());
-            schema.setValidator(validator);
-            Application.getLogger().info(validator.getErrorComments());
+        // If dependency schemas were added, add those
+        processor.addAllSchemas(dependencySchemas);
 
-            if (consolidatedSchemas != null && !consolidatedSchemas) {
-                for (Schema dependencySchema : processor.getDependencySchemas().values()) {
-                    validator = new Validator().withSchema(dependencySchema);
-                    validator.validateSchema();
-                    dependencySchema.setIsValidSchema(validator.getErrors().isEmpty());
-                    dependencySchema.setValidator(validator);
-                    Application.getLogger().info(validator.getErrorComments());
-                }
-            }
-        }
+        // Process schemas
+        processor.execute();
 
+        // Write files
         if (outputDirectory == null) {
             log.debug("outputDirectory is NULL");
         } else {
@@ -188,12 +186,8 @@ public class Application extends AbstractMojo {
 
         FileGeneration fg = new FileGeneration(outputDirectory);
         try {
-            fg.writeSchema(schema);
-
-            if (consolidatedSchemas != null && !consolidatedSchemas) {
-                for (Schema dependencySchema : processor.getDependencySchemas().values()) {
-                    fg.writeSchema(dependencySchema);
-                }
+            for (Schema completeSchema : processor.getProcessedSchemas()) {
+                fg.writeSchema(completeSchema);
             }
         } catch (IOException e) {
             log.error("Unable to write schemas to disk", e);

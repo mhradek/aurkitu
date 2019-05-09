@@ -1,6 +1,7 @@
 package com.michaelhradek.aurkitu.plugin.core.output;
 
 import com.michaelhradek.aurkitu.plugin.Config;
+import com.michaelhradek.aurkitu.plugin.core.Processor;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -63,12 +64,12 @@ public class SchemaTest {
         schema.addInclude(INCLUDE_2);
         schema.addAttribute(ATTRIBUTE);
 
-        Schema.Constant<Integer> integerConstant = new Schema.Constant<Integer>();
+        Schema.Constant<Integer> integerConstant = new Schema.Constant<>();
         integerConstant.name = INT_CONST_NAME;
         integerConstant.value = INT_CONST_VALUE;
         schema.addIntegerConstant(integerConstant);
 
-        Schema.Constant<Float> floatConstant = new Schema.Constant<Float>();
+        Schema.Constant<Float> floatConstant = new Schema.Constant<>();
         floatConstant.name = FLOAT_CONST_NAME;
         floatConstant.value = FLOAT_CONST_VALUE;
         schema.addFloatConstant(floatConstant);
@@ -78,18 +79,18 @@ public class SchemaTest {
 
         schema.setNamespace(NAMESPACE);
 
-        for(String line : schema.toString().split(System.lineSeparator())) {
-            if(line.contains(INCLUDE_1)) {
+        for (String line : schema.toString().split(System.lineSeparator())) {
+            if (line.contains(INCLUDE_1)) {
                 Assert.assertEquals("include " + INCLUDE_1 + ";", line);
                 continue;
             }
 
-            if(line.contains(INCLUDE_2)) {
+            if (line.contains(INCLUDE_2)) {
                 Assert.assertEquals("include " + INCLUDE_2, line);
                 continue;
             }
 
-            if(line.contains(ATTRIBUTE)) {
+            if (line.contains(ATTRIBUTE)) {
                 Assert.assertEquals("attribute \"" + ATTRIBUTE + "\";", line);
                 continue;
             }
@@ -104,17 +105,17 @@ public class SchemaTest {
                 continue;
             }
 
-            if(line.contains(FILE_ID)) {
+            if (line.contains(FILE_ID)) {
                 Assert.assertEquals("file_identifier \"" + FILE_ID + "\";", line);
                 continue;
             }
 
-            if(line.contains(FILE_EXT)) {
+            if (line.contains(FILE_EXT)) {
                 Assert.assertEquals("file_extension \"" + FILE_EXT + "\";", line);
                 continue;
             }
 
-            if(line.contains(NAMESPACE)) {
+            if (line.contains(NAMESPACE)) {
                 Assert.assertEquals("namespace " + NAMESPACE + ";", line);
                 continue;
             }
@@ -136,7 +137,7 @@ public class SchemaTest {
         schema.setAttributes(null);
         Assert.assertNull(schema.getAttributes());
         Assert.assertEquals(TEST_SCHEMA_HEADER, schema.toString());
-        schema.setAttributes(new ArrayList<String>());
+        schema.setAttributes(new ArrayList<>());
         Assert.assertNotNull(schema.getAttributes());
         Assert.assertEquals(TEST_SCHEMA_HEADER, schema.toString());
 
@@ -190,5 +191,26 @@ public class SchemaTest {
 
         Assert.assertFalse(schema.isGenerateVersion());
         Assert.assertNull(schema.getValidator());
+    }
+
+    @Test
+    public void testEquals() {
+        Schema schemaOne = new Schema();
+        Schema schemaTwo = new Schema();
+
+        Assert.assertFalse(schemaOne.equals(null));
+        Assert.assertFalse(schemaOne.equals(String.class));
+        Assert.assertFalse(schemaOne.equals(new Processor()));
+        Assert.assertTrue(schemaOne.equals(schemaTwo));
+
+        schemaOne.setNamespace(schemaOne.getClass().getPackage().getName());
+        Assert.assertFalse(schemaOne.equals(schemaTwo));
+        schemaTwo.setNamespace(schemaTwo.getClass().getPackage().getName());
+        Assert.assertTrue(schemaOne.equals(schemaTwo));
+
+        schemaOne.setNamespace("nameOne");
+        Assert.assertFalse(schemaOne.equals(schemaTwo));
+        schemaTwo.setNamespace("nameOne");
+        Assert.assertTrue(schemaOne.equals(schemaTwo));
     }
 }

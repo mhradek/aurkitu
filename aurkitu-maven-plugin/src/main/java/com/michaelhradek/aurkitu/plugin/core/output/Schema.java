@@ -1,16 +1,13 @@
 package com.michaelhradek.aurkitu.plugin.core.output;
 
-import com.michaelhradek.aurkitu.plugin.Application;
 import com.michaelhradek.aurkitu.plugin.Config;
 import com.michaelhradek.aurkitu.plugin.core.Validator;
 import com.michaelhradek.aurkitu.plugin.core.parsing.ClasspathReference;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * @author m.hradek
@@ -18,6 +15,7 @@ import java.util.Map;
  */
 @Getter
 @Setter
+@EqualsAndHashCode
 public class Schema {
 
     // IDL values
@@ -28,26 +26,34 @@ public class Schema {
     String rootType;
     List<EnumDeclaration> enums;
     List<TypeDeclaration> types;
-    List<String> includes;
+    Set<String> includes;
     List<String> attributes;
     List<Constant<Integer>> integerConstants;
     List<Constant<Float>> floatConstants;
 
     // Aurkitu values
     boolean generateVersion;
-    Boolean isValidSchema;
+    Boolean isValid;
     Validator validator;
+    boolean isDependency;
+    boolean isEmpty;
 
     // Classpath references used to create this schema
     private List<ClasspathReference> classpathReferenceList;
 
     public Schema() {
-        enums = new ArrayList<EnumDeclaration>();
-        types = new ArrayList<TypeDeclaration>();
-        includes = new ArrayList<String>();
-        attributes = new ArrayList<String>();
-        integerConstants = new ArrayList<Constant<Integer>>();
-        floatConstants = new ArrayList<Constant<Float>>();
+        enums = new ArrayList<>();
+        types = new ArrayList<>();
+        includes = new HashSet<>();
+        attributes = new ArrayList<>();
+        integerConstants = new ArrayList<>();
+        floatConstants = new ArrayList<>();
+
+        classpathReferenceList = new ArrayList<>();
+    }
+
+    public void isEmpty(boolean isEmpty) {
+        this.isEmpty = isEmpty;
     }
 
     /**
@@ -103,7 +109,7 @@ public class Schema {
     public static class Constant<T extends Number> {
         public String name;
         public T value;
-        public Map<String, String> options = new HashMap<String, String>();
+        public Map<String, String> options = new HashMap<>();
     }
 
     /**
@@ -123,7 +129,7 @@ public class Schema {
     }
 
     /**
-     * @param input Set the file extension. Default is {@link Application#fileExtension}
+     * @param input Set the file extension. Default is {@link Config#FILE_EXTENSION}
      */
     public void setFileExtension(String input) {
         if(input == null) {
@@ -244,7 +250,7 @@ public class Schema {
             builder.append(System.lineSeparator());
         }
 
-        if (isValidSchema != null) {
+        if (isValid != null) {
             builder.append(validator.getErrorComments());
         }
 
@@ -256,23 +262,5 @@ public class Schema {
         }
 
         return result;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (!(o instanceof Schema)) {
-            return false;
-        }
-
-        final Schema schemaO = (Schema) o;
-        if (!namespace.equals(schemaO.namespace)) {
-            return false;
-        }
-
-        if (!name.equals(schemaO.name)) {
-            return false;
-        }
-
-        return true;
     }
 }

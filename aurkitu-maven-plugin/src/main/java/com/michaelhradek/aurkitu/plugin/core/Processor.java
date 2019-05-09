@@ -11,6 +11,7 @@ import com.michaelhradek.aurkitu.plugin.core.output.TypeDeclaration.Property;
 import com.michaelhradek.aurkitu.plugin.core.output.TypeDeclaration.Property.PropertyOptionKey;
 import com.michaelhradek.aurkitu.plugin.core.parsing.AnnotationParser;
 import com.michaelhradek.aurkitu.plugin.core.parsing.ArtifactReference;
+import com.michaelhradek.aurkitu.plugin.core.parsing.ClasspathReference;
 import com.michaelhradek.aurkitu.plugin.core.parsing.ClasspathSearchType;
 import lombok.Getter;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
@@ -18,6 +19,7 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
@@ -26,6 +28,8 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.jar.JarEntry;
+import java.util.jar.JarInputStream;
 
 /**
  * @author m.hradek
@@ -40,8 +44,13 @@ public class Processor {
     private Set<String> warnedTypeNames;
     private Map<String, String> namespaceOverrideMap;
     private List<String> specifiedDependencies;
-    private boolean consolidatedSchemas;
-    private Schema schema;
+    private boolean consolidatedSchemas = true;
+    private List<Schema> candidateSchemas;
+    private List<Schema> processedSchemas;
+    private boolean validateSchemas = false;
+
+    // Internal member
+    private Schema currentSchema;
 
     /**
      * An unconsolidated schema means that we do not grab and build all the various inherited models into the target
@@ -49,21 +58,19 @@ public class Processor {
      * Therefore, each schema will need to be aware of which dependencies it has and what models in that schema refer
      * to these dependencies.
      * <p>
-     * The schema namespace will be the decider of the dependency/schema ownership. If the artifact & group ids do
+     * The schema namespace will be the decider of the dependency/schema ownership. If the artifact &amp; group ids do
      * not match
      * then a new schema is assumed. Then those models will be marked as requiring a full path. Finally, a new schema
      * is added.
      */
-    private Map<String, Schema> dependencySchemas;
 
     public Processor() {
         sourceAnnotations = new ArrayList<>();
-        targetClasses = new HashSet<>();
         warnedTypeNames = new HashSet<>();
 
         // This could be null as the value via Application could be overriden here
         namespaceOverrideMap = new HashMap<>();
-        dependencySchemas = new HashMap<>();
+        candidateSchemas = new ArrayList<>();
     }
 
     /**
@@ -100,10 +107,10 @@ public class Processor {
         Map<String, String> temp = new HashMap<>();
         for (Entry<String, String> item : namespaceOverrideMap.entrySet()) {
             Application.getLogger().debug(String.format("Reviewing namespaceOverrideMap item key: %s, value %s",
-                item.getKey(), item.getValue()));
+                    item.getKey(), item.getValue()));
 
             temp.put(item.getKey().endsWith(".") ? item.getKey() : item.getKey() + ".",
-                item.getValue().endsWith(".") ? item.getValue() : item.getValue() + ".");
+                    item.getValue().endsWith(".") ? item.getValue() : item.getValue() + ".");
         }
 
         this.namespaceOverrideMap = temp;
@@ -138,20 +145,95 @@ public class Processor {
     }
 
     /**
-     * @param schema A schema to be added to this parent as a dependency. Used in conjunction with the consolidation
-     *               flags in the plugin set up.
+     *
+     * @param schema Set the processor to use this schema. Clear any previously added schemas
+     * @return an instance of the Processor object
      */
-    public void addDependencySchema(Schema schema) {
-        dependencySchemas.put(schema.getNamespace(), schema);
+    public Processor withSchema(Schema schema) {
+        this.candidateSchemas.clear();
+        this.candidateSchemas.add(schema);
+        return this;
+    }
+
+    /**
+     * @param schemas Set the processor to use this list of schemas. Clear any previously added schemas
+     * @return an instance of the Processor object
+     */
+    public Processor withSchemas(List<Schema> schemas) {
+        this.candidateSchemas.clear();
+        this.candidateSchemas.addAll(schemas);
+        return this;
+    }
+
+    /**
+     * @param schema Adds a schemas to a list of schemas to process
+     * @return an instance of the Processor object
+     */
+    public Processor addSchema(Schema schema) {
+        this.candidateSchemas.add(schema);
+        return this;
+    }
+
+    /**
+     * @param schemas Adds a list of schemas to a list of schemas to process
+     * @return an instance of the Processor object
+     */
+    public Processor addAllSchemas(List<Schema> schemas) {
+        this.candidateSchemas.addAll(schemas);
+        return this;
     }
 
     /**
      *
-     * @return a completed schema
-     * @throws MojoExecutionException when there is a MalformedURLException in the classpathElements
+     * @param validateSchemas Set whether or not the processor should validate the schemas. Sending null does not alter the setting
+     * @return an instance of the Processor object
      */
-    Schema buildSchema() throws MojoExecutionException {
-        return buildSchema(new Schema());
+    public Processor withValidateSchemas(Boolean validateSchemas) {
+        if (validateSchemas == null) {
+            return this;
+        }
+
+        this.validateSchemas = validateSchemas;
+        return this;
+    }
+
+    /**
+     * Executes the processor against the settings and schemas specified
+     *
+     * @throws MojoExecutionException if anything goes wrong
+     */
+    public void execute() throws MojoExecutionException {
+        Application.getLogger().debug("Processor: Execution commencing...");
+        List<Schema> processedSchemas = new ArrayList<>();
+        Application.getLogger().debug("    Number of schemas to process: " + candidateSchemas.size());
+        for (Schema schema : candidateSchemas) {
+            Application.getLogger().debug("      Current schema: " + schema.getNamespace());
+            this.currentSchema = schema;
+            this.targetClasses = new HashSet<>();
+
+            Schema builtSchema = buildSchema(schema);
+            if (!builtSchema.isEmpty()) {
+                // Only put schemas that have declarations in them.
+                processedSchemas.add(builtSchema);
+            }
+        }
+
+        if (validateSchemas) {
+            Application.getLogger().debug("    Validating schemas");
+
+            for (int i = 0; i < processedSchemas.size(); i++) {
+                Schema validationSchema = processedSchemas.get(i);
+                Validator validator = new Validator().withSchema(validationSchema);
+                validator.validateSchema();
+                validationSchema.setIsValid(validator.getErrors().isEmpty());
+                validationSchema.setValidator(validator);
+                Application.getLogger().info(validator.getErrorComments());
+                processedSchemas.set(i, validationSchema);
+            }
+        }
+
+        this.processedSchemas = processedSchemas;
+        Application.getLogger().debug("Processor: Execution complete");
     }
 
     /**
@@ -159,9 +241,8 @@ public class Processor {
      * @return a completed schema
      * @throws MojoExecutionException when there is a MalformedURLException in the classpathElements
      */
-    public Schema buildSchema(Schema schema) throws MojoExecutionException {
-        this.schema = schema;
-
+    private Schema buildSchema(Schema schema) throws MojoExecutionException {
+        Application.getLogger().debug("Start building schema: " + schema.getName());
         for (Class<? extends Annotation> source : sourceAnnotations) {
             if (artifactReference == null || artifactReference.getMavenProject() == null) {
                 Application.getLogger().debug("MavenProject is null; falling back to built in class scanner");
@@ -172,7 +253,13 @@ public class Processor {
             }
         }
 
-        // The targetClasses includes ALL annotated classes including those inside dependnecies
+        if (targetClasses.size() < 1) {
+            Application.getLogger().debug("  No target classes found; skipping schema creation");
+            schema.isEmpty(true);
+            return schema;
+        }
+
+        // The targetClasses includes ALL annotated classes including those inside dependencies
         int rootTypeCount = 0;
         for (Class<?> clazz : targetClasses) {
             if (isEnumWorkaround(clazz)) {
@@ -181,7 +268,7 @@ public class Processor {
             }
 
             if (clazz instanceof Class) {
-                TypeDeclaration temp = buildTypeDeclaration(clazz);
+                TypeDeclaration temp = buildTypeDeclaration(schema, clazz);
                 if (temp.isRoot()) {
                     Application.getLogger().debug("  Found root: " + temp.getName());
                     rootTypeCount++;
@@ -192,7 +279,9 @@ public class Processor {
                     schema.setRootType(temp.getName());
                 }
 
-                schema.addTypeDeclaration(temp);
+                if (consolidatedSchemas || !getExternalClassDefinitionDetails(clazz).locatedOutside) {
+                    schema.addTypeDeclaration(temp);
+                }
 
                 // Now examine inner classes
                 Class<?>[] innerClasses = clazz.getDeclaredClasses();
@@ -211,14 +300,11 @@ public class Processor {
 
                     Application.getLogger().debug("  Found type...");
                     // Inner classes cannot be root type
-                    schema.addTypeDeclaration(buildTypeDeclaration(inner));
+                    if (consolidatedSchemas || !getExternalClassDefinitionDetails(inner).locatedOutside) {
+                        schema.addTypeDeclaration(buildTypeDeclaration(schema, inner));
+                    }
                 }
             }
-        }
-
-        for (Entry<String, Schema> dependencyEntrySet : dependencySchemas.entrySet()) {
-            Schema dependencySchema = dependencyEntrySet.getValue();
-            dependencyEntrySet.setValue(buildSchema(dependencySchema));
         }
 
         return schema;
@@ -283,8 +369,8 @@ public class Processor {
                     // Verify the declaration on the enum matches the declaration of the field
                     if (enumD.getType() == null) {
                         throw new IllegalArgumentException(
-                            "Missing @FlatBufferEnum(enumType = EnumType.<SELECT>) declaration or remove @FlatBufferEnumTypeField for: "
-                                + clazz.getName());
+                                "Missing @FlatBufferEnum(enumType = EnumType.<SELECT>) declaration or remove @FlatBufferEnumTypeField for: "
+                                        + clazz.getName());
                     }
 
                     if (field.getType().isAssignableFrom(enumD.getType().targetClass)) {
@@ -298,7 +384,7 @@ public class Processor {
 
         if (numAnnotations > 1) {
             throw new IllegalArgumentException(
-                "Can only declare one @FlatBufferEnumTypeField for Enum: " + clazz.getName());
+                    "Can only declare one @FlatBufferEnumTypeField for Enum: " + clazz.getName());
         }
 
         Object[] constants = clazz.getEnumConstants();
@@ -333,7 +419,7 @@ public class Processor {
                     }
 
                     throw new IllegalArgumentException(
-                        "Enum type must be integral (i.e. byte, ubyte, short, ushort, int, unint, long, or ulong");
+                            "Enum type must be integral (i.e. byte, ubyte, short, ushort, int, unint, long, or ulong");
                 } catch (IllegalAccessException e) {
                     Application.getLogger().error("Not allowed to grab Enum field value: ", e);
                 }
@@ -350,7 +436,7 @@ public class Processor {
      * @param clazz Class which is being considered for an TypeDeclaration
      * @return a TypeDeclaration
      */
-    TypeDeclaration buildTypeDeclaration(Class<?> clazz) {
+    TypeDeclaration buildTypeDeclaration(Schema schema, Class<?> clazz) {
         Application.getLogger().debug("Building Type: " + clazz.getName());
 
         TypeDeclaration type = new TypeDeclaration();
@@ -377,6 +463,8 @@ public class Processor {
             }
         }
 
+        // TODO: If we aren't separated schemas then check to see if the fields are a class which lives im a dependency.
+        //  This will be challenging for things like a List or Map of dependency types
         List<Field> fields = getDeclaredAndInheritedPrivateFields(clazz);
         for (Field field : fields) {
             Application.getLogger().debug("Number of annotations found: " + field.getDeclaredAnnotations().length);
@@ -386,15 +474,15 @@ public class Processor {
                 continue;
             }
 
-            type.addProperty(getPropertyForField(field));
             Application.getLogger().debug("Adding property to Type: " + field.getName());
+            type.addProperty(getPropertyForField(schema, field));
         }
 
         return type;
     }
 
     /**
-     * @param type Class which needs to be travered up to determine which fields are to be
+     * @param type Class which needs to be traversed up to determine which fields are to be
      *        considered as candidates for declaration
      * @return A list of valid fields
      */
@@ -420,7 +508,7 @@ public class Processor {
      *         {@link FieldType}. When encountering an array or ident (Indentifier) the options
      *         property is used to store additional information.
      */
-    Property getPropertyForField(final Field field) {
+    Property getPropertyForField(Schema schema, final Field field) {
         Property property = new Property();
 
         // Some uses in which we reference other namespaces require us to declare the entirety of
@@ -429,11 +517,13 @@ public class Processor {
         boolean useFullName = false;
         String defaultValue = null;
 
+        // Process overrides for the field
         if (annotation != null) {
             useFullName = ((FlatBufferFieldOptions) annotation).useFullName();
             defaultValue = ((FlatBufferFieldOptions) annotation).defaultValue();
         }
 
+        // Apply a comment if the annotation exists
         annotation = field.getAnnotation(FlatBufferComment.class);
         if (annotation != null) {
             String comment = ((FlatBufferComment) annotation).comment();
@@ -443,6 +533,7 @@ public class Processor {
             }
         }
 
+        // Apply the default value if it was set
         if (defaultValue != null && !defaultValue.isEmpty()) {
             Application.getLogger().debug("Found a default value to assign to field: " + defaultValue);
             property.options.put(PropertyOptionKey.DEFAULT_VALUE, defaultValue);
@@ -498,223 +589,63 @@ public class Processor {
 
         // EX: String[], SomeClass[]
         if (field.getType().isArray()) {
-            property.name = field.getName();
-            property.type = FieldType.ARRAY;
-
-            // Determine type of the array
-            String name = field.getType().getComponentType().getSimpleName();
-            if (Utilities.isLowerCaseType(field.getType().getComponentType())) {
-                Application.getLogger().debug("Array parameter is primative, wrapper, or String: " + field.getName());
-                name = name.toLowerCase();
-            } else {
-                // It may be a Class<?> which isn't a primative (i.e. lowerCaseType)
-                if (useFullName) {
-                    name = field.getType().getComponentType().getName();
-
-                    String simpleName = field.getType().getComponentType().getName()
-                        .substring(field.getType().getComponentType().getName().lastIndexOf(".") + 1);
-                    String packageName = field.getType().getComponentType().getName()
-                        .substring(0, field.getType().getComponentType().getName().lastIndexOf(".") + 1);
-                    Application.getLogger().debug(String
-                        .format("Using full name; reviewing simpleName: %s and package: %s", simpleName, packageName));
-
-                    if (namespaceOverrideMap != null && namespaceOverrideMap.containsKey(packageName)) {
-                        name = namespaceOverrideMap.get(packageName) + simpleName;
-                        Application.getLogger().debug("Override located; using it: " + name);
-                    }
-                } else {
-                    name = field.getType().getComponentType().getSimpleName();
-                }
-            }
-
-            // In the end Array[] and List<?> are represented the same way.
-            property.options.put(PropertyOptionKey.ARRAY, name);
-            return property;
+            return processArray(property, field, useFullName);
         }
 
         // EX: Map<String, Object>
         if (field.getType().isAssignableFrom(Map.class)) {
-            property.name = field.getName();
-            property.type = FieldType.MAP;
-
-            // Stuff the types into this list
-            List<Property> properties = new ArrayList<>();
-
-            // Get the type for the key and value
-            String[] parametrizedTypeStrings = new String[]{String.class.getName(), String.class.getName()};
-            try {
-                parametrizedTypeStrings = parseFieldSignatureForParametrizedTypeStringsOnMap(field);
-            } catch (Exception e) {
-                Application.getLogger().warn("Unable to determine classes for Map<?, ?> parameter types", e);
-            }
-
-            // Attempt to load each type
-            for (int i = 0; i < parametrizedTypeStrings.length; i++) {
-                Class<?> mapTypeClass;
-                Property mapTypeProperty = new Property();
-
-                try {
-                    // Load all paths into custom classloader
-                    ClassLoader urlClassLoader = Thread.currentThread().getContextClassLoader();
-                    if (artifactReference != null && artifactReference.getMavenProject() != null) {
-                        urlClassLoader = URLClassLoader
-
-                                // TODO This needs thought
-                                .newInstance(Utilities.arrayForClasspathReferenceList(
-                                        Utilities.buildProjectClasspathList(artifactReference, ClasspathSearchType.BOTH)), urlClassLoader);
-                    }
-
-                    // Parse Field signature
-                    mapTypeClass = urlClassLoader.loadClass(parametrizedTypeStrings[i]);
-
-                    if (mapTypeClass.getName().equals(Object.class.getName())) {
-                        Application.getLogger().warn(
-                            "Using Map<?, ?> where either `?` is `java.lang.Object` is not permitted; using `java.lang.String`");
-                        mapTypeClass = String.class;
-                    }
-                } catch (Exception e) {
-                    Application.getLogger()
-                        .warn("Unable to find and load class for Map<?, ?> parameter, using <String, String> instead: ",
-                            e);
-                    mapTypeClass = String.class;
-                }
-
-                String name = mapTypeClass.getSimpleName();
-                if (useFullName) {
-                    name = mapTypeClass.getName();
-
-                    String simpleName = mapTypeClass.getName()
-                        .substring(mapTypeClass.getName().lastIndexOf(".") + 1);
-                    String packageName = mapTypeClass.getName()
-                        .substring(0, mapTypeClass.getName().lastIndexOf(".") + 1);
-                    Application.getLogger().debug(String
-                        .format("Using full name; reviewing simpleName: %s and package: %s", simpleName,
-                            packageName));
-
-                    if (namespaceOverrideMap != null && namespaceOverrideMap.containsKey(packageName)) {
-                        name = namespaceOverrideMap.get(packageName) + simpleName;
-                        Application.getLogger().debug("Override located; using it: " + name);
-                    }
-                }
-
-                if (Utilities.isLowerCaseType(mapTypeClass)) {
-                    Application.getLogger()
-                        .debug("Array parameter is primative, wrapper, or String: " + field.getName());
-                    name = name.toLowerCase();
-                }
-
-                // Stuffing...
-                if (i == 0) {
-                    mapTypeProperty.name = "key";
-                } else {
-                    mapTypeProperty.name = "value";
-                }
-
-                mapTypeProperty.type = FieldType.IDENT;
-                mapTypeProperty.options.put(PropertyOptionKey.IDENT, name);
-                properties.add(mapTypeProperty);
-            }
-
-            // Create a new type and add it to the list of types
-            TypeDeclaration mapType = new TypeDeclaration();
-            final String mapTypeName = TypeDeclaration.MapValueSet.class.getSimpleName() + "_"
-                + field.getDeclaringClass().getSimpleName() + "_" + field.getName();
-            mapType.setName(mapTypeName);
-            mapType.setComment("Auto-generated type for use with Map<?, ?>");
-
-            // Set in this type the various types for the K/Vs used in this map
-            mapType.setProperties(properties);
-            schema.addTypeDeclaration(mapType);
-
-            // Need a way to reference back to the new generated type
-            property.options.put(PropertyOptionKey.MAP, mapTypeName);
-            return property;
+            return processMap(property, schema, field, useFullName);
         }
 
         // EX: List<String>, List<SomeClass>
         if (field.getType().isAssignableFrom(List.class)) {
-            property.name = field.getName();
-            property.type = FieldType.ARRAY;
-
-            Class<?> listTypeClass;
-
-            try {
-                // Load all paths into custom classloader
-                ClassLoader urlClassLoader = Thread.currentThread().getContextClassLoader();
-                if (artifactReference != null && artifactReference.getMavenProject() != null)
-                    if (consolidatedSchemas) {
-                        urlClassLoader =
-                                URLClassLoader.newInstance(Utilities.buildProjectClasspathList(artifactReference,
-                                ClasspathSearchType.BOTH).toArray(new URL[]{}), urlClassLoader);
-                    } else {
-                        // TODO This needs thought
-                    }
-
-                // Parse Field signature
-                String parametrizedTypeString = parseFieldSignatureForParametrizedTypeStringOnList(field);
-                listTypeClass = urlClassLoader.loadClass(parametrizedTypeString);
-            } catch (Exception e) {
-                Application.getLogger().warn("Unable to find and load class for List<?> parameter, using String instead: ", e);
-                listTypeClass = String.class;
-            }
-
-            String name = listTypeClass.getSimpleName();
-            if (useFullName) {
-                name = listTypeClass.getName();
-
-                String simpleName = listTypeClass.getName().substring(listTypeClass.getName().lastIndexOf(".") + 1);
-                String packageName = listTypeClass.getName().substring(0, listTypeClass.getName().lastIndexOf(".") + 1);
-                Application.getLogger().debug(String
-                    .format("Using full name; reviewing simpleName: %s and package: %s", simpleName, packageName));
-
-                if (namespaceOverrideMap != null && namespaceOverrideMap.containsKey(packageName)) {
-                    name = namespaceOverrideMap.get(packageName) + simpleName;
-                    Application.getLogger().debug("Override located; using it: " + name);
-                }
-            }
-
-            if (Utilities.isLowerCaseType(listTypeClass)) {
-                Application.getLogger().debug("Array parameter is primative, wrapper, or String: " + field.getName());
-                name = name.toLowerCase();
-            }
-
-            property.options.put(PropertyOptionKey.ARRAY, name);
-            return property;
+            return processList(property, field, useFullName);
         }
 
         // Anything else
+        return processClass(property, field, useFullName);
+    }
+
+    /**
+     * @param property    The property to populate with additional data about a field
+     * @param field       The field to examine. In this case the field is a class
+     * @param useFullName Whether or not to use the full class name including the package or just the name
+     * @return The completed property struct
+     */
+    private Property processClass(Property property, Field field, boolean useFullName) {
         String name = field.getName();
         Application.getLogger().debug("Found unrecognized type; assuming Type.IDENT(IFIER): " + name);
         property.name = name;
         property.type = FieldType.IDENT;
 
         Type fieldType = field.getGenericType();
-        String identName;
+        String identName = null;
 
         try {
+            Class<?> clazz;
             if (artifactReference != null && artifactReference.getMavenProject() != null) {
-                Class<?> clazz = getClassForClassName(artifactReference.getMavenProject(), fieldType.getTypeName());
-                identName = useFullName ? clazz.getName() : clazz.getSimpleName();
+                clazz = getClassForClassName(artifactReference.getMavenProject(), currentSchema, fieldType.getTypeName());
+            } else {
+                clazz = Thread.currentThread().getContextClassLoader().loadClass(fieldType.getTypeName());
+            }
 
-                if (useFullName) {
-                    String simpleName = clazz.getName().substring(clazz.getName().lastIndexOf(".") + 1);
-                    String packageName = clazz.getName().substring(0, clazz.getName().lastIndexOf(".") + 1);
-                    if (namespaceOverrideMap != null && namespaceOverrideMap.containsKey(packageName)) {
-                        identName = namespaceOverrideMap.get(packageName) + simpleName;
-                        Application.getLogger().debug("Override located; using it: " + identName);
-                    }
+            // Consolidated versus separated schema check
+            if (!consolidatedSchemas) {
+                Application.getLogger().debug("Separated schemas requested; reviewing class");
+                ExternalClassDefinition externalClassDefinition = getExternalClassDefinitionDetails(clazz);
+                if (externalClassDefinition.locatedOutside) {
+                    identName = externalClassDefinition.targetNamespace + "." + clazz.getSimpleName();
                 }
             } else {
-                Class<?> clazz = Thread.currentThread().getContextClassLoader().loadClass(fieldType.getTypeName());
                 identName = useFullName ? clazz.getName() : clazz.getSimpleName();
+            }
 
-                if (useFullName) {
-                    String simpleName = clazz.getName().substring(clazz.getName().lastIndexOf(".") + 1);
-                    String packageName = clazz.getName().substring(0, clazz.getName().lastIndexOf(".") + 1);
-                    if (namespaceOverrideMap != null && namespaceOverrideMap.containsKey(packageName)) {
-                        identName = namespaceOverrideMap.get(packageName) + simpleName;
-                        Application.getLogger().debug("Override located; using it: " + identName);
-                    }
+            if (useFullName) {
+                String simpleName = clazz.getName().substring(clazz.getName().lastIndexOf(".") + 1);
+                String packageName = clazz.getName().substring(0, clazz.getName().lastIndexOf(".") + 1);
+                if (namespaceOverrideMap != null && namespaceOverrideMap.containsKey(packageName)) {
+                    identName = namespaceOverrideMap.get(packageName) + simpleName;
+                    Application.getLogger().debug("Override located; using it: " + identName);
                 }
             }
         } catch (Exception e) {
@@ -750,6 +681,167 @@ public class Processor {
     }
 
     /**
+     * @param property    The property to populate with additional data about a field
+     * @param field       The field to examine. In this case the field is an array
+     * @param useFullName Whether or not to use the full class name including the package or just the name
+     * @return The completed property struct
+     */
+    private Property processArray(Property property, Field field, boolean useFullName) {
+        property.name = field.getName();
+        property.type = FieldType.ARRAY;
+
+        // Determine type of the array
+        String name = field.getType().getComponentType().getSimpleName();
+        if (Utilities.isLowerCaseType(field.getType().getComponentType())) {
+            Application.getLogger().debug("Array parameter is primitive, wrapper, or String: " + field.getName());
+            name = name.toLowerCase();
+        } else {
+            // It may be a Class<?> which isn't a primative (i.e. lowerCaseType)
+            if (useFullName) {
+                name = field.getType().getComponentType().getName();
+
+                String simpleName = field.getType().getComponentType().getName()
+                        .substring(field.getType().getComponentType().getName().lastIndexOf(".") + 1);
+                String packageName = field.getType().getComponentType().getName()
+                        .substring(0, field.getType().getComponentType().getName().lastIndexOf(".") + 1);
+                Application.getLogger().debug(String
+                        .format("Using full name; reviewing simpleName: %s and package: %s", simpleName, packageName));
+
+                if (namespaceOverrideMap != null && namespaceOverrideMap.containsKey(packageName)) {
+                    name = namespaceOverrideMap.get(packageName) + simpleName;
+                    Application.getLogger().debug("Override located; using it: " + name);
+                }
+            } else {
+                name = field.getType().getComponentType().getSimpleName();
+            }
+        }
+
+        // In the end Array[] and List<?> are represented the same way.
+        property.options.put(PropertyOptionKey.ARRAY, name);
+        return property;
+    }
+
+    /**
+     * @param property    The property to populate with additional data about a field
+     * @param field       The field to examine. In this case the field is a map
+     * @param useFullName Whether or not to use the full class name including the package or just the name
+     * @return The completed property struct
+     */
+    private Property processMap(Property property, Schema schema, Field field, boolean useFullName) {
+        property.name = field.getName();
+        property.type = FieldType.MAP;
+
+        // Stuff the types into this list
+        List<Property> properties = new ArrayList<>();
+
+        // Get the type for the key and value
+        String[] parametrizedTypeStrings = new String[]{String.class.getName(), String.class.getName()};
+        try {
+            parametrizedTypeStrings = parseFieldSignatureForParametrizedTypeStringsOnMap(field);
+        } catch (Exception e) {
+            Application.getLogger().warn("Unable to determine classes for Map<?, ?> parameter types", e);
+        }
+
+        // Attempt to load each type
+        for (int i = 0; i < parametrizedTypeStrings.length; i++) {
+            Class<?> mapTypeClass;
+            Property mapTypeProperty = new Property();
+
+            try {
+                // Load all paths into custom classloader
+                ClassLoader urlClassLoader = Thread.currentThread().getContextClassLoader();
+                if (artifactReference != null && artifactReference.getMavenProject() != null) {
+                    urlClassLoader = URLClassLoader
+
+                            // TODO This needs thought
+                            .newInstance(Utilities.arrayForClasspathReferenceList(
+                                    Utilities.buildProjectClasspathList(artifactReference, ClasspathSearchType.BOTH)), urlClassLoader);
+                }
+
+                // Parse Field signature
+                mapTypeClass = urlClassLoader.loadClass(parametrizedTypeStrings[i]);
+
+                if (mapTypeClass.getName().equals(Object.class.getName())) {
+                    Application.getLogger().warn(
+                            "Using Map<?, ?> where either `?` is `java.lang.Object` is not permitted; using `java.lang.String`");
+                    mapTypeClass = String.class;
+                }
+            } catch (Exception e) {
+                Application.getLogger()
+                        .warn("Unable to find and load class for Map<?, ?> parameter, using <String, String> instead: ",
+                                e);
+                mapTypeClass = String.class;
+            }
+
+            String name = getName(mapTypeClass, field, useFullName);
+
+            // Stuffing...
+            if (i == 0) {
+                mapTypeProperty.name = "key";
+            } else {
+                mapTypeProperty.name = "value";
+            }
+
+            mapTypeProperty.type = FieldType.IDENT;
+            mapTypeProperty.options.put(PropertyOptionKey.IDENT, name);
+            properties.add(mapTypeProperty);
+        }
+
+        // Create a new type and add it to the list of types
+        TypeDeclaration mapType = new TypeDeclaration();
+        final String mapTypeName = TypeDeclaration.MapValueSet.class.getSimpleName() + "_"
+                + field.getDeclaringClass().getSimpleName() + "_" + field.getName();
+        mapType.setName(mapTypeName);
+        mapType.setComment("Auto-generated type for use with Map<?, ?>");
+
+        // Set in this type the various types for the K/Vs used in this map
+        mapType.setProperties(properties);
+        schema.addTypeDeclaration(mapType);
+
+        // Need a way to reference back to the new generated type
+        property.options.put(PropertyOptionKey.MAP, mapTypeName);
+        return property;
+    }
+
+    /**
+     * @param property    The property to populate with additional data about a field
+     * @param field       The field to examine. In this case the field is a list
+     * @param useFullName Whether or not to use the full class name including the package or just the name
+     * @return The completed property struct
+     */
+    private Property processList(Property property, Field field, boolean useFullName) {
+        property.name = field.getName();
+        property.type = FieldType.ARRAY;
+
+        Class<?> listTypeClass;
+
+        try {
+            // Load all paths into custom classloader
+            ClassLoader urlClassLoader = Thread.currentThread().getContextClassLoader();
+            if (artifactReference != null && artifactReference.getMavenProject() != null)
+                if (consolidatedSchemas) {
+                    urlClassLoader =
+                            URLClassLoader.newInstance(Utilities.buildProjectClasspathList(artifactReference,
+                                    ClasspathSearchType.BOTH).toArray(new URL[]{}), urlClassLoader);
+                } else {
+                    // TODO This needs thought
+                }
+
+            // Parse Field signature
+            String parametrizedTypeString = parseFieldSignatureForParametrizedTypeStringOnList(field);
+            listTypeClass = urlClassLoader.loadClass(parametrizedTypeString);
+        } catch (Exception e) {
+            Application.getLogger().warn("Unable to find and load class for List<?> parameter, using String instead: ", e);
+            listTypeClass = String.class;
+        }
+
+        String name = getName(listTypeClass, field, useFullName);
+
+        property.options.put(PropertyOptionKey.ARRAY, name);
+        return property;
+    }
+
+    /**
      *
      * @param className The name of the class we need to locate
      * @return The class we located
@@ -758,14 +850,19 @@ public class Processor {
      * @throws DependencyResolutionRequiredException if MavenProject is unable to resolve the
      *         compiled classpath elements
      */
-    static Class<?> getClassForClassName(MavenProject mavenProject, String className)
-        throws ClassNotFoundException, DependencyResolutionRequiredException, IOException {
+    static Class<?> getClassForClassName(MavenProject mavenProject, Schema schema, String className)
+            throws ClassNotFoundException, DependencyResolutionRequiredException, IOException {
 
         List<String> classpathElements = mavenProject.getCompileClasspathElements();
         List<URL> projectClasspathList = new ArrayList<>();
         for (String element : classpathElements) {
             Application.getLogger().debug("Adding compiled classpath element (via MavenProject): " + element);
             projectClasspathList.add(new File(element).toURI().toURL());
+        }
+
+        for (ClasspathReference reference : schema.getClasspathReferenceList()) {
+            Application.getLogger().debug("Adding classpath reference (via currentSchema): " + reference.getUrl());
+            projectClasspathList.add(reference.getUrl());
         }
 
         URLClassLoader urlClassLoader = new URLClassLoader(projectClasspathList.toArray(new URL[] {}), Thread.currentThread().getContextClassLoader());
@@ -784,13 +881,9 @@ public class Processor {
      * @throws IllegalAccessException if the Field is inaccessible
      */
     static String parseFieldSignatureForParametrizedTypeStringOnList(Field input)
-        throws NoSuchFieldException, IllegalAccessException {
-        Field privateField = input.getClass().getDeclaredField("signature");
-        privateField.setAccessible(true);
-        String signature = (String) privateField.get(input);
-        Application.getLogger().debug("Examining signature: " + signature);
+            throws NoSuchFieldException, IllegalAccessException {
+        String typeSignature = getFieldTypeSignature(input);
 
-        String typeSignature = signature.substring(signature.indexOf("<") + 1, signature.indexOf(">"));
         typeSignature = typeSignature.replaceFirst("[a-zA-Z]{1}", "");
         typeSignature = typeSignature.replaceAll("/", ".");
         typeSignature = typeSignature.replaceAll(";", "");
@@ -807,13 +900,9 @@ public class Processor {
      * @throws IllegalAccessException if the Field is inaccessible
      */
     static String[] parseFieldSignatureForParametrizedTypeStringsOnMap(Field input)
-        throws NoSuchFieldException, IllegalAccessException {
-        Field privateField = input.getClass().getDeclaredField("signature");
-        privateField.setAccessible(true);
-        String signature = (String) privateField.get(input);
-        Application.getLogger().debug("Examining signature: " + signature);
+            throws NoSuchFieldException, IllegalAccessException {
+        String typeSignature = getFieldTypeSignature(input);
 
-        String typeSignature = signature.substring(signature.indexOf("<") + 1, signature.indexOf(">"));
         typeSignature = typeSignature.replaceAll("/", ".");
         String[] listOfTypes = typeSignature.split(";");
         for (int i = 0; i < listOfTypes.length; i++) {
@@ -823,5 +912,134 @@ public class Processor {
         }
 
         return listOfTypes;
+    }
+
+    /**
+     * @param input The field for which we want the signature String.
+     * @return The field type signature which is a private field in classes called "signature"
+     * @throws NoSuchFieldException   if the field doesn't exist
+     * @throws IllegalAccessException if access to the field is unavailable
+     */
+    private static String getFieldTypeSignature(Field input) throws NoSuchFieldException, IllegalAccessException {
+        Field privateField = input.getClass().getDeclaredField("signature");
+        privateField.setAccessible(true);
+        String signature = (String) privateField.get(input);
+        Application.getLogger().debug("Examining signature: " + signature);
+
+        return signature.substring(signature.indexOf("<") + 1, signature.indexOf(">"));
+    }
+
+    /**
+     * @param clazz       The target class which we are determining the name for
+     * @param field       The current field being examined for context on how the class is being used
+     * @param useFullName To use the full name orr not (i.e. include namespace or not)
+     * @return The derived name for the class
+     */
+    private String getName(Class<?> clazz, Field field, boolean useFullName) {
+        String name = clazz.getSimpleName();
+        if (useFullName) {
+            name = clazz.getName();
+
+            String simpleName = clazz.getName()
+                    .substring(clazz.getName().lastIndexOf(".") + 1);
+            String packageName = clazz.getName()
+                    .substring(0, clazz.getName().lastIndexOf(".") + 1);
+            Application.getLogger().debug(String
+                    .format("Using full name; reviewing simpleName: %s and package: %s", simpleName,
+                            packageName));
+
+            if (namespaceOverrideMap != null && namespaceOverrideMap.containsKey(packageName)) {
+                name = namespaceOverrideMap.get(packageName) + simpleName;
+                Application.getLogger().debug("Override located; using it: " + name);
+            }
+        }
+
+        if (Utilities.isLowerCaseType(clazz)) {
+            Application.getLogger()
+                    .debug("Array parameter is primative, wrapper, or String: " + field.getName());
+            name = name.toLowerCase();
+        }
+
+        return name;
+    }
+
+    /**
+     * Enables multi-schemas support
+     *
+     * @param clazz the class we want to examine and determine where it is defined
+     * @return ExternalClassDefinition which is populated with the target schema namespace and if it is externally defined
+     */
+    private ExternalClassDefinition getExternalClassDefinitionDetails(Class<?> clazz) throws MojoExecutionException {
+        ExternalClassDefinition externalClassDefintion = new ExternalClassDefinition();
+
+        Application.getLogger().debug("This is a dependency. Therefor, skipping external class check. This assumes that a dependency schema is the sum of its sef and its dependencies. ");
+        if (currentSchema.isDependency()) {
+            // Consider if we want to recursivesly add more schemas as we find them.
+            return externalClassDefintion;
+        }
+
+        Application.getLogger().debug("Determining if class was defined outside this schema");
+        final String currentClazzPackageName = clazz.getPackage().getName();
+        Application.getLogger().debug("  Class namespace for review: " + currentClazzPackageName);
+        boolean classLocatedOutside = false;
+
+        for (Schema oneOfSchemas : candidateSchemas) {
+            Application.getLogger().debug(" Iterating schemas: " + oneOfSchemas.getNamespace());
+
+            List<String> classNames = new ArrayList<>();
+            for (ClasspathReference reference : oneOfSchemas.getClasspathReferenceList()) {
+
+                final String jarPath = reference.getUrl().toString();
+                if (!jarPath.endsWith(".jar!/")) {
+                    continue;
+                }
+
+                try {
+                    JarInputStream jarInputStream = new JarInputStream(new FileInputStream(jarPath.substring("jar:file:".length(), jarPath.indexOf("!/"))));
+                    JarEntry jarEntry;
+
+                    while (true) {
+                        jarEntry = jarInputStream.getNextJarEntry();
+                        if (jarEntry == null) {
+                            break;
+                        }
+
+                        if ((jarEntry.getName().endsWith(".class"))) {
+                            String classNameWithExtension = jarEntry.getName().replaceAll("/", "\\.");
+                            String className = classNameWithExtension.substring(0, classNameWithExtension.lastIndexOf('.'));
+                            classNames.add(className);
+                        }
+                    }
+                } catch (IOException e) {
+                    throw new MojoExecutionException(e.getMessage());
+                }
+            }
+
+            if (classNames.contains(clazz.getName()) && !oneOfSchemas.equals(currentSchema)) {
+                Application.getLogger().debug("  Found location of class which is outside current schema");
+                externalClassDefintion.targetNamespace = oneOfSchemas.getNamespace();
+                currentSchema.addInclude(externalClassDefintion.targetNamespace);
+
+                classLocatedOutside = true;
+                break;
+            }
+        }
+
+        if (!classLocatedOutside) {
+            Application.getLogger().debug("  Did not find class outside schema; continue processing");
+        }
+
+        externalClassDefintion.locatedOutside = classLocatedOutside;
+        return externalClassDefintion;
+    }
+
+    /**
+     * Enables multi-schemas support
+     * <p>
+     * Internal Processor class
+     */
+    class ExternalClassDefinition {
+        String targetNamespace;
+        boolean locatedOutside;
     }
 }

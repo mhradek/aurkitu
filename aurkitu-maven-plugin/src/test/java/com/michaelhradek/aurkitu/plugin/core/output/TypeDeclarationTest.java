@@ -27,9 +27,9 @@ public class TypeDeclarationTest {
     public void testHashCode() {
         TypeDeclaration declarationAlpha = new TypeDeclaration();
         TypeDeclaration declarationBeta = new TypeDeclaration();
-        Assert.assertNotEquals(declarationAlpha.hashCode(), declarationBeta.hashCode());
-        Assert.assertNotNull(declarationAlpha.hashCode());
-        Assert.assertNotNull(declarationBeta.hashCode());
+        Assert.assertEquals(declarationAlpha.hashCode(), declarationBeta.hashCode());
+        Assert.assertNotEquals(0, declarationAlpha.hashCode());
+        Assert.assertNotEquals(0, declarationBeta.hashCode());
 
         declarationAlpha.setName("declarationAlpha");
         declarationBeta.setName("declarationAlpha");
@@ -51,7 +51,7 @@ public class TypeDeclarationTest {
         TypeDeclaration declarationBeta = new TypeDeclaration();
         declarationBeta.setName("declarationBeta");
 
-        List<TypeDeclaration> list = new ArrayList<TypeDeclaration>();
+        List<TypeDeclaration> list = new ArrayList<>();
         list.add(declarationBeta);
         Assert.assertTrue(list.contains(declarationBeta));
         Assert.assertFalse(list.contains(declarationAlpha));

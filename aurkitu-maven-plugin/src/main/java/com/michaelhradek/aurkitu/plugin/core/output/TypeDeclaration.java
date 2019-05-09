@@ -3,6 +3,7 @@ package com.michaelhradek.aurkitu.plugin.core.output;
 import com.michaelhradek.aurkitu.annotations.FlatBufferTable.TableStructureType;
 import com.michaelhradek.aurkitu.annotations.types.FieldType;
 import com.michaelhradek.aurkitu.plugin.core.output.TypeDeclaration.Property.PropertyOptionKey;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -17,13 +18,16 @@ import java.util.Map;
  */
 @Getter
 @Setter
+@EqualsAndHashCode
 public class TypeDeclaration {
 
     private String name;
     private boolean isRoot;
     private TableStructureType structure;
-    private List<Property> properties = new ArrayList<Property>();
+    private List<Property> properties = new ArrayList<>();
     private String comment;
+
+    private boolean isDependencyType;
 
     public TypeDeclaration(TableStructureType structure) {
         this.structure = structure;
@@ -48,7 +52,7 @@ public class TypeDeclaration {
     public static class Property {
         public String name;
         public FieldType type;
-        public Map<PropertyOptionKey, String> options = new HashMap<PropertyOptionKey, String>();
+        public Map<PropertyOptionKey, String> options = new HashMap<>();
 
         public enum PropertyOptionKey {
             ARRAY,
@@ -121,24 +125,5 @@ public class TypeDeclaration {
 
         public String key;
         public String value;
-    }
-
-    @Override
-    public int hashCode() {
-        if (name == null) {
-            return super.hashCode();
-        }
-
-        return name.hashCode();
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (o instanceof TypeDeclaration) {
-            TypeDeclaration toCompare = (TypeDeclaration) o;
-            return this.name.equals(toCompare.name);
-        }
-
-        return false;
     }
 }

@@ -75,7 +75,7 @@ public class Utilities {
 
         // Retain annotations
         JavassistAdapter javassistAdapter = new JavassistAdapter();
-        javassistAdapter.includeInvisibleTag = false;
+        JavassistAdapter.includeInvisibleTag = false;
 
         return new Reflections(
                 new ConfigurationBuilder().setUrls(
@@ -95,6 +95,7 @@ public class Utilities {
     /**
      * @param artifactReference Our helper which contains all the goodies needed from the MavenProject and the other
      *                          artifact handling stuff
+     * @param classpathSearchType Which type of classpath search should we use. BOTH, PROJECT, DEPENDENCIES.
      * @return an array of URLs which will be used to attempt to initialize our classes
      * @throws ArtifactResolutionException           if unable to Utilities#buildProjectClasspathList#resolveArtifact
      * via Repo System
@@ -104,7 +105,7 @@ public class Utilities {
     public static List<ClasspathReference> buildProjectClasspathList(ArtifactReference artifactReference,
                                                                      ClasspathSearchType classpathSearchType) throws ArtifactResolutionException, MalformedURLException, DependencyResolutionRequiredException {
 
-        List<ClasspathReference> classpathReferenceList = new ArrayList<ClasspathReference>();
+        List<ClasspathReference> classpathReferenceList = new ArrayList<>();
         final MavenProject mavenProject = artifactReference.getMavenProject();
 
         if (classpathSearchType == ClasspathSearchType.BOTH || classpathSearchType == ClasspathSearchType.PROJECT) {

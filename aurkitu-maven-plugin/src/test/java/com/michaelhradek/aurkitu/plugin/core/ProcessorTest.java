@@ -60,7 +60,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
     public MojoRule rule = new MojoRule() {
 
         @Override
-        protected void before() throws Throwable {
+        protected void before() {
         }
 
         @Override
@@ -77,15 +77,16 @@ public class ProcessorTest extends AbstractMojoTestCase {
     }
 
     /**
-     * Test method for {@link com.michaelhradek.aurkitu.plugin.core.Processor#buildSchema()}.
+     * Test method for {@link com.michaelhradek.aurkitu.plugin.core.Processor#execute()}.
      */
     @Test
-    public void testBuildSchema() throws MojoExecutionException {
+    public void testExecute() throws MojoExecutionException {
         Processor processor = new Processor().withSourceAnnotation(FlatBufferTable.class)
-                .withSourceAnnotation(FlatBufferEnum.class);
+                .withSourceAnnotation(FlatBufferEnum.class).withSchema(new Schema());
         Assert.assertEquals(2, processor.getSourceAnnotations().size());
 
-        Schema schema = processor.buildSchema();
+        processor.execute();
+        Schema schema = processor.getProcessedSchemas().get(0);
         schema.setNamespace(
             processor.getClass().getPackage().getName().replace("core", "flatbuffers"));
         schema.addAttribute("Priority");
@@ -110,9 +111,11 @@ public class ProcessorTest extends AbstractMojoTestCase {
      */
     @Test
     public void testBuildEnumDeclarationPass() throws MojoExecutionException {
-        Processor processor = new Processor().withSourceAnnotation(FlatBufferEnum.class);
+        Processor processor = new Processor().withSourceAnnotation(FlatBufferEnum.class).withSchema(new Schema());
         Assert.assertEquals(1, processor.getSourceAnnotations().size());
-        Schema schema = processor.buildSchema();
+
+        processor.execute();
+        Schema schema = processor.getProcessedSchemas().get(0);
 
         Assert.assertEquals(7, processor.getTargetClasses().size());
         Assert.assertEquals(0, schema.getTypes().size());
@@ -157,13 +160,15 @@ public class ProcessorTest extends AbstractMojoTestCase {
 
     /**
      * Test method for
-     * {@link com.michaelhradek.aurkitu.plugin.core.Processor#buildTypeDeclaration(java.lang.Class)}.
+     * {@link com.michaelhradek.aurkitu.plugin.core.Processor#buildTypeDeclaration(com.michaelhradek.aurkitu.plugin.core.output.Schema, java.lang.Class)}.
      */
     @Test
     public void testBuildTypeDeclarationPass() throws MojoExecutionException {
-        Processor processor = new Processor().withSourceAnnotation(FlatBufferTable.class);
+        Processor processor = new Processor().withSourceAnnotation(FlatBufferTable.class).withSchema(new Schema());
         Assert.assertEquals(1, processor.getSourceAnnotations().size());
-        Schema schema = processor.buildSchema();
+
+        processor.execute();
+        Schema schema = processor.getProcessedSchemas().get(0);
 
         Assert.assertEquals(6, processor.getTargetClasses().size());
         Assert.assertEquals(9, schema.getTypes().size());
@@ -309,7 +314,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
 
     /**
      * Test method for
-     * {@link com.michaelhradek.aurkitu.plugin.core.Processor#getPropertyForField(java.lang.reflect.Field)}.
+     * {@link com.michaelhradek.aurkitu.plugin.core.Processor#getPropertyForField(com.michaelhradek.aurkitu.plugin.core.output.Schema, java.lang.reflect.Field)}.
      *
      * @throws SecurityException if unable to access field via getDeclaredField()
      * @throws NoSuchFieldException if unable to locate field via getDeclaredField()
@@ -317,33 +322,34 @@ public class ProcessorTest extends AbstractMojoTestCase {
     @Test
     public void testGetPropertyForField() throws NoSuchFieldException, SecurityException {
         Processor processor = new Processor();
+        Schema schema = new Schema();
 
         Field field = SampleClassTable.class.getDeclaredField("id");
-        Property prop = processor.getPropertyForField(field);
+        Property prop = processor.getPropertyForField(schema, field);
         Assert.assertEquals("id", prop.name);
         Assert.assertEquals(FieldType.LONG, prop.type);
         Assert.assertEquals(true, prop.options.isEmpty());
 
         field = SampleClassTable.class.getDeclaredField("name");
-        prop = processor.getPropertyForField(field);
+        prop = processor.getPropertyForField(schema, field);
         Assert.assertEquals("name", prop.name);
         Assert.assertEquals(FieldType.STRING, prop.type);
         Assert.assertEquals(true, prop.options.isEmpty());
 
         field = SampleClassTable.class.getDeclaredField("level");
-        prop = processor.getPropertyForField(field);
+        prop = processor.getPropertyForField(schema, field);
         Assert.assertEquals("level", prop.name);
         Assert.assertEquals(FieldType.SHORT, prop.type);
         Assert.assertEquals(false, prop.options.isEmpty());
 
         field = SampleClassTable.class.getDeclaredField("currency");
-        prop = processor.getPropertyForField(field);
+        prop = processor.getPropertyForField(schema, field);
         Assert.assertEquals("currency", prop.name);
         Assert.assertEquals(FieldType.INT, prop.type);
         Assert.assertEquals(true, prop.options.isEmpty());
 
         field = SampleClassTable.class.getDeclaredField("tokens");
-        prop = processor.getPropertyForField(field);
+        prop = processor.getPropertyForField(schema, field);
         Assert.assertEquals("tokens", prop.name);
         Assert.assertEquals(FieldType.ARRAY, prop.type);
         Assert.assertEquals(false, prop.options.isEmpty());
@@ -351,7 +357,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
         Assert.assertEquals("string", prop.options.get(Property.PropertyOptionKey.ARRAY));
 
         field = SampleClassTable.class.getDeclaredField("deleted");
-        prop = processor.getPropertyForField(field);
+        prop = processor.getPropertyForField(schema, field);
         Assert.assertEquals("deleted", prop.name);
         Assert.assertEquals(FieldType.BOOL, prop.type);
 
@@ -359,7 +365,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
         Assert.assertEquals(true, prop.options.isEmpty());
 
         field = SampleClassTable.class.getDeclaredField("energy");
-        prop = processor.getPropertyForField(field);
+        prop = processor.getPropertyForField(schema, field);
         Assert.assertEquals("energy", prop.name);
         Assert.assertEquals(FieldType.BYTE, prop.type);
         Assert.assertEquals(true, prop.options.isEmpty());
@@ -408,14 +414,15 @@ public class ProcessorTest extends AbstractMojoTestCase {
                     put("com.michaelhradek.aurkitu.plugin.test.other", "com.michaelhradek.aurkitu.plugin.test" +
                             ".flatbuffer");
                 }
-            });
+            }).withSchema(new Schema());
 
-        Schema schema = processor.buildSchema();
+        processor.execute();
+        Schema schema = processor.getProcessedSchemas().get(0);
         for (TypeDeclaration type : schema.getTypes()) {
             if (type.getName().equals(SampleClassReferenced.class.getSimpleName())) {
 
                 Field field = SampleClassReferenced.class.getDeclaredField("samples");
-                Property prop = processor.getPropertyForField(field);
+                Property prop = processor.getPropertyForField(schema, field);
 
                 Assert.assertEquals(
                         "com.michaelhradek.aurkitu.plugin.test.flatbuffer." + SampleClassNamespaceMap.class.getSimpleName(),
@@ -440,7 +447,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
 
         Assert.assertNotNull(mavenProject);
 
-        Class<?> clazz = Processor.getClassForClassName(mavenProject, AurkituTestSettingsStub.class.getName());
+        Class<?> clazz = Processor.getClassForClassName(mavenProject, new Schema(), AurkituTestSettingsStub.class.getName());
         Assert.assertNotNull(clazz);
         Assert.assertEquals(AurkituTestSettingsStub.class.getName(), clazz.getName());
     }
@@ -452,7 +459,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
         Assert.assertEquals(0, processor.getNamespaceOverrideMap().size());
         Assert.assertNotNull(processor.withNamespaceOverrideMap(null));
 
-        Map<String, String> testMap = new HashMap<String, String>();
+        Map<String, String> testMap = new HashMap<>();
         testMap.put(TEST_NAMESPACE_OVERRIDE_KEY, TEST_NAMESPACE_OVERRIDE_VALUE);
         processor.withNamespaceOverrideMap(testMap);
         Assert.assertEquals(1, processor.getNamespaceOverrideMap().size());
@@ -479,7 +486,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
         Assert.assertNull(processor.getSpecifiedDependencies());
         Assert.assertNotNull(processor.withSpecifiedDependencies(null));
 
-        List<String> testList = new ArrayList<String>();
+        List<String> testList = new ArrayList<>();
         testList.add(TEST_SPECIFIED_DEPENDENCY);
         Assert.assertNotNull(processor.withSpecifiedDependencies(testList));
         Assert.assertEquals(1, processor.getSpecifiedDependencies().size());
@@ -516,7 +523,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
     }
 
     interface TestInterface {
-        public void someTestMethod();
+        void someTestMethod();
     }
 
     @Test
