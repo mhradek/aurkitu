@@ -159,7 +159,7 @@ public class Application extends AbstractMojo {
                     log.debug(" namespace: " + classpathReference.getDerivedNamespace());
                     dependencySchema.setName(classpathReference.getArtifact());
                     dependencySchema.setNamespace(classpathReference.getDerivedNamespace());
-                    dependencySchema.setClasspathReferenceList((Arrays.asList(classpathReference));
+                    dependencySchema.setClasspathReferenceList(Arrays.asList(classpathReference));
                     dependencySchema.setDependency(true);
                     dependencySchemas.add(dependencySchema);
                 }
