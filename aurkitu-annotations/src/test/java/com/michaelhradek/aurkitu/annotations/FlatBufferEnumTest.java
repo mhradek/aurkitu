@@ -1,29 +1,12 @@
 package com.michaelhradek.aurkitu.annotations;
 
 import com.michaelhradek.aurkitu.annotations.types.EnumType;
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.lang.annotation.Annotation;
 
 public class FlatBufferEnumTest {
-
-    /**
-     * @throws Exception
-     */
-    @Before
-    public void setUp() throws Exception {
-    }
-
-    /**
-     * @throws Exception
-     */
-    @After
-    public void tearDown() throws Exception {
-    }
-
 
     @Test
     public void testDefault() {
@@ -60,13 +43,13 @@ public class FlatBufferEnumTest {
     @FlatBufferEnum
     private enum TestEnumDefault {
 
-        VALUE_ONE, VALUE_TWO;
+        VALUE_ONE, VALUE_TWO
     }
 
     @FlatBufferEnum(value = FlatBufferEnum.EnumStructureType.UNION, enumType = EnumType.ULONG)
     @Deprecated
     private enum TestEnumExtended {
 
-        VALUE_ONE, VALUE_TWO;
+        VALUE_ONE, VALUE_TWO
     }
 }

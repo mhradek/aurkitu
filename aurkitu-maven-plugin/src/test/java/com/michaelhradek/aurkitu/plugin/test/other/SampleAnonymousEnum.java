@@ -13,7 +13,7 @@ public class SampleAnonymousEnum {
         ThirdOption
     }
 
-    Option option;
+    public Option option;
 
     @FlatBufferComment(comment = "This is a enum comment")
     @FlatBufferEnum(enumType = EnumType.SHORT)
@@ -29,7 +29,7 @@ public class SampleAnonymousEnum {
         }
     }
 
-    VectorSize size;
+    public VectorSize size;
 
     @FlatBufferEnum(enumType = EnumType.LONG)
     protected enum SplineEstimate {
@@ -44,7 +44,7 @@ public class SampleAnonymousEnum {
         }
     }
 
-    SplineEstimate estimate;
+    public SplineEstimate estimate;
 
     @FlatBufferEnum(enumType = EnumType.INT)
     protected enum Matrix {
@@ -60,5 +60,5 @@ public class SampleAnonymousEnum {
     }
 
     @FlatBufferFieldOptions(fieldType = FieldType.IDENT, defaultValue = "SMALL")
-    Matrix matrix;
+    public Matrix matrix;
 }

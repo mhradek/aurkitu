@@ -19,24 +19,24 @@ import java.util.*;
 public class Schema {
 
     // IDL values
-    String name;
-    String fileIdentifier;
-    String fileExtension;
-    String namespace;
-    String rootType;
-    List<EnumDeclaration> enums;
-    List<TypeDeclaration> types;
-    Set<String> includes;
-    List<String> attributes;
-    List<Constant<Integer>> integerConstants;
-    List<Constant<Float>> floatConstants;
+    private String name;
+    private String fileIdentifier;
+    private String fileExtension;
+    private String namespace;
+    private String rootType;
+    private List<EnumDeclaration> enums;
+    private List<TypeDeclaration> types;
+    private Set<String> includes;
+    private List<String> attributes;
+    private List<Constant<Integer>> integerConstants;
+    private List<Constant<Float>> floatConstants;
 
     // Aurkitu values
-    boolean generateVersion;
-    Boolean isValid;
-    Validator validator;
-    boolean isDependency;
-    boolean isEmpty;
+    private boolean generateVersion;
+    private Boolean isValid;
+    private Validator validator;
+    private boolean isDependency;
+    private boolean isEmpty;
 
     // Classpath references used to create this schema
     private List<ClasspathReference> classpathReferenceList;

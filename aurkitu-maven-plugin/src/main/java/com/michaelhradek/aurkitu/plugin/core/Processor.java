@@ -315,19 +315,20 @@ public class Processor {
      * @param enumClass Class to test if it is an Enum
      * @return boolean
      */
-    private boolean isEnumWorkaround(Class<?> enumClass) {
-        if (enumClass.isAnonymousClass()) {
-            enumClass = enumClass.getSuperclass();
+    public boolean isEnumWorkaround(Class<?> enumClass) {
+        Class<?> temp = enumClass;
+        if (temp.isAnonymousClass()) {
+            temp = temp.getSuperclass();
         }
 
-        return enumClass.isEnum();
+        return temp.isEnum();
     }
 
     /**
      * @param clazz Class which is being considered for an EnumDeclaration
      * @return an EnumDeclaration
      */
-    EnumDeclaration buildEnumDeclaration(Class<?> clazz) {
+    public EnumDeclaration buildEnumDeclaration(Class<?> clazz) {
         Application.getLogger().debug("Building Enum: " + clazz.getName());
 
         EnumDeclaration enumD = new EnumDeclaration();
@@ -433,10 +434,12 @@ public class Processor {
     }
 
     /**
+     *
+     * @param schema The schema currently being considered while reviewing this class
      * @param clazz Class which is being considered for an TypeDeclaration
      * @return a TypeDeclaration
      */
-    TypeDeclaration buildTypeDeclaration(Schema schema, Class<?> clazz) {
+    public TypeDeclaration buildTypeDeclaration(Schema schema, Class<?> clazz) {
         Application.getLogger().debug("Building Type: " + clazz.getName());
 
         TypeDeclaration type = new TypeDeclaration();
@@ -503,12 +506,14 @@ public class Processor {
     }
 
     /**
+     *
+     * @param schema The schema currently being considered while reviewing this field
      * @param field A class field
      * @return A type declaration Property. This contains the name of the field and type
      *         {@link FieldType}. When encountering an array or ident (Indentifier) the options
      *         property is used to store additional information.
      */
-    Property getPropertyForField(Schema schema, final Field field) {
+    public Property getPropertyForField(Schema schema, final Field field) {
         Property property = new Property();
 
         // Some uses in which we reference other namespaces require us to declare the entirety of
@@ -612,7 +617,7 @@ public class Processor {
      * @param useFullName Whether or not to use the full class name including the package or just the name
      * @return The completed property struct
      */
-    private Property processClass(Property property, Field field, boolean useFullName) {
+    public Property processClass(Property property, Field field, boolean useFullName) {
         String name = field.getName();
         Application.getLogger().debug("Found unrecognized type; assuming Type.IDENT(IFIER): " + name);
         property.name = name;
@@ -686,7 +691,7 @@ public class Processor {
      * @param useFullName Whether or not to use the full class name including the package or just the name
      * @return The completed property struct
      */
-    private Property processArray(Property property, Field field, boolean useFullName) {
+    public Property processArray(Property property, Field field, boolean useFullName) {
         property.name = field.getName();
         property.type = FieldType.ARRAY;
 
@@ -723,11 +728,12 @@ public class Processor {
 
     /**
      * @param property    The property to populate with additional data about a field
+     * @param schema The schema currently being considered while reviewing this field
      * @param field       The field to examine. In this case the field is a map
      * @param useFullName Whether or not to use the full class name including the package or just the name
      * @return The completed property struct
      */
-    private Property processMap(Property property, Schema schema, Field field, boolean useFullName) {
+    public Property processMap(Property property, Schema schema, Field field, boolean useFullName) {
         property.name = field.getName();
         property.type = FieldType.MAP;
 
@@ -809,7 +815,7 @@ public class Processor {
      * @param useFullName Whether or not to use the full class name including the package or just the name
      * @return The completed property struct
      */
-    private Property processList(Property property, Field field, boolean useFullName) {
+    public Property processList(Property property, Field field, boolean useFullName) {
         property.name = field.getName();
         property.type = FieldType.ARRAY;
 
@@ -843,6 +849,8 @@ public class Processor {
 
     /**
      *
+     * @param mavenProject The project details for class loader functionality
+     * @param schema The schema currently being considered while reviewing this class
      * @param className The name of the class we need to locate
      * @return The class we located
      * @throws ClassNotFoundException if the class cannot be located
@@ -850,7 +858,7 @@ public class Processor {
      * @throws DependencyResolutionRequiredException if MavenProject is unable to resolve the
      *         compiled classpath elements
      */
-    static Class<?> getClassForClassName(MavenProject mavenProject, Schema schema, String className)
+    public static Class<?> getClassForClassName(MavenProject mavenProject, Schema schema, String className)
             throws ClassNotFoundException, DependencyResolutionRequiredException, IOException {
 
         List<String> classpathElements = mavenProject.getCompileClasspathElements();
@@ -876,11 +884,11 @@ public class Processor {
      *
      * @param input The List with a type declaration
      * @return a String which parses: com.company.team.service.model.Person from the following:
-     *         Ljava/util/List<Lcom/company/team/service/model/Person;>;
+     *         Ljava/util/List&lt;Lcom/company/team/service/model/Person;&gt;;
      * @throws NoSuchFieldException if the Field does not exist in the class
      * @throws IllegalAccessException if the Field is inaccessible
      */
-    static String parseFieldSignatureForParametrizedTypeStringOnList(Field input)
+    public static String parseFieldSignatureForParametrizedTypeStringOnList(Field input)
             throws NoSuchFieldException, IllegalAccessException {
         String typeSignature = getFieldTypeSignature(input);
 
@@ -895,11 +903,11 @@ public class Processor {
     /**
      * @param input The Map with a set of type declarations
      * @return a list of String which parses {"java.lang.String", "java.lang.Object"} from the following:
-     * Ljava/util/Map<Ljava/lang/String;Ljava/lang/Object;>;
+     * Ljava/util/Map&lt;Ljava/lang/String;Ljava/lang/Object;&gt;;
      * @throws NoSuchFieldException if the Field does not exist in the class
      * @throws IllegalAccessException if the Field is inaccessible
      */
-    static String[] parseFieldSignatureForParametrizedTypeStringsOnMap(Field input)
+    public static String[] parseFieldSignatureForParametrizedTypeStringsOnMap(Field input)
             throws NoSuchFieldException, IllegalAccessException {
         String typeSignature = getFieldTypeSignature(input);
 
@@ -920,7 +928,7 @@ public class Processor {
      * @throws NoSuchFieldException   if the field doesn't exist
      * @throws IllegalAccessException if access to the field is unavailable
      */
-    private static String getFieldTypeSignature(Field input) throws NoSuchFieldException, IllegalAccessException {
+    public static String getFieldTypeSignature(Field input) throws NoSuchFieldException, IllegalAccessException {
         Field privateField = input.getClass().getDeclaredField("signature");
         privateField.setAccessible(true);
         String signature = (String) privateField.get(input);
@@ -935,7 +943,7 @@ public class Processor {
      * @param useFullName To use the full name orr not (i.e. include namespace or not)
      * @return The derived name for the class
      */
-    private String getName(Class<?> clazz, Field field, boolean useFullName) {
+    public String getName(Class<?> clazz, Field field, boolean useFullName) {
         String name = clazz.getSimpleName();
         if (useFullName) {
             name = clazz.getName();
@@ -968,8 +976,9 @@ public class Processor {
      *
      * @param clazz the class we want to examine and determine where it is defined
      * @return ExternalClassDefinition which is populated with the target schema namespace and if it is externally defined
+     * @throws MojoExecutionException if something goes wrong
      */
-    private ExternalClassDefinition getExternalClassDefinitionDetails(Class<?> clazz) throws MojoExecutionException {
+    public ExternalClassDefinition getExternalClassDefinitionDetails(Class<?> clazz) throws MojoExecutionException {
         ExternalClassDefinition externalClassDefintion = new ExternalClassDefinition();
 
         Application.getLogger().debug("This is a dependency. Therefor, skipping external class check. This assumes that a dependency schema is the sum of its sef and its dependencies. ");
@@ -1038,7 +1047,7 @@ public class Processor {
      * <p>
      * Internal Processor class
      */
-    class ExternalClassDefinition {
+    private class ExternalClassDefinition {
         String targetNamespace;
         boolean locatedOutside;
     }

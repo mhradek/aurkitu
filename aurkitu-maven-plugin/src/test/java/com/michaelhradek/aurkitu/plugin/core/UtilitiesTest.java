@@ -226,7 +226,7 @@ public class UtilitiesTest extends AbstractMojoTestCase {
             }
 
             public void setVersion(String s) {
-
+                // Empty
             }
 
             public String getScope() {
@@ -250,7 +250,7 @@ public class UtilitiesTest extends AbstractMojoTestCase {
             }
 
             public void setFile(File file) {
-
+                // Empty
             }
 
             public String getBaseVersion() {
@@ -258,7 +258,7 @@ public class UtilitiesTest extends AbstractMojoTestCase {
             }
 
             public void setBaseVersion(String s) {
-
+                // Empty
             }
 
             public String getId() {
@@ -270,7 +270,7 @@ public class UtilitiesTest extends AbstractMojoTestCase {
             }
 
             public void addMetadata(ArtifactMetadata artifactMetadata) {
-
+                // Empty
             }
 
             public Collection<ArtifactMetadata> getMetadataList() {
@@ -278,7 +278,7 @@ public class UtilitiesTest extends AbstractMojoTestCase {
             }
 
             public void setRepository(ArtifactRepository artifactRepository) {
-
+                // Empty
             }
 
             public ArtifactRepository getRepository() {
@@ -286,7 +286,7 @@ public class UtilitiesTest extends AbstractMojoTestCase {
             }
 
             public void updateVersion(String s, ArtifactRepository artifactRepository) {
-
+                // Empty
             }
 
             public String getDownloadUrl() {
@@ -294,7 +294,7 @@ public class UtilitiesTest extends AbstractMojoTestCase {
             }
 
             public void setDownloadUrl(String s) {
-
+                // Empty
             }
 
             public ArtifactFilter getDependencyFilter() {
@@ -302,7 +302,7 @@ public class UtilitiesTest extends AbstractMojoTestCase {
             }
 
             public void setDependencyFilter(ArtifactFilter artifactFilter) {
-
+                // Empty
             }
 
             public ArtifactHandler getArtifactHandler() {
@@ -314,11 +314,11 @@ public class UtilitiesTest extends AbstractMojoTestCase {
             }
 
             public void setDependencyTrail(List<String> list) {
-
+                // Empty
             }
 
             public void setScope(String s) {
-
+                // Empty
             }
 
             public VersionRange getVersionRange() {
@@ -326,19 +326,19 @@ public class UtilitiesTest extends AbstractMojoTestCase {
             }
 
             public void setVersionRange(VersionRange versionRange) {
-
+                // Empty
             }
 
             public void selectVersion(String s) {
-
+                // Empty
             }
 
             public void setGroupId(String s) {
-
+                // Empty
             }
 
             public void setArtifactId(String s) {
-
+                // Empty
             }
 
             public boolean isSnapshot() {
@@ -346,7 +346,7 @@ public class UtilitiesTest extends AbstractMojoTestCase {
             }
 
             public void setResolved(boolean b) {
-
+                // Empty
             }
 
             public boolean isResolved() {
@@ -354,11 +354,11 @@ public class UtilitiesTest extends AbstractMojoTestCase {
             }
 
             public void setResolvedVersion(String s) {
-
+                // Empty
             }
 
             public void setArtifactHandler(ArtifactHandler artifactHandler) {
-
+                // Empty
             }
 
             public boolean isRelease() {
@@ -366,7 +366,7 @@ public class UtilitiesTest extends AbstractMojoTestCase {
             }
 
             public void setRelease(boolean b) {
-
+                // Empty
             }
 
             public List<ArtifactVersion> getAvailableVersions() {
@@ -374,7 +374,7 @@ public class UtilitiesTest extends AbstractMojoTestCase {
             }
 
             public void setAvailableVersions(List<ArtifactVersion> list) {
-
+                // Empty
             }
 
             public boolean isOptional() {
@@ -382,7 +382,7 @@ public class UtilitiesTest extends AbstractMojoTestCase {
             }
 
             public void setOptional(boolean b) {
-
+                // Empty
             }
 
             public ArtifactVersion getSelectedVersion() throws OverConstrainedVersionException {

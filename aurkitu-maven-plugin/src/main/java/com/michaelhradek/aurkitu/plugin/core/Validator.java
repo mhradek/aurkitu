@@ -25,13 +25,13 @@ import java.util.List;
 @AllArgsConstructor
 public class Validator {
 
-    Schema schema;
-    boolean checkTables;
-    boolean checkEnums;
-    List<Error> errors;
+    private Schema schema;
+    private boolean checkTables;
+    private boolean checkEnums;
+    private List<Error> errors;
 
     public Validator() {
-        errors = new ArrayList<Error>();
+        errors = new ArrayList<>();
         checkTables = true;
         checkEnums = true;
     }

@@ -105,10 +105,6 @@ public class ProcessorTest extends AbstractMojoTestCase {
         }
     }
 
-    /**
-     * Test method for
-     * {@link com.michaelhradek.aurkitu.plugin.core.Processor#buildEnumDeclaration(java.lang.Class)}.
-     */
     @Test
     public void testBuildEnumDeclarationPass() throws MojoExecutionException {
         Processor processor = new Processor().withSourceAnnotation(FlatBufferEnum.class).withSchema(new Schema());
@@ -158,10 +154,6 @@ public class ProcessorTest extends AbstractMojoTestCase {
         }
     }
 
-    /**
-     * Test method for
-     * {@link com.michaelhradek.aurkitu.plugin.core.Processor#buildTypeDeclaration(com.michaelhradek.aurkitu.plugin.core.output.Schema, java.lang.Class)}.
-     */
     @Test
     public void testBuildTypeDeclarationPass() throws MojoExecutionException {
         Processor processor = new Processor().withSourceAnnotation(FlatBufferTable.class).withSchema(new Schema());

@@ -1,9 +1,7 @@
 package com.michaelhradek.aurkitu.annotations;
 
 import com.michaelhradek.aurkitu.annotations.types.FieldType;
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.lang.annotation.Annotation;
@@ -12,21 +10,6 @@ import java.lang.reflect.Field;
 public class FlatBufferFieldOptionsTest {
 
     private final static String TEST_DEFAULT_VALUE = "testDefaultValueForField";
-
-    /**
-     * @throws Exception
-     */
-    @Before
-    public void setUp() throws Exception {
-    }
-
-    /**
-     * @throws Exception
-     */
-    @After
-    public void tearDown() throws Exception {
-    }
-
 
     @Test
     public void testDefaults() throws NoSuchFieldException {

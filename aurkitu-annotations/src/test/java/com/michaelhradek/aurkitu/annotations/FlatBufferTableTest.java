@@ -1,28 +1,11 @@
 package com.michaelhradek.aurkitu.annotations;
 
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.lang.annotation.Annotation;
 
 public class FlatBufferTableTest {
-
-    /**
-     * @throws java.lang.Exception
-     */
-    @Before
-    public void setUp() throws Exception {
-    }
-
-    /**
-     * @throws java.lang.Exception
-     */
-    @After
-    public void tearDown() throws Exception {
-    }
-
 
     @Test
     public void testFlatbufferTableDefault() {

@@ -1,28 +1,12 @@
 package com.michaelhradek.aurkitu.annotations;
 
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 
 public class FlatBufferEnumTypeFieldTest {
-
-    /**
-     * @throws Exception
-     */
-    @Before
-    public void setUp() throws Exception {
-    }
-
-    /**
-     * @throws Exception
-     */
-    @After
-    public void tearDown() throws Exception {
-    }
 
 
     @Test
