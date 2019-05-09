@@ -46,16 +46,16 @@ public class FlatBufferEnumTypeFieldTest {
 
         VALUE(1, "test");
 
-        TestEnumDefault(int value, String name) {
-            this.enumValue = value;
-            this.enumName = name;
-        }
-
         @FlatBufferEnumTypeField
         public int enumValue;
 
         @FlatBufferEnumTypeField
         @Deprecated
         public String enumName;
+
+        TestEnumDefault(int value, String name) {
+            this.enumValue = value;
+            this.enumName = name;
+        }
     }
 }

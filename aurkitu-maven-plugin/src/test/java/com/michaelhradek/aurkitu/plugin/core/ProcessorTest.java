@@ -52,6 +52,20 @@ public class ProcessorTest extends AbstractMojoTestCase {
         }
     };
 
+    @Rule
+    public MojoRule rule = new MojoRule() {
+
+        @Override
+        protected void before() {
+            // Empty
+        }
+
+        @Override
+        protected void after() {
+            // Empty
+        }
+    };
+
     /**
      * @see junit.framework.TestCase#setUp()
      */
@@ -61,10 +75,6 @@ public class ProcessorTest extends AbstractMojoTestCase {
         // required for mojo lookups to work
         super.setUp();
     }
-
-    @Rule
-    public MojoRule rule = new MojoRule() {
-    };
 
     /**
      * @throws java.lang.Exception via super

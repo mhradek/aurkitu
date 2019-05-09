@@ -1,6 +1,5 @@
 package com.michaelhradek.aurkitu;
 
-import com.michaelhradek.aurkitu.plugin.Application;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
 import org.apache.maven.plugin.testing.MojoRule;
 import org.apache.maven.project.MavenProject;
@@ -44,10 +43,14 @@ public class ApplicationTest extends AbstractMojoTestCase {
     public MojoRule rule = new MojoRule() {
 
         @Override
-        protected void before() throws Throwable {}
+        protected void before() {
+            // Empty
+        }
 
         @Override
-        protected void after() {}
+        protected void after() {
+            // Empty
+        }
     };
 
     @Before
@@ -67,7 +70,7 @@ public class ApplicationTest extends AbstractMojoTestCase {
         Assert.assertTrue(testPom.exists());
         Assert.assertTrue(testPom.isFile());
 
-        Application mojo = new Application();
+//        Application mojo = new Application();
 //        mojo = (Application) this.configureMojo(
 //                mojo, extractPluginConfiguration(Application.MOJO_NAME, testPom)
 //        );

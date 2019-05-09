@@ -71,6 +71,7 @@ public class FieldTypeTest {
                     break;
                 default:
                     Assert.fail("Undefined enum");
+                    break;
             }
         }
     }

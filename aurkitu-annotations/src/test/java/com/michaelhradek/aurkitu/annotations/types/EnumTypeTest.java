@@ -43,6 +43,7 @@ public class EnumTypeTest {
                     break;
                 default:
                     Assert.fail("Undefined enum");
+                    break;
             }
         }
     }

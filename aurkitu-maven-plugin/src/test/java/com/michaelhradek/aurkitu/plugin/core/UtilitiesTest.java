@@ -32,9 +32,6 @@ public class UtilitiesTest extends AbstractMojoTestCase {
 
     private static String OUTPUT_DIRECTORY = "target/aurkitu/utilities/test";
 
-    /**
-     * @see junit.framework.TestCase#setUp()
-     */
     @Override
     protected void setUp() throws Exception {
 
@@ -47,10 +44,12 @@ public class UtilitiesTest extends AbstractMojoTestCase {
 
         @Override
         protected void before() {
+            // Empty
         }
 
         @Override
         protected void after() {
+            // Empty
         }
     };
 

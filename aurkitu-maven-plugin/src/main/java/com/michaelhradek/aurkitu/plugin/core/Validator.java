@@ -222,10 +222,10 @@ public class Validator {
     @Getter
     @Setter
     class Error {
-        String location;
-        Property property;
-        ErrorType type;
-        String comment;
+        private String location;
+        private Property property;
+        private ErrorType type;
+        private String comment;
 
         @Override
         public String toString() {
