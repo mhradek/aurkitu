@@ -4,7 +4,7 @@ language: java
 
 jdk: openjdk8
 
-script: mvn install -B
+script: mvn install -B -q
 
 after_success:
 - mvn cobertura:cobertura
