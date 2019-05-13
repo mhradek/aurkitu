@@ -10,5 +10,6 @@ before_script:
 script: mvn install -B -q
 
 after_success:
+  - echo "MAVEN_OPTS='-Dorg.slf4j.simpleLogger.defaultLogLevel=warn'" > ~/.mavenrc
   - mvn cobertura:cobertura -q
   - pip install --user codecov && codecov
