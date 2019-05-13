@@ -8,4 +8,4 @@ script: mvn install -B -q
 
 after_success:
   - mvn cobertura:cobertura -q
-- pip install --user codecov && codecov
+  - pip install --user codecov && codecov
