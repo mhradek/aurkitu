@@ -4,6 +4,9 @@ language: java
 
 jdk: openjdk8
 
+before_script:
+  - echo "MAVEN_OPTS='-Dorg.slf4j.simpleLogger.defaultLogLevel=warn'" > ~/.mavenrc
+
 script: mvn install -B -q
 
 after_success:
