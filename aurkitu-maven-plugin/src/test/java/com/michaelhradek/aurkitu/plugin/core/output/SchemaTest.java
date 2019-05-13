@@ -23,6 +23,9 @@ public class SchemaTest {
         final String validFileIdentifier = "VLID";
         schema.setFileIdentifier(validFileIdentifier);
         Assert.assertEquals(validFileIdentifier, schema.getFileIdentifier());
+
+        schema.setFileIdentifier(null);
+        Assert.assertNull(schema.getFileIdentifier());
     }
 
     @Test
@@ -212,5 +215,13 @@ public class SchemaTest {
         Assert.assertFalse(schemaOne.equals(schemaTwo));
         schemaTwo.setNamespace("nameOne");
         Assert.assertTrue(schemaOne.equals(schemaTwo));
+    }
+
+    @Test
+    public void testGenerateVersion() {
+        Schema schema = new Schema();
+        Assert.assertFalse(schema.toString().contains("// @version:"));
+        schema.setGenerateVersion(true);
+        Assert.assertTrue(schema.toString().contains("// @version:"));
     }
 }

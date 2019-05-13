@@ -1,8 +1,6 @@
-package com.michaelhradek.aurkitu.plugin.core.parser;
+package com.michaelhradek.aurkitu.plugin.core.parsing;
 
 import com.michaelhradek.aurkitu.annotations.FlatBufferTable;
-import com.michaelhradek.aurkitu.plugin.core.parsing.AnnotationParser;
-import com.michaelhradek.aurkitu.plugin.core.parsing.ArtifactReference;
 import com.michaelhradek.aurkitu.plugin.test.*;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;

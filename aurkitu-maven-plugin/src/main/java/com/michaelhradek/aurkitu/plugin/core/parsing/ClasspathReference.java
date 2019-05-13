@@ -18,6 +18,10 @@ public class ClasspathReference {
      * @return a valid package identifier.
      */
     public String getDerivedNamespace() {
+        if (artifact == null || groupId == null) {
+            return null;
+        }
+
         return artifact + "." + groupId;
     }
 }
