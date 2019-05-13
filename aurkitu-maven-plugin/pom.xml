@@ -181,7 +181,6 @@
                         <excludes>
                             <exclude>**/*HelpMojo</exclude>
                             <exclude>**/*Config.class</exclude>
-                            <exclude>**/*aurkitu/annotations</exclude>
                             <!-- Exclude dependencies-->
                             <exclude>/**/org/**/*</exclude>
                             <exclude>/**/com/sun/**/*</exclude>
