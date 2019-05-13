@@ -181,11 +181,7 @@
                         <excludes>
                             <exclude>**/*HelpMojo</exclude>
                             <exclude>**/*Config.class</exclude>
-                            <!-- Exclude dependencies-->
-                            <exclude>/**/org/**/*</exclude>
-                            <exclude>/**/com/sun/**/*</exclude>
-                            <exclude>/**/*.java</exclude>
-                            <exclude>/**/META-INF/**/*</exclude>
+                            <exclude>**/*aurkitu/annotations</exclude>
                         </excludes>
                     </instrumentation>
                 </configuration>
