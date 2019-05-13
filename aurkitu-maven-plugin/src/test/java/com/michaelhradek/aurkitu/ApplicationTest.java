@@ -1,5 +1,6 @@
 package com.michaelhradek.aurkitu;
 
+import com.michaelhradek.aurkitu.plugin.Application;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
 import org.apache.maven.plugin.testing.MojoRule;
 import org.apache.maven.project.MavenProject;
@@ -14,7 +15,9 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import java.io.File;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Map;
 
 /**
  * @author m.hradek
@@ -70,13 +73,78 @@ public class ApplicationTest extends AbstractMojoTestCase {
         Assert.assertTrue(testPom.exists());
         Assert.assertTrue(testPom.isFile());
 
-//        Application mojo = new Application();
-//        mojo = (Application) this.configureMojo(
-//                mojo, extractPluginConfiguration(Application.MOJO_NAME, testPom)
-//        );
-//
-//        assertNotNull(mojo);
-//        mojo.execute();
+        Application mojo = new Application();
+        mojo = (Application) this.configureMojo(
+                mojo, extractPluginConfiguration(Application.MOJO_NAME, testPom)
+        );
+
+        assertNotNull(mojo);
+        mojo.execute();
+
+        // get the project variable
+        MavenProject project = (MavenProject) this.getVariableValueFromObject(mojo, "project");
+
+        // get the groupId from inside the project
+        final String groupId = (String) this.getVariableValueFromObject(project, "groupId");
+        final String artifactId = (String) this.getVariableValueFromObject(project, "artifactId");
+
+        // assert
+        Assert.assertEquals("com.michaelhradek.aurkitu.test", groupId);
+        Assert.assertEquals("plugin-basic", artifactId);
+
+        // get values from configuration
+        Field field = mojo.getClass().getDeclaredField("outputDirectory");
+        field.setAccessible(true);
+        Assert.assertEquals("target/test-dir", field.get(mojo));
+
+        field = mojo.getClass().getDeclaredField("specifiedDependencies");
+        field.setAccessible(true);
+        Assert.assertEquals(null, field.get(mojo));
+
+        field = mojo.getClass().getDeclaredField("schemaNamespace");
+        field.setAccessible(true);
+        Assert.assertEquals(null, field.get(mojo));
+
+        field = mojo.getClass().getDeclaredField("schemaIncludes");
+        field.setAccessible(true);
+        Assert.assertEquals(null, field.get(mojo));
+
+        field = mojo.getClass().getDeclaredField("validateSchema");
+        field.setAccessible(true);
+        Assert.assertEquals(true, field.get(mojo));
+
+        field = mojo.getClass().getDeclaredField("schemaName");
+        field.setAccessible(true);
+        Assert.assertEquals("test-schema", field.get(mojo));
+
+        field = mojo.getClass().getDeclaredField("schemaFileIdentifier");
+        field.setAccessible(true);
+        Assert.assertEquals(null, field.get(mojo));
+
+        field = mojo.getClass().getDeclaredField("fileExtension");
+        field.setAccessible(true);
+        Assert.assertEquals(null, field.get(mojo));
+
+        field = mojo.getClass().getDeclaredField("namespaceOverrideMap");
+        field.setAccessible(true);
+        Assert.assertNotNull(field.get(mojo));
+        Map<String, String> namespaceOverrideMap = (Map<String, String>) field.get(mojo);
+        Assert.assertEquals(1, namespaceOverrideMap.size());
+        Assert.assertTrue(namespaceOverrideMap.containsKey("search.namespace"));
+        Assert.assertTrue(namespaceOverrideMap.containsValue("replacement.namespace"));
+        Assert.assertEquals("replacement.namespace", namespaceOverrideMap.get("search.namespace"));
+
+        field = mojo.getClass().getDeclaredField("generateVersion");
+        field.setAccessible(true);
+        Assert.assertEquals(true, field.get(mojo));
+
+        field = mojo.getClass().getDeclaredField("consolidatedSchemas");
+        field.setAccessible(true);
+        Assert.assertEquals(true, field.get(mojo));
+
+        field = mojo.getClass().getDeclaredField("useSchemaCaching");
+        field.setAccessible(true);
+        Assert.assertEquals(false, field.get(mojo));
     }
 
     @Test
