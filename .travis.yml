@@ -4,12 +4,8 @@ language: java
 
 jdk: openjdk8
 
-before_script:
-  - echo "MAVEN_OPTS='-Dorg.slf4j.simpleLogger.defaultLogLevel=warn'" > ~/.mavenrc
-
-script: mvn install -B -q
+script: mvn install -B
 
 after_success:
-  - echo "MAVEN_OPTS='-Dorg.slf4j.simpleLogger.defaultLogLevel=warn'" > ~/.mavenrc
-  - mvn cobertura:cobertura -q
+  - mvn cobertura:cobertura
   - pip install --user codecov && codecov
