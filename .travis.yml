@@ -7,5 +7,5 @@ jdk: openjdk8
 script: mvn install -B
 
 after_success:
-  - mvn cobertura:cobertura
+  - mvn clean cobertura:cobertura org.eluder.coveralls:coveralls-maven-plugin:report
   - pip install --user codecov && codecov
