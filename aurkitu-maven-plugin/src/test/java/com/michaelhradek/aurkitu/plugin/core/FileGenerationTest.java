@@ -12,6 +12,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,7 +21,9 @@ import java.util.List;
  */
 public class FileGenerationTest {
 
-    private static final String OUTPUT_DIRECTORY = "target/aurkitu/test";
+    private static final String OUTPUT_DIRECTORY_VALID = "target/aurkitu/test";
+    private static final String OUTPUT_DIRECTORY_PERMISSIONS_FAILURE = "/opt/aurkitu/test";
+    private static final String OUTPUT_FILENAME = "test";
 
     /**
      * Test method for
@@ -30,7 +33,7 @@ public class FileGenerationTest {
      * @throws MojoExecutionException if an error occurs attempting to execute plugin
      */
     @Test
-    public void testWriteSchema() throws IOException, MojoExecutionException {
+    public void testWriteSchema() throws IOException, MojoExecutionException, NoSuchFieldException, IllegalAccessException {
         Processor processor = new Processor().withSourceAnnotation(FlatBufferTable.class)
                 .withSourceAnnotation(FlatBufferEnum.class).withSchema(new Schema());
         Assert.assertEquals(2, processor.getSourceAnnotations().size());
@@ -39,20 +42,26 @@ public class FileGenerationTest {
         Schema schema = processor.getProcessedSchemas().get(0);
         schema.setGenerateVersion(true);
 
-        File outputDirectory = new File(OUTPUT_DIRECTORY);
+        File outputDirectory = new File(OUTPUT_DIRECTORY_VALID);
         Assert.assertFalse(outputDirectory.exists());
         Assert.assertFalse(outputDirectory.isDirectory());
 
         FileGeneration fg = new FileGeneration(outputDirectory);
         fg.writeSchema(schema);
-        schema.setName("test");
+        schema.setName(OUTPUT_FILENAME);
         fg.writeSchema(schema);
+
+        Field field = fg.getClass().getDeclaredField("fileName");
+        field.setAccessible(true);
+        final String fileName = (String) field.get(fg);
+
+        Assert.assertEquals(OUTPUT_FILENAME + "." + Config.FILE_EXTENSION, fileName);
 
         // TODO Rigorous testing
         Assert.assertTrue(outputDirectory.exists());
         Assert.assertTrue(outputDirectory.isDirectory());
 
-        File resultingFile = new File(OUTPUT_DIRECTORY + File.separator + fg.getFileName());
+        File resultingFile = new File(OUTPUT_DIRECTORY_VALID + File.separator + fg.getFileName());
 
         if (Config.DEBUG) {
             System.out.println("RESULTING FILE: " + resultingFile.getPath());
@@ -64,7 +73,7 @@ public class FileGenerationTest {
         Assert.assertEquals(outputDirectory, fg.getOutputDirectory());
 
         BufferedReader reader =
-                new BufferedReader(new FileReader(OUTPUT_DIRECTORY + File.separator + fg.getFileName()));
+                new BufferedReader(new FileReader(OUTPUT_DIRECTORY_VALID + File.separator + fg.getFileName()));
         List<String> lines = new ArrayList<>();
 
         String line;
@@ -75,5 +84,23 @@ public class FileGenerationTest {
 
         String[] data = lines.toArray(new String[]{});
         Assert.assertEquals(Config.SCHEMA_INTRO_COMMENT, data[0]);
+    }
+
+    @Test(expected = IOException.class)
+    public void testDirectoryFailures() throws MojoExecutionException, IOException {
+        Processor processor = new Processor().withSourceAnnotation(FlatBufferTable.class)
+                .withSourceAnnotation(FlatBufferEnum.class).withSchema(new Schema());
+        Assert.assertEquals(2, processor.getSourceAnnotations().size());
+
+        processor.execute();
+        Schema schema = processor.getProcessedSchemas().get(0);
+        schema.setGenerateVersion(true);
+
+        File outputDirectory = new File(OUTPUT_DIRECTORY_PERMISSIONS_FAILURE);
+        Assert.assertFalse(outputDirectory.exists());
+        Assert.assertFalse(outputDirectory.isDirectory());
+
+        FileGeneration fg = new FileGeneration(outputDirectory);
+        fg.writeSchema(schema);
     }
 }

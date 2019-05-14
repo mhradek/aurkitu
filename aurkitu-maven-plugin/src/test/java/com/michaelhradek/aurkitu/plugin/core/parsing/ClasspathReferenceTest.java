@@ -22,6 +22,16 @@ public class ClasspathReferenceTest {
 
         final URL TEST_URL = new URL("file:/some/url/to/some/jar");
 
+        classpathReference = new ClasspathReference(TEST_URL, TEST_ARTIFACT, null);
+        Assert.assertEquals(TEST_ARTIFACT, classpathReference.getArtifact());
+        Assert.assertEquals(null, classpathReference.getGroupId());
+        Assert.assertNull(classpathReference.getDerivedNamespace());
+
+        classpathReference = new ClasspathReference(TEST_URL, null, TEST_GROUP);
+        Assert.assertEquals(null, classpathReference.getArtifact());
+        Assert.assertEquals(TEST_GROUP, classpathReference.getGroupId());
+        Assert.assertNull(classpathReference.getDerivedNamespace());
+
         classpathReference = new ClasspathReference(TEST_URL, TEST_ARTIFACT, TEST_GROUP);
         Assert.assertEquals(TEST_URL, classpathReference.getUrl());
         Assert.assertEquals(TEST_ARTIFACT, classpathReference.getArtifact());
