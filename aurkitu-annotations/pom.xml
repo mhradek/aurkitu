@@ -105,8 +105,8 @@
                     <quiet>true</quiet>
                     <instrumentation>
                         <excludes>
-                            <exclude>**/*Config</exclude>
-                            <exclude>**/*HelpMojo</exclude>
+                            <exclude>**/*Config.*</exclude>
+                            <exclude>**/*HelpMojo.*</exclude>
                         </excludes>
                     </instrumentation>
                 </configuration>

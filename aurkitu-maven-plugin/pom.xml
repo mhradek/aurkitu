@@ -179,8 +179,8 @@
                     <quiet>true</quiet>
                     <instrumentation>
                         <excludes>
-                            <exclude>**/*HelpMojo</exclude>
-                            <exclude>**/*Config.class</exclude>
+                            <exclude>**/*HelpMojo.*</exclude>
+                            <exclude>**/*Config.*</exclude>
                             <exclude>**/*aurkitu/annotations</exclude>
                         </excludes>
                     </instrumentation>
@@ -190,6 +190,10 @@
                 <groupId>org.eluder.coveralls</groupId>
                 <artifactId>coveralls-maven-plugin</artifactId>
                 <version>${coveralls-maven-plugin.version}</version>
+                <configuration>
+                    <coberturaReports>${basedir}/target/site/cobertura/coverage.xml</coberturaReports>
+
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
