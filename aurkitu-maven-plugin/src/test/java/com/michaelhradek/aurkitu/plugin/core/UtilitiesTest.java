@@ -22,7 +22,9 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.File;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -52,6 +54,12 @@ public class UtilitiesTest extends AbstractMojoTestCase {
             // Empty
         }
     };
+
+    @Test()
+    public void testPrivateConstructor() throws NoSuchMethodException {
+        final Constructor<Utilities> constructor = Utilities.class.getDeclaredConstructor();
+        Assert.assertTrue(Modifier.isPrivate(constructor.getModifiers()));
+    }
 
     @Test
     public void testIsLowerCaseType() {

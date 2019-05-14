@@ -359,7 +359,7 @@ public class Processor {
         // Find what field was annotated as the value we need to use for the declared type
         boolean setValues = false;
         Field valueField = null;
-        int numAnnotations = 0;
+        int numFlatBufferEnumTypeFieldAnnotations = 0;
         if (fields != null && fields.length > 0) {
             Application.getLogger().debug("Enum with declared fields detected");
             for (Field field : fields) {
@@ -377,13 +377,14 @@ public class Processor {
                     if (field.getType().isAssignableFrom(enumD.getType().targetClass)) {
                         setValues = true;
                         valueField = field;
-                        numAnnotations++;
                     }
+
+                    numFlatBufferEnumTypeFieldAnnotations++;
                 }
             }
         }
 
-        if (numAnnotations > 1) {
+        if (numFlatBufferEnumTypeFieldAnnotations > 1) {
             throw new IllegalArgumentException(
                     "Can only declare one @FlatBufferEnumTypeField for Enum: " + clazz.getName());
         }

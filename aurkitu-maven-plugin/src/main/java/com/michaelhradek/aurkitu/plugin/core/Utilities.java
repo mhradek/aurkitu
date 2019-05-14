@@ -37,6 +37,10 @@ public class Utilities {
     private static List<String> classpathElementsCache;
     private static String workingProject;
 
+    // Never need to instantiate this
+    private Utilities() {
+    }
+
     /**
      * @param type The class which needs to be tested if it is a primative. Also, double and Double are both
      *             considered primative within this context.

@@ -20,6 +20,11 @@ import com.michaelhradek.aurkitu.plugin.test.*;
 import com.michaelhradek.aurkitu.plugin.test.SampleClassReferenced.SampleClassTableInnerEnumInt;
 import com.michaelhradek.aurkitu.plugin.test.other.SampleAnonymousEnum;
 import com.michaelhradek.aurkitu.plugin.test.other.SampleClassNamespaceMap;
+import javassist.*;
+import javassist.bytecode.AnnotationsAttribute;
+import javassist.bytecode.ClassFile;
+import javassist.bytecode.ConstPool;
+import javassist.bytecode.annotation.Annotation;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
 import org.apache.maven.plugin.testing.MojoRule;
@@ -27,6 +32,7 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.io.File;
 import java.lang.reflect.Field;
@@ -52,6 +58,9 @@ public class ProcessorTest extends AbstractMojoTestCase {
                     ".flatbuffer");
         }
     };
+
+    @Rule
+    public ExpectedException exceptionRule = ExpectedException.none();
 
     @Rule
     public MojoRule rule = new MojoRule() {
@@ -102,9 +111,9 @@ public class ProcessorTest extends AbstractMojoTestCase {
         schema.addAttribute("ConsiderThis");
         schema.addInclude("AnotherFile.fbs");
 
-        Assert.assertEquals(13, processor.getTargetClasses().size());
+        Assert.assertEquals(12, processor.getTargetClasses().size());
         Assert.assertEquals(9, schema.getTypes().size());
-        Assert.assertEquals(9, schema.getEnums().size());
+        Assert.assertEquals(8, schema.getEnums().size());
 
         Assert.assertEquals("SampleClassTable", schema.getRootType());
 
@@ -122,9 +131,9 @@ public class ProcessorTest extends AbstractMojoTestCase {
         processor.execute();
         Schema schema = processor.getProcessedSchemas().get(0);
 
-        Assert.assertEquals(7, processor.getTargetClasses().size());
+        Assert.assertEquals(6, processor.getTargetClasses().size());
         Assert.assertEquals(0, schema.getTypes().size());
-        Assert.assertEquals(7, schema.getEnums().size());
+        Assert.assertEquals(6, schema.getEnums().size());
 
         Assert.assertEquals(null, schema.getRootType());
 
@@ -544,13 +553,6 @@ public class ProcessorTest extends AbstractMojoTestCase {
     }
 
     @Test
-    public void testBuildEnumDelarationMultipleTypes() {
-        Processor processor = new Processor();
-        EnumDeclaration declaration = processor.buildEnumDeclaration(TestEnumMultipleType.class);
-        Assert.assertNotNull(declaration);
-    }
-
-    @Test
     public void testWithValidateSchemas() {
         Processor processor = new Processor();
         Assert.assertFalse(processor.isValidateSchemas());
@@ -668,6 +670,41 @@ public class ProcessorTest extends AbstractMojoTestCase {
         Assert.assertNull(externalClassDefinition.targetNamespace);
     }
 
+    @Test
+    public void testCurrentSchema() throws NoSuchFieldException, MojoExecutionException {
+        Processor processor = new Processor();
+        Assert.assertNull(processor.getCurrentSchema());
+
+        Schema schema = new Schema();
+        schema.setName("testSchemaCurrent");
+        processor.withSchema(schema);
+        processor.execute();
+
+        Assert.assertEquals(schema, processor.getCurrentSchema());
+    }
+
+    @Test
+    public void testBuildEnumDelarationMultipleTypes() throws CannotCompileException {
+        try {
+            Processor processor = new Processor();
+            processor.buildEnumDeclaration(createTestEnum("TestEnumMultipleType", true));
+            Assert.fail("Expected IllegalArgumentException where number of annotations FlatBufferEnumTypeField > 1 not thrown");
+        } catch (IllegalArgumentException e) {
+            Assert.assertEquals("Can only declare one @FlatBufferEnumTypeField for Enum: TestEnumMultipleType", e.getMessage());
+        }
+    }
+
+    @Test
+    public void testBuildEnumDelarationMissingEnumType() throws CannotCompileException {
+        try {
+            Processor processor = new Processor();
+            processor.buildEnumDeclaration(createTestEnum("TestEnumMissingType", false));
+            Assert.fail("xpected IllegalArgumentException where missing @FlatBufferEnum(enumType = EnumType.<SELECT>) declaration");
+        } catch (IllegalArgumentException e) {
+            Assert.assertEquals("Missing @FlatBufferEnum(enumType = EnumType.<SELECT>) declaration or remove @FlatBufferEnumTypeField for: TestEnumMissingType", e.getMessage());
+        }
+    }
+
     /**
      * Test classes, internal to this test
      */
@@ -677,16 +714,44 @@ public class ProcessorTest extends AbstractMojoTestCase {
 
     }
 
-    @FlatBufferEnum
-    enum TestEnumMultipleType {
 
-        VALUE_ONE, VALUE_TWO;
+    /**
+     * TestEnumMultipleType
+     *
+     * @param name
+     * @param setEnumType
+     * @return
+     * @throws CannotCompileException
+     */
+    private static Class<?> createTestEnum(String name, boolean setEnumType) throws CannotCompileException {
+        CtClass enumMultipleType = ClassPool.getDefault().makeClass(name);
 
-        @FlatBufferEnumTypeField
-        int key;
+        ClassFile ccFile = enumMultipleType.getClassFile();
+        ConstPool constpool = ccFile.getConstPool();
 
-        @FlatBufferEnumTypeField
-        String value;
+        AnnotationsAttribute attrField = new AnnotationsAttribute(constpool, AnnotationsAttribute.visibleTag);
+        Annotation annotField = new Annotation(FlatBufferEnumTypeField.class.getName(), constpool);
+        attrField.addAnnotation(annotField);
+
+        CtField field = new CtField(CtClass.intType, "key", enumMultipleType);
+        field.getFieldInfo().addAttribute(attrField);
+        enumMultipleType.addField(field);
+
+        field = new CtField(CtClass.booleanType, "value", enumMultipleType);
+        field.getFieldInfo().addAttribute(attrField);
+        enumMultipleType.addField(field);
+
+        CtMethod method = CtNewMethod.make("public Object[] getEnumConstants() { return new Object[0]; }", enumMultipleType);
+        enumMultipleType.addMethod(method);
+
+        if (setEnumType) {
+            AnnotationsAttribute attrClass = new AnnotationsAttribute(constpool, AnnotationsAttribute.visibleTag);
+            Annotation annotClass = new Annotation(FlatBufferEnum.class.getName(), constpool);
+            attrClass.addAnnotation(annotClass);
+            ccFile.addAttribute(attrClass);
+        }
+
+        return enumMultipleType.toClass();
     }
 
     class TestAnonymousClass {
