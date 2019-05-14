@@ -52,6 +52,9 @@ public class Schema {
         classpathReferenceList = new ArrayList<>();
     }
 
+    /**
+     * @param isEmpty If the schema had no classes to review from the classpath. We can check this also be reviewing the various lists but that could be a false negative/positive.
+     */
     public void isEmpty(boolean isEmpty) {
         this.isEmpty = isEmpty;
     }

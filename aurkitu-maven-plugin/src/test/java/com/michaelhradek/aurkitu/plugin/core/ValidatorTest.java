@@ -69,7 +69,7 @@ public class ValidatorTest {
         Assert.assertTrue(errorComments.contains("// Issue : TYPE_DEFINITION_NOT_DEFINED, Location: SampleClassTable, Name: fullnameClass\n"));
         Assert.assertTrue(errorComments.contains("// Issue : MISCONFIGURED_DEFINITION, Location: SampleClassTableInnerEnumInt, Name: null\n"));
         Assert.assertTrue(errorComments.contains("// Issue : ENUM_DEFINITION_NOT_DEFINED, Location: TestEnumCommentEmpty, Name: null, Comment: The enum contains no values.\n"));
-        Assert.assertTrue(errorComments.contains("// Issue : MISCONFIGURED_DEFINITION, Location: Option, Name: null\n\n"));
+        Assert.assertTrue(errorComments.contains("// Issue : MISCONFIGURED_DEFINITION, Location: Option, Name: null\n"));
     }
 
     @Test

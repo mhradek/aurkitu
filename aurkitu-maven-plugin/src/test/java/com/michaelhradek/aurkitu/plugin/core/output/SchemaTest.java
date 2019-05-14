@@ -224,4 +224,12 @@ public class SchemaTest {
         schema.setGenerateVersion(true);
         Assert.assertTrue(schema.toString().contains("// @version:"));
     }
+
+    @Test
+    public void testIsEmpty() {
+        Schema schema = new Schema();
+        Assert.assertFalse(schema.isEmpty());
+        schema.isEmpty(true);
+        Assert.assertTrue(schema.isEmpty());
+    }
 }

@@ -13,6 +13,7 @@ import com.michaelhradek.aurkitu.plugin.core.output.Schema;
 import com.michaelhradek.aurkitu.plugin.core.output.TypeDeclaration;
 import com.michaelhradek.aurkitu.plugin.core.output.TypeDeclaration.Property;
 import com.michaelhradek.aurkitu.plugin.core.output.TypeDeclaration.Property.PropertyOptionKey;
+import com.michaelhradek.aurkitu.plugin.core.parsing.ArtifactReference;
 import com.michaelhradek.aurkitu.plugin.stubs.AurkituTestMavenProjectStub;
 import com.michaelhradek.aurkitu.plugin.stubs.AurkituTestSettingsStub;
 import com.michaelhradek.aurkitu.plugin.test.*;
@@ -96,7 +97,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
         processor.execute();
         Schema schema = processor.getProcessedSchemas().get(0);
         schema.setNamespace(
-            processor.getClass().getPackage().getName().replace("core", "flatbuffers"));
+                processor.getClass().getPackage().getName().replace("core", "flatbuffers"));
         schema.addAttribute("Priority");
         schema.addAttribute("ConsiderThis");
         schema.addInclude("AnotherFile.fbs");
@@ -186,19 +187,19 @@ public class ProcessorTest extends AbstractMojoTestCase {
                 for (Property property : type.getProperties()) {
                     if ("innerEnum".equals(property.name)) {
                         Assert.assertEquals("SHORT_SWORD",
-                            property.options.get(PropertyOptionKey.DEFAULT_VALUE));
+                                property.options.get(PropertyOptionKey.DEFAULT_VALUE));
                         Assert.assertNull(property.options.get(PropertyOptionKey.COMMENT));
                     }
 
                     if ("definedInnerEnumArray".equals(property.name)) {
                         Assert.assertEquals(SampleClassTableInnerEnumInt.class.getName(),
-                            property.options.get(PropertyOptionKey.ARRAY));
+                                property.options.get(PropertyOptionKey.ARRAY));
                         Assert.assertNull(property.options.get(PropertyOptionKey.COMMENT));
                     }
 
                     if ("fullnameClass".equals(property.name)) {
                         Assert.assertEquals(SampleClassReferenced.class.getName(),
-                            property.options.get(PropertyOptionKey.IDENT));
+                                property.options.get(PropertyOptionKey.IDENT));
                         Assert.assertNull(property.options.get(PropertyOptionKey.COMMENT));
                     }
 
@@ -361,7 +362,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
         Assert.assertEquals("deleted", prop.name);
         Assert.assertEquals(FieldType.BOOL, prop.type);
 
-        // FIXME This should be false; boolean has a defualt value assigned to it
+        // FIXME This should be false; boolean has a default value assigned to it
         Assert.assertEquals(true, prop.options.isEmpty());
 
         field = SampleClassTable.class.getDeclaredField("energy");
@@ -373,27 +374,27 @@ public class ProcessorTest extends AbstractMojoTestCase {
 
     @Test
     public void testParseFieldSignatureForParametrizedTypeStringoOnList()
-        throws NoSuchFieldException, IllegalAccessException, ClassNotFoundException {
+            throws NoSuchFieldException, IllegalAccessException, ClassNotFoundException {
         Schema schema = new Schema();
         Field field = schema.getClass().getDeclaredField("enums");
 
         Assert.assertEquals(EnumDeclaration.class.getName(),
-            Processor.parseFieldSignatureForParametrizedTypeStringOnList(field));
+                Processor.parseFieldSignatureForParametrizedTypeStringOnList(field));
 
         Class<?> testClass = Class.forName(SampleClassTable.class.getName());
         field = testClass.getDeclaredField("tokens");
         Assert
-            .assertEquals(String.class.getName(), Processor.parseFieldSignatureForParametrizedTypeStringOnList(field));
+                .assertEquals(String.class.getName(), Processor.parseFieldSignatureForParametrizedTypeStringOnList(field));
 
         testClass = Class.forName(SampleClassReferenced.class.getName());
         field = testClass.getDeclaredField("baggage");
         Assert.assertEquals(SampleClassTable.class.getName(),
-            Processor.parseFieldSignatureForParametrizedTypeStringOnList(field));
+                Processor.parseFieldSignatureForParametrizedTypeStringOnList(field));
     }
 
     @Test
     public void testParseFieldSignatureForParametrizedTypeStringsOnMap()
-        throws NoSuchFieldException, IllegalAccessException, ClassNotFoundException {
+            throws NoSuchFieldException, IllegalAccessException, ClassNotFoundException {
 
         Class<?> testClass = Class.forName(SampleClassTable.class.getName());
         Field field = testClass.getDeclaredField("dataMap");
@@ -408,7 +409,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
     @Test
     public void testProcessNamespaceOverride() throws MojoExecutionException, NoSuchFieldException {
         Processor processor = new Processor()
-            .withSourceAnnotation(FlatBufferTable.class)
+                .withSourceAnnotation(FlatBufferTable.class)
                 .withNamespaceOverrideMap(TEST_NAMESPACE_OVERRIDE_MAP)
                 .withSchema(new Schema());
 
@@ -422,7 +423,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
 
                 Assert.assertEquals(
                         "com.michaelhradek.aurkitu.plugin.test.flatbuffer." + SampleClassNamespaceMap.class.getSimpleName(),
-                    prop.options.get(PropertyOptionKey.ARRAY)
+                        prop.options.get(PropertyOptionKey.ARRAY)
                 );
             }
         }
@@ -434,7 +435,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
 
         Application mojo = new Application();
         mojo = (Application) this.configureMojo(
-            mojo, extractPluginConfiguration(Application.MOJO_NAME, testPom)
+                mojo, extractPluginConfiguration(Application.MOJO_NAME, testPom)
         );
 
         Field projectField = mojo.getClass().getDeclaredField("project");
@@ -509,17 +510,29 @@ public class ProcessorTest extends AbstractMojoTestCase {
         Assert.assertFalse(result);
     }
 
-    class TestAnonymousClass {
+    @Test
+    public void testWithArtifactReference() {
+        Processor processor = new Processor();
+        Assert.assertNull(processor.getArtifactReference());
 
-        public TestInterface innerAnonymousField;
-
-        public void someClassMethod(TestInterface input) {
-            innerAnonymousField = input;
-        }
+        Processor processorCopy = processor.withArtifactReference(new ArtifactReference(null, null, null, null, null));
+        Assert.assertNotNull(processor.getArtifactReference());
+        Assert.assertNotNull(processorCopy);
+        Assert.assertNotNull(processorCopy.getArtifactReference());
     }
 
-    interface TestInterface {
-        void someTestMethod();
+    @Test
+    public void testWithConsolidatedSchemas() {
+        Processor processor = new Processor();
+        Assert.assertTrue(processor.isConsolidatedSchemas());
+
+        Processor processorCopy = processor.withConsolidatedSchemas(null);
+        Assert.assertTrue(processor.isConsolidatedSchemas());
+        Assert.assertTrue(processorCopy.isConsolidatedSchemas());
+
+        processorCopy = processor.withConsolidatedSchemas(false);
+        Assert.assertFalse(processor.isConsolidatedSchemas());
+        Assert.assertFalse(processorCopy.isConsolidatedSchemas());
     }
 
     @Test
@@ -537,6 +550,127 @@ public class ProcessorTest extends AbstractMojoTestCase {
         Assert.assertNotNull(declaration);
     }
 
+    @Test
+    public void testWithValidateSchemas() {
+        Processor processor = new Processor();
+        Assert.assertFalse(processor.isValidateSchemas());
+
+        Processor processorCopy = processor.withValidateSchemas(null);
+        Assert.assertFalse(processor.isValidateSchemas());
+        Assert.assertFalse(processorCopy.isValidateSchemas());
+
+        processorCopy = processor.withValidateSchemas(true);
+        Assert.assertTrue(processor.isValidateSchemas());
+        Assert.assertTrue(processorCopy.isValidateSchemas());
+    }
+
+    @Test
+    public void testWithSchemas() {
+        Processor processor = new Processor();
+        Assert.assertTrue(processor.getCandidateSchemas().isEmpty());
+
+        List<Schema> newSchemas = new ArrayList<>();
+        Schema schemaOne = new Schema();
+        schemaOne.setName("schemaOne");
+        Schema schemaTwo = new Schema();
+        schemaTwo.setName("schemaTwo");
+        newSchemas.add(schemaOne);
+        newSchemas.add(schemaTwo);
+
+        Assert.assertFalse(processor.withSchemas(newSchemas).getCandidateSchemas().isEmpty());
+        Assert.assertEquals(2, processor.getCandidateSchemas().size());
+        Assert.assertTrue(processor.getCandidateSchemas().contains(schemaOne));
+        Assert.assertTrue(processor.getCandidateSchemas().contains(schemaTwo));
+
+        newSchemas = new ArrayList<>();
+        Schema schemaThree = new Schema();
+        schemaThree.setName("schemaThree");
+        newSchemas.add(schemaThree);
+
+        Assert.assertFalse(processor.withSchemas(newSchemas).getCandidateSchemas().isEmpty());
+        Assert.assertEquals(1, processor.getCandidateSchemas().size());
+        Assert.assertEquals(schemaThree, processor.getCandidateSchemas().get(0));
+    }
+
+    @Test
+    public void testWithSchema() {
+        Processor processor = new Processor();
+        Assert.assertTrue(processor.getCandidateSchemas().isEmpty());
+
+        Schema schemaOne = new Schema();
+        schemaOne.setName("schemaOne");
+        Schema schemaTwo = new Schema();
+        schemaTwo.setName("schemaTwo");
+
+        processor.withSchema(schemaOne);
+        Assert.assertFalse(processor.getCandidateSchemas().isEmpty());
+        processor.withSchema(schemaTwo);
+        Assert.assertFalse(processor.getCandidateSchemas().isEmpty());
+        Assert.assertEquals(1, processor.getCandidateSchemas().size());
+    }
+
+    @Test
+    public void testAddSchema() {
+        Processor processor = new Processor();
+        Assert.assertTrue(processor.getCandidateSchemas().isEmpty());
+
+        Schema schemaOne = new Schema();
+        schemaOne.setName("schemaOne");
+        Schema schemaTwo = new Schema();
+        schemaTwo.setName("schemaTwo");
+
+        processor.addSchema(schemaOne);
+        Assert.assertFalse(processor.getCandidateSchemas().isEmpty());
+        Assert.assertEquals(1, processor.getCandidateSchemas().size());
+        processor.addSchema(schemaTwo);
+        Assert.assertFalse(processor.getCandidateSchemas().isEmpty());
+        Assert.assertEquals(2, processor.getCandidateSchemas().size());
+    }
+
+    @Test
+    public void testAddAllSchemas() {
+        Processor processor = new Processor();
+        Assert.assertTrue(processor.getCandidateSchemas().isEmpty());
+
+        List<Schema> newSchemas = new ArrayList<>();
+        Schema schemaOne = new Schema();
+        schemaOne.setName("schemaOne");
+        Schema schemaTwo = new Schema();
+        schemaTwo.setName("schemaTwo");
+        newSchemas.add(schemaOne);
+        newSchemas.add(schemaTwo);
+
+        Assert.assertFalse(processor.addAllSchemas(newSchemas).getCandidateSchemas().isEmpty());
+        Assert.assertEquals(2, processor.getCandidateSchemas().size());
+        Assert.assertTrue(processor.getCandidateSchemas().contains(schemaOne));
+        Assert.assertTrue(processor.getCandidateSchemas().contains(schemaTwo));
+
+        newSchemas = new ArrayList<>();
+        Schema schemaThree = new Schema();
+        schemaThree.setName("schemaThree");
+        newSchemas.add(schemaThree);
+
+        Assert.assertFalse(processor.addAllSchemas(newSchemas).getCandidateSchemas().isEmpty());
+        Assert.assertEquals(3, processor.getCandidateSchemas().size());
+        Assert.assertTrue(processor.getCandidateSchemas().contains(schemaThree));
+    }
+
+    @Test
+    public void testGetExternalClassDefinitionDetails() throws MojoExecutionException {
+        Processor processor = new Processor().withSourceAnnotation(FlatBufferTable.class)
+                .withSourceAnnotation(FlatBufferEnum.class).withSchema(new Schema());
+        Assert.assertEquals(2, processor.getSourceAnnotations().size());
+
+        processor.execute();
+
+        Processor.ExternalClassDefinition externalClassDefinition = processor.getExternalClassDefinitionDetails(TestAnonymousClass.class);
+        Assert.assertFalse(externalClassDefinition.locatedOutside);
+        Assert.assertNull(externalClassDefinition.targetNamespace);
+    }
+
+    /**
+     * Test classes, internal to this test
+     */
     @FlatBufferComment(comment = "")
     @FlatBufferEnum
     enum TestEnumCommentEmpty {
@@ -553,5 +687,18 @@ public class ProcessorTest extends AbstractMojoTestCase {
 
         @FlatBufferEnumTypeField
         String value;
+    }
+
+    class TestAnonymousClass {
+
+        public TestInterface innerAnonymousField;
+
+        public void someClassMethod(TestInterface input) {
+            innerAnonymousField = input;
+        }
+    }
+
+    interface TestInterface {
+        void someTestMethod();
     }
 }

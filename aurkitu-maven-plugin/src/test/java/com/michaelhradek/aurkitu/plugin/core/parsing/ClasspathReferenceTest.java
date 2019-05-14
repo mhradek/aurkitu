@@ -19,6 +19,11 @@ public class ClasspathReferenceTest {
         Assert.assertNull(classpathReference.getGroupId());
         Assert.assertNull(classpathReference.getDerivedNamespace());
 
+        ClasspathReference classpathReferenceTwo = new ClasspathReference(null, null, null);
+        Assert.assertTrue(classpathReference.equals(classpathReferenceTwo));
+        Assert.assertTrue(classpathReferenceTwo.equals(classpathReference));
+        Assert.assertEquals(classpathReference.hashCode(), classpathReferenceTwo.hashCode());
+
 
         final URL TEST_URL = new URL("file:/some/url/to/some/jar");
 
@@ -39,5 +44,9 @@ public class ClasspathReferenceTest {
 
         final String testNamespace = TEST_ARTIFACT + "." + TEST_GROUP;
         Assert.assertEquals(testNamespace, classpathReference.getDerivedNamespace());
+
+        Assert.assertFalse(classpathReference.equals(classpathReferenceTwo));
+        Assert.assertFalse(classpathReferenceTwo.equals(classpathReference));
+        Assert.assertNotEquals(classpathReference.hashCode(), classpathReferenceTwo.hashCode());
     }
 }

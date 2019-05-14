@@ -1047,7 +1047,7 @@ public class Processor {
      * <p>
      * Internal Processor class
      */
-    private class ExternalClassDefinition {
+    public class ExternalClassDefinition {
         public String targetNamespace;
         public boolean locatedOutside;
     }
