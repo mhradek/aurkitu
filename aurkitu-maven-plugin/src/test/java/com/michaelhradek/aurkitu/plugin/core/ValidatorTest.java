@@ -46,6 +46,8 @@ public class ValidatorTest {
                 Assert.assertEquals("Array type name contains '$'; using '@FlatBufferOptions(useFullName = true)' on " +
                         "inner not recommended: com.michaelhradek.aurkitu.plugin.test" +
                         ".SampleClassReferenced$SampleClassTableInnerEnumInt", error.getComment());
+
+                Assert.assertEquals("// Issue : INVALID_PATH, Location: SampleClassTable, Name: definedInnerEnumArray, Comment: Array type name contains '$'; using '@FlatBufferOptions(useFullName = true)' on inner not recommended: com.michaelhradek.aurkitu.plugin.test.SampleClassReferenced$SampleClassTableInnerEnumInt\n", error.toString());
             }
         }
 

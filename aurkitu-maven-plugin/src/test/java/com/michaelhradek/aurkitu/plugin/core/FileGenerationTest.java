@@ -22,7 +22,7 @@ import java.util.List;
 public class FileGenerationTest {
 
     private static final String OUTPUT_DIRECTORY_VALID = "target/aurkitu/test";
-    private static final String OUTPUT_DIRECTORY_PERMISSIONS_FAILURE = "/opt/aurkitu/test";
+    private static final String OUTPUT_DIRECTORY_PERMISSIONS_FAILURE = "/../opt/aurkitu/test";
     private static final String OUTPUT_FILENAME = "test";
 
     /**

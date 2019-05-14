@@ -7,5 +7,5 @@ jdk: openjdk8
 script: mvn install -B
 
 after_success:
-  - mvn cobertura:cobertura
+  - mvn cobertura:cobertura coveralls:report
   - pip install --user codecov && codecov
