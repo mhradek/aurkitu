@@ -34,13 +34,13 @@ public class ValidatorTest {
         // Issue : MISCONFIGURED_DEFINITION, Location: SampleClassTableInnerEnumInt, Name: null
         // Issue : MISCONFIGURED_DEFINITION, Location: Option, Name: null
 
-        for(Validator.Error error : validator.getErrors()) {
-            if(error.getLocation().equals("Option")) {
+        for (Validator.Error error : validator.getErrors()) {
+            if (error.getLocation().equals("Option")) {
                 Assert.assertEquals(Validator.ErrorType.MISCONFIGURED_DEFINITION, error.getType());
                 Assert.assertEquals(null, error.getProperty());
             }
 
-            if(error.getType().equals(Validator.ErrorType.INVALID_PATH)) {
+            if (error.getType().equals(Validator.ErrorType.INVALID_PATH)) {
                 Assert.assertEquals("SampleClassTable", error.getLocation());
                 Assert.assertEquals("definedInnerEnumArray", error.getProperty().name);
                 Assert.assertEquals("Array type name contains '$'; using '@FlatBufferOptions(useFullName = true)' on " +
@@ -55,20 +55,21 @@ public class ValidatorTest {
             System.out.println(validator.getErrorComments());
         }
 
-        Assert.assertEquals("// Schema failed validation (i.e. flatc will likely fail): \n" +
-                "// Issue : TYPE_DEFINITION_NOT_DEFINED, Location: SampleClassReferenced, Name: samples\n" +
-                "// Issue : TYPE_DEFINITION_NOT_DEFINED, Location: SampleClassTableWithUndefined, Name: awesomeUndefinedClass\n" +
-                "// Issue : TYPE_DEFINITION_NOT_DEFINED, Location: MapValueSet_SampleClassTable_dataMap, Name: key\n" +
-                "// Issue : TYPE_DEFINITION_NOT_DEFINED, Location: MapValueSet_SampleClassTable_dataMap, Name: value\n" +
-                "// Issue : TYPE_DEFINITION_NOT_DEFINED, Location: SampleClassTable, Name: tokens\n" +
-                "// Issue : TYPE_DEFINITION_NOT_DEFINED, Location: SampleClassTable, Name: options\n" +
-                "// Issue : TYPE_DEFINITION_NOT_DEFINED, Location: SampleClassTable, Name: anomalousSamples\n" +
-                "// Issue : INVALID_PATH, Location: SampleClassTable, Name: definedInnerEnumArray, Comment: Array type name contains '$'; using '@FlatBufferOptions(useFullName = true)' on inner not recommended: com.michaelhradek.aurkitu.plugin.test.SampleClassReferenced$SampleClassTableInnerEnumInt\n" +
-                "// Issue : TYPE_DEFINITION_NOT_DEFINED, Location: SampleClassTable, Name: definedInnerEnumArray\n" +
-                "// Issue : TYPE_DEFINITION_NOT_DEFINED, Location: SampleClassTable, Name: fullnameClass\n" +
-                "// Issue : MISCONFIGURED_DEFINITION, Location: SampleClassTableInnerEnumInt, Name: null\n" +
-                "// Issue : ENUM_DEFINITION_NOT_DEFINED, Location: TestEnumCommentEmpty, Name: null, Comment: The enum contains no values.\n" +
-                "// Issue : MISCONFIGURED_DEFINITION, Location: Option, Name: null\n\n", validator.getErrorComments());
+        final String errorComments = validator.getErrorComments();
+        Assert.assertTrue(errorComments.contains("// Schema failed validation (i.e. flatc will likely fail): \n"));
+        Assert.assertTrue(errorComments.contains("// Issue : TYPE_DEFINITION_NOT_DEFINED, Location: SampleClassReferenced, Name: samples\n"));
+        Assert.assertTrue(errorComments.contains("// Issue : TYPE_DEFINITION_NOT_DEFINED, Location: SampleClassTableWithUndefined, Name: awesomeUndefinedClass\n"));
+        Assert.assertTrue(errorComments.contains("// Issue : TYPE_DEFINITION_NOT_DEFINED, Location: MapValueSet_SampleClassTable_dataMap, Name: key\n"));
+        Assert.assertTrue(errorComments.contains("// Issue : TYPE_DEFINITION_NOT_DEFINED, Location: MapValueSet_SampleClassTable_dataMap, Name: value\n"));
+        Assert.assertTrue(errorComments.contains("// Issue : TYPE_DEFINITION_NOT_DEFINED, Location: SampleClassTable, Name: tokens\n"));
+        Assert.assertTrue(errorComments.contains("// Issue : TYPE_DEFINITION_NOT_DEFINED, Location: SampleClassTable, Name: options\n"));
+        Assert.assertTrue(errorComments.contains("// Issue : TYPE_DEFINITION_NOT_DEFINED, Location: SampleClassTable, Name: anomalousSamples\n"));
+        Assert.assertTrue(errorComments.contains("// Issue : INVALID_PATH, Location: SampleClassTable, Name: definedInnerEnumArray, Comment: Array type name contains '$'; using '@FlatBufferOptions(useFullName = true)' on inner not recommended: com.michaelhradek.aurkitu.plugin.test.SampleClassReferenced$SampleClassTableInnerEnumInt\n"));
+        Assert.assertTrue(errorComments.contains("// Issue : TYPE_DEFINITION_NOT_DEFINED, Location: SampleClassTable, Name: definedInnerEnumArray\n"));
+        Assert.assertTrue(errorComments.contains("// Issue : TYPE_DEFINITION_NOT_DEFINED, Location: SampleClassTable, Name: fullnameClass\n"));
+        Assert.assertTrue(errorComments.contains("// Issue : MISCONFIGURED_DEFINITION, Location: SampleClassTableInnerEnumInt, Name: null\n"));
+        Assert.assertTrue(errorComments.contains("// Issue : ENUM_DEFINITION_NOT_DEFINED, Location: TestEnumCommentEmpty, Name: null, Comment: The enum contains no values.\n"));
+        Assert.assertTrue(errorComments.contains("// Issue : MISCONFIGURED_DEFINITION, Location: Option, Name: null\n\n"));
     }
 
     @Test
