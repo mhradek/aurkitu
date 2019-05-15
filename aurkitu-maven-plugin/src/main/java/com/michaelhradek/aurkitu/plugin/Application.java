@@ -23,7 +23,6 @@ import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.RepositorySystemSession;
 import org.eclipse.aether.repository.RemoteRepository;
 import org.eclipse.aether.resolution.ArtifactResolutionException;
-import org.jetbrains.annotations.TestOnly;
 
 import java.io.File;
 import java.io.IOException;
@@ -119,7 +118,6 @@ public class Application extends AbstractMojo {
     /**
      * Log everything sent to this plugin via the configuration from the Maven POM.
      */
-    @TestOnly
     private void log() {
 
         getLogger().info("execute: " + Application.MOJO_NAME);

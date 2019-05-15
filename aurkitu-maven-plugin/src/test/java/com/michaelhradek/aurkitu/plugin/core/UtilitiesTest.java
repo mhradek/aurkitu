@@ -163,6 +163,33 @@ public class UtilitiesTest extends AbstractMojoTestCase {
     }
 
     @Test
+    public void testAreSchemasPresent() throws Exception {
+
+        List<Schema> schemas = new ArrayList<>();
+        Schema schemaA = new Schema();
+        schemaA.setName("schemaA");
+        schemas.add(schemaA);
+
+        Assert.assertFalse(Utilities.areSchemasPresent(schemas, new File("/")));
+
+        Processor processor = new Processor().withSourceAnnotation(FlatBufferTable.class)
+                .withSourceAnnotation(FlatBufferEnum.class).withSchema(new Schema());
+
+        processor.execute();
+        Schema schemaB = processor.getProcessedSchemas().get(0);
+        schemaB.setName("schemaB");
+        FileGeneration gen = new FileGeneration(new File(OUTPUT_DIRECTORY));
+        gen.writeSchema(schemaB);
+
+        schemas.add(schemaB);
+        Assert.assertFalse(Utilities.areSchemasPresent(schemas, gen.getOutputDirectory()));
+
+        // A was never present so removing it makes it true since B exists
+        schemas.remove(schemaA);
+        Assert.assertTrue(Utilities.areSchemasPresent(schemas, gen.getOutputDirectory()));
+    }
+
+    @Test
     public void testIsResolutionRequired() {
 
         ArtifactReference artifactReference = new ArtifactReference(null, null, null, null, null);
