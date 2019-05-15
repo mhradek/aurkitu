@@ -47,105 +47,127 @@ public class ApplicationTest extends AbstractMojoTestCase {
     }
 
     @Test
-    public void testWrite() throws NoSuchFieldException, IllegalAccessException, InvocationTargetException {
-        Schema schema = new Schema();
-        schema.setName("test-schema-name-Application-Write");
-        List<Schema> processedSchemas = new ArrayList<>();
-        processedSchemas.add(schema);
+    public void testWrite() {
 
-        Application application = new Application();
+        try {
+            Schema schema = new Schema();
+            schema.setName("test-schema-name-Application-Write");
+            List<Schema> processedSchemas = new ArrayList<>();
+            processedSchemas.add(schema);
 
-        // Get the private method
-        Method writeMethod = getPrivateApplicationMethod(application, "write");
+            Application application = new Application();
 
-        // Fill application with required values
-        Field outputDirectoryField = application.getClass().getDeclaredField("outputDirectory");
-        outputDirectoryField.setAccessible(true);
-        outputDirectoryField.set(application, new File("./unit-test"));
+            // Get the private method
+            Method writeMethod = getPrivateApplicationMethod(application, "write");
 
-        writeMethod.invoke(application, processedSchemas);
+            // Fill application with required values
+            Field outputDirectoryField = application.getClass().getDeclaredField("outputDirectory");
+            outputDirectoryField.setAccessible(true);
+            outputDirectoryField.set(application, new File("./unit-test"));
+
+            writeMethod.invoke(application, processedSchemas);
+
+        } catch (NoSuchFieldException | IllegalAccessException | InvocationTargetException e) {
+            Assert.fail("Unable to write files via Application::write " + e.getMessage());
+        }
     }
 
     @Test
-    public void testParse() throws IllegalAccessException, InvocationTargetException {
-        Schema schema = new Schema();
-        schema.setName("test-schema-name-Application-Parse");
-        List<Schema> processedSchemas = new ArrayList<>();
-        processedSchemas.add(schema);
+    public void testParse() {
+        try {
+            Schema schema = new Schema();
+            schema.setName("test-schema-name-Application-Parse");
+            List<Schema> processedSchemas = new ArrayList<>();
+            processedSchemas.add(schema);
 
-        Application application = new Application();
+            Application application = new Application();
 
-        // Get the private method
-        Method parseMethod = getPrivateApplicationMethod(application, "parse");
+            // Get the private method
+            Method parseMethod = getPrivateApplicationMethod(application, "parse");
 
-        ArtifactReference reference = new ArtifactReference(null, null, null, null, null);
+            ArtifactReference reference = new ArtifactReference(null, null, null, null, null);
 
-        parseMethod.invoke(application, processedSchemas, reference);
+            parseMethod.invoke(application, processedSchemas, reference);
+        } catch (IllegalAccessException | InvocationTargetException e) {
+            Assert.fail("Unable to parse schemas via Application::parse " + e.getMessage());
+        }
     }
 
     @Test
-    public void testSetup() throws IllegalAccessException, InvocationTargetException, NoSuchFieldException {
-        Application application = new Application();
+    public void testSetup() {
+        try {
+            Application application = new Application();
 
-        // Get the private method
-        Method setupMethod = getPrivateApplicationMethod(application, "setup");
+            // Get the private method
+            Method setupMethod = getPrivateApplicationMethod(application, "setup");
 
-        Mockito.when(mockProject.getDependencyArtifacts()).thenReturn(new HashSet<>());
-        ArtifactReference reference = new ArtifactReference(mockProject, null, null, null, null);
+            Mockito.when(mockProject.getDependencyArtifacts()).thenReturn(new HashSet<>());
+            ArtifactReference reference = new ArtifactReference(mockProject, null, null, null, null);
 
-        // Fill application with required values
-        Field generateVersionField = application.getClass().getDeclaredField("generateVersion");
-        generateVersionField.setAccessible(true);
-        generateVersionField.set(application, false);
+            // Fill application with required values
+            Field generateVersionField = application.getClass().getDeclaredField("generateVersion");
+            generateVersionField.setAccessible(true);
+            generateVersionField.set(application, false);
 
-        Field consolidatedSchemasField = application.getClass().getDeclaredField("consolidatedSchemas");
-        consolidatedSchemasField.setAccessible(true);
-        consolidatedSchemasField.set(application, false);
+            Field consolidatedSchemasField = application.getClass().getDeclaredField("consolidatedSchemas");
+            consolidatedSchemasField.setAccessible(true);
+            consolidatedSchemasField.set(application, false);
 
-        setupMethod.invoke(application, reference);
+            setupMethod.invoke(application, reference);
+        } catch (NoSuchFieldException | IllegalAccessException | InvocationTargetException e) {
+            Assert.fail("Unable to setup schemas via Application::setup " + e.getMessage());
+        }
     }
 
     @Test
-    public void testLog() throws NoSuchFieldException, IllegalAccessException, InvocationTargetException {
-        Application application = new Application();
+    public void testLog() {
+        try {
+            Application application = new Application();
 
-        // Get the private method
-        Method logMethod = getPrivateApplicationMethod(application, "log");
+            // Get the private method
+            Method logMethod = getPrivateApplicationMethod(application, "log");
 
-        // Fill application with required values
-        Field outputDirectoryField = application.getClass().getDeclaredField("outputDirectory");
-        outputDirectoryField.setAccessible(true);
-        outputDirectoryField.set(application, new File("./unit-test"));
+            // Fill application with required values
+            Field outputDirectoryField = application.getClass().getDeclaredField("outputDirectory");
+            outputDirectoryField.setAccessible(true);
+            outputDirectoryField.set(application, new File("./unit-test"));
 
-        logMethod.invoke(application);
+            logMethod.invoke(application);
+        } catch (NoSuchFieldException | IllegalAccessException | InvocationTargetException e) {
+            Assert.fail("Unable to run the initiate setting log via Application::log " + e.getMessage());
+        }
     }
 
     @Test
-    public void testExecute() throws NoSuchFieldException, IllegalAccessException, InvocationTargetException {
-        Application application = new Application();
+    public void testExecute() {
+        try {
+            Application application = new Application();
 
-        // Get the private method
-        Method executeMethod = getPrivateApplicationMethod(application, "execute");
+            // Get the private method
+            Method executeMethod = getPrivateApplicationMethod(application, "execute");
 
-        // Fill application with required values
-        Field outputDirectoryField = application.getClass().getDeclaredField("outputDirectory");
-        outputDirectoryField.setAccessible(true);
-        outputDirectoryField.set(application, new File("./unit-test"));
+            // Fill application with required values
+            Field outputDirectoryField = application.getClass().getDeclaredField("outputDirectory");
+            outputDirectoryField.setAccessible(true);
+            outputDirectoryField.set(application, new File("./unit-test"));
 
-        Field generateVersionField = application.getClass().getDeclaredField("generateVersion");
-        generateVersionField.setAccessible(true);
-        generateVersionField.set(application, false);
+            Field generateVersionField = application.getClass().getDeclaredField("generateVersion");
+            generateVersionField.setAccessible(true);
+            generateVersionField.set(application, false);
 
-        Mockito.when(mockProject.getDependencyArtifacts()).thenReturn(new HashSet<>());
-        Field mavenProjectField = application.getClass().getDeclaredField("project");
-        mavenProjectField.setAccessible(true);
-        mavenProjectField.set(application, mockProject);
+            Mockito.when(mockProject.getDependencyArtifacts()).thenReturn(new HashSet<>());
+            Field mavenProjectField = application.getClass().getDeclaredField("project");
+            mavenProjectField.setAccessible(true);
+            mavenProjectField.set(application, mockProject);
 
-        Field useSchemaCachingField = application.getClass().getDeclaredField("useSchemaCaching");
-        useSchemaCachingField.setAccessible(true);
-        useSchemaCachingField.set(application, false);
+            Field useSchemaCachingField = application.getClass().getDeclaredField("useSchemaCaching");
+            useSchemaCachingField.setAccessible(true);
+            useSchemaCachingField.set(application, false);
 
-        executeMethod.invoke(application);
+            executeMethod.invoke(application);
+        } catch (NoSuchFieldException | IllegalAccessException | InvocationTargetException e) {
+            Assert.fail("Unable to execute plugin via Application::execute " + e.getMessage());
+        }
     }
 
     /**
@@ -178,7 +200,7 @@ public class ApplicationTest extends AbstractMojoTestCase {
      */
     @Test
     public void testBasicRead() {
-        File testPom = new File(getBasedir(),"src/test/resources/plugin-basic/pom.xml");
+        File testPom = new File(getBasedir(), "src/test/resources/plugin-basic/pom.xml");
         Assert.assertNotNull(testPom);
         Assert.assertTrue(testPom.exists());
         Assert.assertTrue(testPom.isFile());
