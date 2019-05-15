@@ -25,9 +25,9 @@ import javassist.bytecode.AnnotationsAttribute;
 import javassist.bytecode.ClassFile;
 import javassist.bytecode.ConstPool;
 import javassist.bytecode.annotation.Annotation;
+import javassist.bytecode.annotation.BooleanMemberValue;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
-import org.apache.maven.plugin.testing.MojoRule;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -39,10 +39,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * @author m.hradek
@@ -62,20 +59,6 @@ public class ProcessorTest extends AbstractMojoTestCase {
 
     @Rule
     public ExpectedException exceptionRule = ExpectedException.none();
-
-    @Rule
-    public MojoRule rule = new MojoRule() {
-
-        @Override
-        protected void before() {
-            // Empty
-        }
-
-        @Override
-        protected void after() {
-            // Empty
-        }
-    };
 
     /**
      * @see junit.framework.TestCase#setUp()
@@ -101,7 +84,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
     @Test
     public void testExecute() throws MojoExecutionException {
         Processor processor = new Processor().withSourceAnnotation(FlatBufferTable.class)
-                .withSourceAnnotation(FlatBufferEnum.class).withSchema(new Schema());
+                .withSourceAnnotation(FlatBufferEnum.class).withSchema(new Schema()).withValidateSchemas(true);
         Assert.assertEquals(2, processor.getSourceAnnotations().size());
 
         processor.execute();
@@ -118,7 +101,6 @@ public class ProcessorTest extends AbstractMojoTestCase {
 
         Assert.assertEquals("SampleClassTable", schema.getRootType());
 
-        // TODO Test multiple root types
         if (Config.DEBUG) {
             System.out.println(schema.toString());
         }
@@ -706,6 +688,35 @@ public class ProcessorTest extends AbstractMojoTestCase {
         }
     }
 
+    @Test
+    public void testMultipleRoots() throws NoSuchFieldException, NoSuchMethodException, IllegalAccessException, CannotCompileException, InvocationTargetException {
+
+        try {
+            Schema schema = new Schema();
+            schema.setName("schemaTestMultipleRoots");
+
+            Processor processor = new Processor();
+
+            Field targetClassesField = processor.getClass().getDeclaredField("targetClasses");
+            targetClassesField.setAccessible(true);
+            targetClassesField.set(processor, null);
+
+            Set<Class<?>> targetClasses = new HashSet<>();
+            targetClasses.add(createTestClassRootType("targetClassOne"));
+            targetClasses.add(createTestClassRootType("targetClassTwo"));
+
+            targetClassesField.set(processor, targetClasses);
+
+            Method buildSchemaMethod = processor.getClass().getDeclaredMethod("buildSchema", Schema.class);
+            buildSchemaMethod.setAccessible(true);
+            buildSchemaMethod.invoke(processor, schema);
+
+            Assert.fail("Expected IllegalArgumentException when multiple roots type declarations are made");
+        } catch (InvocationTargetException e) {
+            Assert.assertEquals("Only one rootType declaration is allowed", e.getCause().getMessage());
+        }
+    }
+
     /**
      * Test classes, internal to this test
      */
@@ -713,6 +724,21 @@ public class ProcessorTest extends AbstractMojoTestCase {
     @FlatBufferEnum
     enum TestEnumCommentEmpty {
 
+    }
+
+    private static Class<?> createTestClassRootType(String name) throws CannotCompileException {
+        CtClass targetClass = ClassPool.getDefault().makeClass(name);
+        ClassFile ccFile = targetClass.getClassFile();
+        ConstPool constpool = ccFile.getConstPool();
+
+        AnnotationsAttribute attribute = new AnnotationsAttribute(constpool, AnnotationsAttribute.visibleTag);
+        Annotation annotation = new Annotation(FlatBufferTable.class.getName(), constpool);
+        annotation.addMemberValue("rootType", new BooleanMemberValue(true, constpool));
+        attribute.addAnnotation(annotation);
+
+        ccFile.addAttribute(attribute);
+
+        return targetClass.toClass();
     }
 
     /**

@@ -98,6 +98,10 @@ public class ApplicationTest extends AbstractMojoTestCase {
         generateVersionField.setAccessible(true);
         generateVersionField.set(application, false);
 
+        Field consolidatedSchemasField = application.getClass().getDeclaredField("consolidatedSchemas");
+        consolidatedSchemasField.setAccessible(true);
+        consolidatedSchemasField.set(application, false);
+
         setupMethod.invoke(application, reference);
     }
 
