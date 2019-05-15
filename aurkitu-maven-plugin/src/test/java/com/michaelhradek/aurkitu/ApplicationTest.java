@@ -1,5 +1,8 @@
 package com.michaelhradek.aurkitu;
 
+import com.michaelhradek.aurkitu.plugin.Application;
+import com.michaelhradek.aurkitu.plugin.core.output.Schema;
+import com.michaelhradek.aurkitu.plugin.core.parsing.ArtifactReference;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
 import org.apache.maven.plugin.testing.MojoRule;
 import org.apache.maven.project.MavenProject;
@@ -14,7 +17,11 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import java.io.File;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author m.hradek
@@ -55,6 +62,65 @@ public class ApplicationTest extends AbstractMojoTestCase {
         MockitoAnnotations.initMocks(this);
     }
 
+
+    @Test
+    public void testWrite() throws NoSuchFieldException, IllegalAccessException, InvocationTargetException {
+        Schema schema = new Schema();
+        schema.setName("test-schema-name-Application-Write");
+        List<Schema> processedSchemas = new ArrayList<>();
+        processedSchemas.add(schema);
+
+        Application application = new Application();
+
+        // Get the private method
+        Method writeMethod = getPrivateApplicationMethod(application, "write");
+
+        // Fill application with required values
+        Field outputDirectoryField = application.getClass().getDeclaredField("outputDirectory");
+        outputDirectoryField.setAccessible(true);
+        outputDirectoryField.set(application, new File("./unit-test"));
+
+        writeMethod.invoke(application, processedSchemas);
+    }
+
+    @Test
+    public void testParse() throws IllegalAccessException, InvocationTargetException {
+        Schema schema = new Schema();
+        schema.setName("test-schema-name-Application-Parse");
+        List<Schema> processedSchemas = new ArrayList<>();
+        processedSchemas.add(schema);
+
+        Application application = new Application();
+
+        // Get the private method
+        Method parseMethod = getPrivateApplicationMethod(application, "parse");
+
+        ArtifactReference reference = new ArtifactReference(null, null, null, null, null);
+
+        parseMethod.invoke(application, processedSchemas, reference);
+    }
+
+    /**
+     * @param application
+     * @param methodName
+     * @return
+     */
+    private static Method getPrivateApplicationMethod(Application application, String methodName) {
+
+        Method targetMethod = null;
+        for (Method method : application.getClass().getDeclaredMethods()) {
+            if (method.getName().equals(methodName)) {
+                targetMethod = method;
+                break;
+            }
+        }
+
+        // Makes sure it was found and that it is accessible
+        Assert.assertNotNull(targetMethod);
+        targetMethod.setAccessible(true);
+
+        return targetMethod;
+    }
 
     /**
      * The commented block only works when the POM is set to run with some special settings. Will probably need to move this
