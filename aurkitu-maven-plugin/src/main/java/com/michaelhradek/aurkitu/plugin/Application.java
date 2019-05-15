@@ -104,7 +104,7 @@ public class Application extends AbstractMojo {
 
         // Eh, cache?
         if (useSchemaCaching && Utilities.areSchemasPresent(schemas, outputDirectory)) {
-            log.info("Schema found & caching was requested; skipping schema update.");
+            getLogger().info("Schema found & caching was requested; skipping schema update.");
             return;
         }
 

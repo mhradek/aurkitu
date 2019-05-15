@@ -1,14 +1,11 @@
-package com.michaelhradek.aurkitu;
+package com.michaelhradek.aurkitu.plugin;
 
-import com.michaelhradek.aurkitu.plugin.Application;
 import com.michaelhradek.aurkitu.plugin.core.output.Schema;
 import com.michaelhradek.aurkitu.plugin.core.parsing.ArtifactReference;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
-import org.apache.maven.plugin.testing.MojoRule;
 import org.apache.maven.project.MavenProject;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -21,6 +18,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 
 /**
@@ -43,25 +41,10 @@ public class ApplicationTest extends AbstractMojoTestCase {
         super.tearDown();
     }
 
-    @Rule
-    public MojoRule rule = new MojoRule() {
-
-        @Override
-        protected void before() {
-            // Empty
-        }
-
-        @Override
-        protected void after() {
-            // Empty
-        }
-    };
-
     @Before
     public void before() {
         MockitoAnnotations.initMocks(this);
     }
-
 
     @Test
     public void testWrite() throws NoSuchFieldException, IllegalAccessException, InvocationTargetException {
@@ -100,6 +83,67 @@ public class ApplicationTest extends AbstractMojoTestCase {
         parseMethod.invoke(application, processedSchemas, reference);
     }
 
+    @Test
+    public void testSetup() throws IllegalAccessException, InvocationTargetException, NoSuchFieldException {
+        Application application = new Application();
+
+        // Get the private method
+        Method setupMethod = getPrivateApplicationMethod(application, "setup");
+
+        Mockito.when(mockProject.getDependencyArtifacts()).thenReturn(new HashSet<>());
+        ArtifactReference reference = new ArtifactReference(mockProject, null, null, null, null);
+
+        // Fill application with required values
+        Field generateVersionField = application.getClass().getDeclaredField("generateVersion");
+        generateVersionField.setAccessible(true);
+        generateVersionField.set(application, false);
+
+        setupMethod.invoke(application, reference);
+    }
+
+    @Test
+    public void testLog() throws NoSuchFieldException, IllegalAccessException, InvocationTargetException {
+        Application application = new Application();
+
+        // Get the private method
+        Method logMethod = getPrivateApplicationMethod(application, "log");
+
+        // Fill application with required values
+        Field outputDirectoryField = application.getClass().getDeclaredField("outputDirectory");
+        outputDirectoryField.setAccessible(true);
+        outputDirectoryField.set(application, new File("./unit-test"));
+
+        logMethod.invoke(application);
+    }
+
+    @Test
+    public void testExecute() throws NoSuchFieldException, IllegalAccessException, InvocationTargetException {
+        Application application = new Application();
+
+        // Get the private method
+        Method executeMethod = getPrivateApplicationMethod(application, "execute");
+
+        // Fill application with required values
+        Field outputDirectoryField = application.getClass().getDeclaredField("outputDirectory");
+        outputDirectoryField.setAccessible(true);
+        outputDirectoryField.set(application, new File("./unit-test"));
+
+        Field generateVersionField = application.getClass().getDeclaredField("generateVersion");
+        generateVersionField.setAccessible(true);
+        generateVersionField.set(application, false);
+
+        Mockito.when(mockProject.getDependencyArtifacts()).thenReturn(new HashSet<>());
+        Field mavenProjectField = application.getClass().getDeclaredField("project");
+        mavenProjectField.setAccessible(true);
+        mavenProjectField.set(application, mockProject);
+
+        Field useSchemaCachingField = application.getClass().getDeclaredField("useSchemaCaching");
+        useSchemaCachingField.setAccessible(true);
+        useSchemaCachingField.set(application, false);
+
+        executeMethod.invoke(application);
+    }
+
     /**
      * @param application
      * @param methodName
@@ -129,9 +173,7 @@ public class ApplicationTest extends AbstractMojoTestCase {
      * @throws Exception
      */
     @Test
-    public void testBasicRead() throws Exception {
-        Mockito.when(mockProject.getCompileClasspathElements()).thenReturn(new ArrayList<>());
-
+    public void testBasicRead() {
         File testPom = new File(getBasedir(),"src/test/resources/plugin-basic/pom.xml");
         Assert.assertNotNull(testPom);
         Assert.assertTrue(testPom.exists());
