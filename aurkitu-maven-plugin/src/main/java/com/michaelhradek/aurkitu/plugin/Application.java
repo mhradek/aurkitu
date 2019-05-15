@@ -23,6 +23,7 @@ import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.RepositorySystemSession;
 import org.eclipse.aether.repository.RemoteRepository;
 import org.eclipse.aether.resolution.ArtifactResolutionException;
+import org.jetbrains.annotations.TestOnly;
 
 import java.io.File;
 import java.io.IOException;
@@ -94,29 +95,60 @@ public class Application extends AbstractMojo {
      */
     public void execute() throws MojoExecutionException {
 
-        if (log == null)
-            log = getLog();
+        // Log
+        log();
 
-        log.info("execute: " + Application.MOJO_NAME);
+        ArtifactReference reference = new ArtifactReference(project, repoSystem, repoSession, repositories, specifiedDependencies);
 
-        if (project != null) {
-            log.info(" MavenProject (ArtifactId): " + project.getArtifactId());
-            log.info(" MavenProject (GroupId): " + project.getGroupId());
+        // Setup
+        List<Schema> schemas = setup(reference);
+
+        // Eh, cache?
+        if (useSchemaCaching && Utilities.areSchemasPresent(schemas, outputDirectory)) {
+            log.info("Schema found & caching was requested; skipping schema update.");
+            return;
         }
 
-        log.info(" schemaNamespace: " + schemaNamespace);
-        log.info(" schemaName: " + schemaName);
-        log.info(" fileExtension: " + fileExtension);
-        log.info(" schemaFileIdentifier: " + schemaFileIdentifier);
-        log.info(" outputDirectory: " + outputDirectory.getAbsolutePath());
-        log.info(" validateSchema: " + validateSchema);
-        log.info(" generateVersion: " + generateVersion);
-        log.info(" namespaceOverrideMap: " + (namespaceOverrideMap == null ? "null" : namespaceOverrideMap.toString()));
-        log.info(" useSchemaCaching: " + useSchemaCaching);
-        log.info(" schemaIncludes: " + (schemaIncludes == null ? "null" : schemaIncludes.toString()));
-        log.info(" specifiedDependencies: " + (specifiedDependencies == null ? "null" : specifiedDependencies.toString()));
-        log.info(" consolidatedSchemas: " + consolidatedSchemas);
+        // Parse
+        final Processor processor = parse(schemas, reference);
 
+        // Write files
+        write(processor.getProcessedSchemas());
+    }
+
+    /**
+     * Log everything sent to this plugin via the configuration from the Maven POM.
+     */
+    @TestOnly
+    private void log() {
+
+        getLogger().info("execute: " + Application.MOJO_NAME);
+
+        if (project != null) {
+            getLogger().info(" MavenProject (ArtifactId): " + project.getArtifactId());
+            getLogger().info(" MavenProject (GroupId): " + project.getGroupId());
+        }
+
+        getLogger().info(" schemaNamespace: " + schemaNamespace);
+        getLogger().info(" schemaName: " + schemaName);
+        getLogger().info(" fileExtension: " + fileExtension);
+        getLogger().info(" schemaFileIdentifier: " + schemaFileIdentifier);
+        getLogger().info(" outputDirectory: " + outputDirectory.getAbsolutePath());
+        getLogger().info(" validateSchema: " + validateSchema);
+        getLogger().info(" generateVersion: " + generateVersion);
+        getLogger().info(" namespaceOverrideMap: " + (namespaceOverrideMap == null ? "null" : namespaceOverrideMap.toString()));
+        getLogger().info(" useSchemaCaching: " + useSchemaCaching);
+        getLogger().info(" schemaIncludes: " + (schemaIncludes == null ? "null" : schemaIncludes.toString()));
+        getLogger().info(" specifiedDependencies: " + (specifiedDependencies == null ? "null" : specifiedDependencies.toString()));
+        getLogger().info(" consolidatedSchemas: " + consolidatedSchemas);
+    }
+
+    /**
+     * @param reference ArtifactReference is how we move around the MavenProject and objects required for annotation finding
+     * @return All the schemas required for processing
+     * @throws MojoExecutionException if anything goes wrong
+     */
+    private List<Schema> setup(ArtifactReference reference) throws MojoExecutionException {
         Schema schema = new Schema();
         schema.setNamespace(schemaNamespace);
         schema.setName(schemaName);
@@ -127,12 +159,43 @@ public class Application extends AbstractMojo {
 
         List<Schema> dependencySchemas = new ArrayList<>();
 
-        if (useSchemaCaching && Utilities.isSchemaPresent(schema, outputDirectory)) {
-            log.info("Schema found & caching was requested; skipping schema update.");
-            return;
+        // Set up the class paths
+        try {
+            schema.setClasspathReferenceList(Utilities.buildProjectClasspathList(reference,
+                    ClasspathSearchType.BOTH));
+
+            if (consolidatedSchemas != null && !consolidatedSchemas) {
+                List<ClasspathReference> classpathReferenceList = Utilities.buildProjectClasspathList(reference,
+                        ClasspathSearchType.DEPENDENCIES);
+                getLogger().debug("Dependencies found: " + classpathReferenceList.size());
+                for (ClasspathReference classpathReference : classpathReferenceList) {
+                    Schema dependencySchema = new Schema();
+                    getLogger().debug(" namespace: " + classpathReference.getDerivedNamespace());
+                    dependencySchema.setName(classpathReference.getArtifact());
+                    dependencySchema.setNamespace(classpathReference.getDerivedNamespace());
+                    dependencySchema.setClasspathReferenceList(Arrays.asList(classpathReference));
+                    dependencySchema.setDependency(true);
+                    dependencySchemas.add(dependencySchema);
+                }
+            }
+        } catch (IOException | DependencyResolutionRequiredException | ArtifactResolutionException e) {
+            throw new MojoExecutionException(e.getMessage(), e.getCause());
         }
 
-        ArtifactReference reference = new ArtifactReference(project, repoSystem, repoSession, repositories, specifiedDependencies);
+        // The only differentiator is the setDependency flag
+        List<Schema> candidateSchemas = new ArrayList<>();
+        candidateSchemas.add(schema);
+        candidateSchemas.addAll(dependencySchemas);
+        return candidateSchemas;
+    }
+
+    /**
+     * @param candidateSchemas The schemas we wish to examine
+     * @param reference        the ArtifactReference object
+     * @return a processor that's been executed
+     * @throws MojoExecutionException if anything goes wrong
+     */
+    private Processor parse(List<Schema> candidateSchemas, ArtifactReference reference) throws MojoExecutionException {
 
         // Setup the processor
         Processor processor =
@@ -145,52 +208,33 @@ public class Application extends AbstractMojo {
                         .withConsolidatedSchemas(consolidatedSchemas)
                         .withValidateSchemas(validateSchema);
 
-        // Set up the class paths
-        try {
-            schema.setClasspathReferenceList(Utilities.buildProjectClasspathList(reference,
-                    ClasspathSearchType.BOTH));
 
-            if (consolidatedSchemas != null && !consolidatedSchemas) {
-                List<ClasspathReference> classpathReferenceList = Utilities.buildProjectClasspathList(reference,
-                        ClasspathSearchType.DEPENDENCIES);
-                log.debug("Dependencies found: " + classpathReferenceList.size());
-                for (ClasspathReference classpathReference : classpathReferenceList) {
-                    Schema dependencySchema = new Schema();
-                    log.debug(" namespace: " + classpathReference.getDerivedNamespace());
-                    dependencySchema.setName(classpathReference.getArtifact());
-                    dependencySchema.setNamespace(classpathReference.getDerivedNamespace());
-                    dependencySchema.setClasspathReferenceList(Arrays.asList(classpathReference));
-                    dependencySchema.setDependency(true);
-                    dependencySchemas.add(dependencySchema);
-                }
-            }
-        } catch (IOException | DependencyResolutionRequiredException | ArtifactResolutionException e) {
-            throw new MojoExecutionException(e.getMessage(), e.getCause());
-        }
-
-        // Add the scehma
-        processor.addSchema(schema);
-
-        // If dependency schemas were added, add those
-        processor.addAllSchemas(dependencySchemas);
+        // Add schemas
+        processor.addAllSchemas(candidateSchemas);
 
         // Process schemas
         processor.execute();
 
-        // Write files
+        return processor;
+    }
+
+    /**
+     * @param processedSchemas schemas to write to disk
+     */
+    private void write(List<Schema> processedSchemas) {
         if (outputDirectory == null) {
-            log.debug("outputDirectory is NULL");
+            getLogger().debug("outputDirectory is NULL");
         } else {
-            log.debug("outputDirectory is: " + outputDirectory);
+            getLogger().debug("outputDirectory is: " + outputDirectory);
         }
 
         FileGeneration fg = new FileGeneration(outputDirectory);
         try {
-            for (Schema completeSchema : processor.getProcessedSchemas()) {
+            for (Schema completeSchema : processedSchemas) {
                 fg.writeSchema(completeSchema);
             }
         } catch (IOException e) {
-            log.error("Unable to write schemas to disk", e);
+            getLogger().error("Unable to write schemas to disk", e);
         }
     }
 

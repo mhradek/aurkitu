@@ -184,6 +184,7 @@
                     <aggregate>true</aggregate>
                     <quiet>true</quiet>
                     <instrumentation>
+                        <ignoreMethodAnnotation>org.jetbrains.annotations.TestOnly</ignoreMethodAnnotation>
                         <excludes>
                             <exclude>**/*HelpMojo.*</exclude>
                             <exclude>**/*Config.*</exclude>

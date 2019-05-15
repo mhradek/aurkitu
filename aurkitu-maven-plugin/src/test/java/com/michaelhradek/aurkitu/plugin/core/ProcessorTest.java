@@ -38,6 +38,7 @@ import java.io.File;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -687,7 +688,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
     public void testBuildEnumDelarationMultipleTypes() throws CannotCompileException {
         try {
             Processor processor = new Processor();
-            processor.buildEnumDeclaration(createTestEnum("TestEnumMultipleType", true));
+            processor.buildEnumDeclaration(createTestEnum("TestEnumMultipleType", true, true));
             Assert.fail("Expected IllegalArgumentException where number of annotations FlatBufferEnumTypeField > 1 not thrown");
         } catch (IllegalArgumentException e) {
             Assert.assertEquals("Can only declare one @FlatBufferEnumTypeField for Enum: TestEnumMultipleType", e.getMessage());
@@ -698,8 +699,8 @@ public class ProcessorTest extends AbstractMojoTestCase {
     public void testBuildEnumDelarationMissingEnumType() throws CannotCompileException {
         try {
             Processor processor = new Processor();
-            processor.buildEnumDeclaration(createTestEnum("TestEnumMissingType", false));
-            Assert.fail("xpected IllegalArgumentException where missing @FlatBufferEnum(enumType = EnumType.<SELECT>) declaration");
+            processor.buildEnumDeclaration(createTestEnum("TestEnumMissingType", false, true));
+            Assert.fail("Expected IllegalArgumentException where missing @FlatBufferEnum(enumType = EnumType.<SELECT>) declaration");
         } catch (IllegalArgumentException e) {
             Assert.assertEquals("Missing @FlatBufferEnum(enumType = EnumType.<SELECT>) declaration or remove @FlatBufferEnumTypeField for: TestEnumMissingType", e.getMessage());
         }
@@ -714,7 +715,6 @@ public class ProcessorTest extends AbstractMojoTestCase {
 
     }
 
-
     /**
      * TestEnumMultipleType
      *
@@ -723,7 +723,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
      * @return
      * @throws CannotCompileException
      */
-    private static Class<?> createTestEnum(String name, boolean setEnumType) throws CannotCompileException {
+    private static Class<?> createTestEnum(String name, boolean setEnumType, boolean setMultipleEnumTypeFields) throws CannotCompileException {
         CtClass enumMultipleType = ClassPool.getDefault().makeClass(name);
 
         ClassFile ccFile = enumMultipleType.getClassFile();
@@ -738,10 +738,16 @@ public class ProcessorTest extends AbstractMojoTestCase {
         enumMultipleType.addField(field);
 
         field = new CtField(CtClass.booleanType, "value", enumMultipleType);
-        field.getFieldInfo().addAttribute(attrField);
+
+        // Unnecessary. Leaving in for now.
+        if (setMultipleEnumTypeFields) {
+            field.getFieldInfo().addAttribute(attrField);
+        }
+
         enumMultipleType.addField(field);
 
-        CtMethod method = CtNewMethod.make("public Object[] getEnumConstants() { return new Object[0]; }", enumMultipleType);
+        CtMethod method = CtNewMethod.make("public java.lang.Object[] getEnumConstants() { return new java.lang.Object[0]; }", enumMultipleType);
+        method.setModifiers(enumMultipleType.getModifiers() & -Modifier.PUBLIC);
         enumMultipleType.addMethod(method);
 
         if (setEnumType) {

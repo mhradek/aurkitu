@@ -25,9 +25,6 @@ public class ApplicationTest extends AbstractMojoTestCase {
     @Mock
     private MavenProject mockProject;
 
-    /**
-     * @see junit.framework.TestCase#setUp()
-     */
     @Override
     protected void setUp() throws Exception {
 
@@ -58,8 +55,12 @@ public class ApplicationTest extends AbstractMojoTestCase {
         MockitoAnnotations.initMocks(this);
     }
 
+
     /**
-     * @throws Exception Unable to locate file.
+     * The commented block only works when the POM is set to run with some special settings. Will probably need to move this
+     * into an integration test block that runs special POM files/projects to validate the POM files.
+     *
+     * @throws Exception
      */
     @Test
     public void testBasicRead() throws Exception {
@@ -143,38 +144,4 @@ public class ApplicationTest extends AbstractMojoTestCase {
 //        field.setAccessible(true);
 //        Assert.assertEquals(false, field.get(mojo));
     }
-
-    @Test
-    public void testBasicWithProjectRead() throws Exception {
-        File testPom = new File(getBasedir(), "src/test/resources/plugin-basic-with-project/pom.xml");
-        Assert.assertNotNull(testPom);
-        Assert.assertTrue(testPom.exists());
-        Assert.assertTrue(testPom.isFile());
-
-//        Application mojo = new Application();
-//        mojo = (Application) this.configureMojo(
-//            mojo, extractPluginConfiguration(Application.MOJO_NAME, testPom)
-//        );
-//
-//        Field projectField = mojo.getClass().getDeclaredField("project");
-//        projectField.setAccessible(true);
-//        MavenProject mavenProject = (MavenProject) projectField.get(mojo);
-//
-//        Assert.assertNotNull(mavenProject);
-    }
-
-//    @Test(expected = MojoExecutionException.class)
-//    public void testBasicReadWithProject() throws Exception {
-//        File testPom = new File(getBasedir(),"src/test/resources/plugin-basic-with-project/pom.xml");
-//        Assert.assertNotNull(testPom);        Assert.assertTrue(testPom.exists());
-//        Assert.assertTrue(testPom.isFile());
-//
-//        Application mojo = new Application();
-//        mojo = (Application) this.configureMojo(
-//                mojo, extractPluginConfiguration(Application.MOJO_NAME, testPom)
-//        );
-//
-//        assertNotNull(mojo);
-//        mojo.execute();
-//    }
 }

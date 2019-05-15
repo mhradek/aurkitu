@@ -245,6 +245,23 @@ public class Utilities {
     }
 
     /**
+     * Currently this is odd because some schemas end up being invalid so likely always false
+     *
+     * @param schemas         The target schema (used to determine filename)
+     * @param outputDirectory Where we have configured the schema to be written to
+     * @return boolean whether or not the schema file exists in the location specified
+     */
+    public static boolean areSchemasPresent(final List<Schema> schemas, final File outputDirectory) {
+        for (Schema schema : schemas) {
+            if (!isSchemaPresent(schema, outputDirectory)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
      * @param unresolvedArtifact an artifact
      * @param artifactReference  the Maven repo bundle
      * @return whether or not the artifact should be resolved
