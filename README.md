@@ -17,14 +17,12 @@ Aurkitu currently supports Flatbuffers version 1.3.
 This is a very early proof-of-concept currently being developed in spare time.
 
 ## roadmap
-*   [x] handle core types
+*   [x] enable thread safety
 *   [ ] handle options, deprecation, and default values
 *   [ ] validate dependencies (optional)
-*   [x] implement as plugin and test against a sample project
-*   [ ] test with flatc (started)
+*   [ ] automate testing with flatc
+*   [ ] improve validation
 *   [ ] update with current (1.8) feature support (i.e. gRPC, Field, String constant, etc.)
-*   [x] release to maven
-*   [x] split into annotations and plugin
 
 ## peculiarities
 While flatbuffers support unsigned primatives (e.g. ubyte, ushort, etc.), Java does not technically support them (though you can use the wrapper types \[e.g. `java.lang.Long`, etc.]) to [simulate this behavior](https://docs.oracle.com/javase/tutorial/java/nutsandbolts/datatypes.html). Eventually we could map to the wrapper types when building the schema files. At this time all primatives and their corresponding wrappers are mapped as primatives.
