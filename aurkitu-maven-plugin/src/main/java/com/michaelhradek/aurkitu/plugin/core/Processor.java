@@ -839,7 +839,7 @@ public class Processor {
             String parametrizedTypeString = parseFieldSignatureForParametrizedTypeStringOnList(field);
             listTypeClass = urlClassLoader.loadClass(parametrizedTypeString);
         } catch (Exception e) {
-            log.warn("Unable to find and load class for List<?> parameter, using String instead: ", e);
+            log.warn("Unable to find and load class for List<?> parameter, using String instead (field name): ", field.getName());
             listTypeClass = String.class;
         }
 
