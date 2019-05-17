@@ -1,11 +1,8 @@
 package com.michaelhradek.aurkitu.annotations;
 
 import com.michaelhradek.aurkitu.annotations.types.FieldType;
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+
+import java.lang.annotation.*;
 
 /**
  * @author m.hradek

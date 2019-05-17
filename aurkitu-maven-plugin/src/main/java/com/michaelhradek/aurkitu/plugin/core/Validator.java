@@ -1,7 +1,6 @@
 package com.michaelhradek.aurkitu.plugin.core;
 
 import com.michaelhradek.aurkitu.annotations.types.FieldType;
-import com.michaelhradek.aurkitu.plugin.Application;
 import com.michaelhradek.aurkitu.plugin.core.output.EnumDeclaration;
 import com.michaelhradek.aurkitu.plugin.core.output.Schema;
 import com.michaelhradek.aurkitu.plugin.core.output.TypeDeclaration;
@@ -11,6 +10,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Wither;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,6 +19,7 @@ import java.util.List;
  * @author m.hradek
  *
  */
+@Slf4j
 @Getter
 @Setter
 @Wither
@@ -41,29 +42,29 @@ public class Validator {
      *
      */
     public void validateSchema() {
-        Application.getLogger().debug("Starting validator");
+        log.debug("Starting validator");
 
         if (schema == null) {
-            Application.getLogger().debug(" was null; ending");
+            log.debug(" was null; ending");
             return;
         }
 
         if (checkTables) {
             for (TypeDeclaration type : schema.getTypes()) {
-                Application.getLogger().debug("Looking at type: " + type.getName());
+                log.debug("Looking at type: " + type.getName());
                 for (Property property : type.getProperties()) {
-                    Application.getLogger().debug("  Examining property: " + property.name);
-                    Application.getLogger().debug("  with type: " + property.type);
+                    log.debug("  Examining property: " + property.name);
+                    log.debug("  with type: " + property.type);
                     if (property.type != FieldType.IDENT && property.type != FieldType.ARRAY
                         && property.type != FieldType.MAP
                             && Utilities.isLowerCaseType(property.type.targetClass)) {
-                        Application.getLogger().debug("    Property is lower case type: " + property.name);
+                        log.debug("    Property is lower case type: " + property.name);
                         continue;
                     }
 
                     if (property.options.get(PropertyOptionKey.IDENT) != null && property.options
                         .get(PropertyOptionKey.IDENT).contains("$")) {
-                        Application.getLogger().debug("    Error located in IDENT: " + property.name);
+                        log.debug("    Error located in IDENT: " + property.name);
                         Error error = new Error();
                         error.setLocation(type.getName());
                         error.setType(ErrorType.INVALID_PATH);
@@ -76,7 +77,7 @@ public class Validator {
 
                     if (property.options.get(PropertyOptionKey.ARRAY) != null && property.options
                         .get(PropertyOptionKey.ARRAY).contains("$")) {
-                        Application.getLogger().debug("    Error located in ARRAY: " + property.name);
+                        log.debug("    Error located in ARRAY: " + property.name);
                         Error error = new Error();
                         error.setLocation(type.getName());
                         error.setType(ErrorType.INVALID_PATH);
@@ -88,11 +89,11 @@ public class Validator {
                     }
 
                     if (definitionExists(property)) {
-                        Application.getLogger().debug("    Type definition exists: " + property.name);
+                        log.debug("    Type definition exists: " + property.name);
                         continue;
                     }
 
-                    Application.getLogger().debug("    Error located in: " + property.name);
+                    log.debug("    Error located in: " + property.name);
                     Error error = new Error();
                     error.setLocation(type.getName());
                     error.setType(ErrorType.TYPE_DEFINITION_NOT_DEFINED);
@@ -104,10 +105,10 @@ public class Validator {
 
         if (checkEnums) {
             for (EnumDeclaration enumD : schema.getEnums()) {
-                Application.getLogger().debug("Looking at enum: " + enumD.getName());
+                log.debug("Looking at enum: " + enumD.getName());
 
                 if (enumD.getType() == null) {
-                    Application.getLogger().debug("    Error located in enum: " + enumD.getName());
+                    log.debug("    Error located in enum: " + enumD.getName());
                     Error error = new Error();
                     error.setLocation(enumD.getName());
                     error.setType(ErrorType.MISCONFIGURED_DEFINITION);
@@ -115,7 +116,7 @@ public class Validator {
                 }
 
                 if (enumD.getValues() == null || enumD.getValues().size() < 1) {
-                    Application.getLogger().debug("    Error located in enum: " + enumD.getName());
+                    log.debug("    Error located in enum: " + enumD.getName());
                     Error error = new Error();
                     error.setComment("The enum contains no values.");
                     error.setLocation(enumD.getName());
@@ -132,25 +133,25 @@ public class Validator {
      * @return boolean true or false
      */
     private boolean definitionExists(Property input) {
-        Application.getLogger().debug("    Checking TypeDeclaration list for: " + input.name);
-        Application.getLogger().debug("      with set type of: " + input.type);
+        log.debug("    Checking TypeDeclaration list for: " + input.name);
+        log.debug("      with set type of: " + input.type);
 
         if (input.type.equals(FieldType.MAP)) {
-            Application.getLogger().debug("    is a map: " + input.name);
+            log.debug("    is a map: " + input.name);
             String mapName = input.options.get(PropertyOptionKey.MAP);
-            Application.getLogger().debug("    with type name: " + mapName);
+            log.debug("    with type name: " + mapName);
 
             // If it's a map and it's an upper case then it must be defined
             if (Character.isUpperCase(mapName.charAt(0))) {
                 for (TypeDeclaration type : schema.getTypes()) {
-                    Application.getLogger().debug("    against type (map): " + type.getName());
+                    log.debug("    against type (map): " + type.getName());
                     if (type.getName().equalsIgnoreCase(mapName)) {
                         return true;
                     }
                 }
 
                 for (EnumDeclaration enumD : schema.getEnums()) {
-                    Application.getLogger().debug("    against enum (map): " + enumD.getName());
+                    log.debug("    against enum (map): " + enumD.getName());
                     if (enumD.getName().equalsIgnoreCase(mapName)) {
                         return true;
                     }
@@ -159,21 +160,21 @@ public class Validator {
         }
 
         if (input.type.equals(FieldType.ARRAY)) {
-            Application.getLogger().debug("    is an array: " + input.name);
+            log.debug("    is an array: " + input.name);
             String listTypeName = input.options.get(PropertyOptionKey.ARRAY);
-            Application.getLogger().debug("    with type name: " + listTypeName);
+            log.debug("    with type name: " + listTypeName);
 
             // If it's an array and it's an upper case then it must be defined
             if (Character.isUpperCase(listTypeName.charAt(0))) {
                 for (TypeDeclaration type : schema.getTypes()) {
-                    Application.getLogger().debug("    against type (array): " + type.getName());
+                    log.debug("    against type (array): " + type.getName());
                     if (type.getName().equalsIgnoreCase(listTypeName)) {
                         return true;
                     }
                 }
 
                 for (EnumDeclaration enumD : schema.getEnums()) {
-                    Application.getLogger().debug("    against enum (array): " + enumD.getName());
+                    log.debug("    against enum (array): " + enumD.getName());
                     if (enumD.getName().equalsIgnoreCase(listTypeName)) {
                         return true;
                     }
@@ -182,19 +183,19 @@ public class Validator {
         }
 
         if (input.type.equals(FieldType.IDENT)) {
-            Application.getLogger().debug("    is an ident: " + input.name);
+            log.debug("    is an ident: " + input.name);
             String identTypeName = input.options.get(PropertyOptionKey.IDENT);
-            Application.getLogger().debug("    with type name: " + identTypeName);
+            log.debug("    with type name: " + identTypeName);
             if (Character.isUpperCase(identTypeName.charAt(0))) {
                 for (TypeDeclaration type : schema.getTypes()) {
-                    Application.getLogger().debug("    against type (ident): " + type.getName());
+                    log.debug("    against type (ident): " + type.getName());
                     if (type.getName().equalsIgnoreCase(identTypeName)) {
                         return true;
                     }
                 }
 
                 for (EnumDeclaration enumD : schema.getEnums()) {
-                    Application.getLogger().debug("    against enum (ident): " + enumD.getName());
+                    log.debug("    against enum (ident): " + enumD.getName());
                     if (enumD.getName().equalsIgnoreCase(identTypeName)) {
                         return true;
                     }
@@ -203,14 +204,14 @@ public class Validator {
         }
 
         for (TypeDeclaration type : schema.getTypes()) {
-            Application.getLogger().debug("    against type: " + type.getName());
+            log.debug("    against type: " + type.getName());
             if (type.getName().equalsIgnoreCase(input.name)) {
                 return true;
             }
         }
 
         for (EnumDeclaration enumD : schema.getEnums()) {
-            Application.getLogger().debug("    against enum: " + enumD.getName());
+            log.debug("    against enum: " + enumD.getName());
             if (enumD.getName().equalsIgnoreCase(input.name)) {
                 return true;
             }

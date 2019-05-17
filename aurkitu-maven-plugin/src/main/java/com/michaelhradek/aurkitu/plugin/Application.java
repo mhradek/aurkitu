@@ -9,11 +9,10 @@ import com.michaelhradek.aurkitu.plugin.core.output.Schema;
 import com.michaelhradek.aurkitu.plugin.core.parsing.ArtifactReference;
 import com.michaelhradek.aurkitu.plugin.core.parsing.ClasspathReference;
 import com.michaelhradek.aurkitu.plugin.core.parsing.ClasspathSearchType;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugin.logging.Log;
-import org.apache.maven.plugin.logging.SystemStreamLog;
 import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
@@ -32,6 +31,7 @@ import java.util.*;
  * @author m.hradek
  *
  */
+@Slf4j
 @Mojo(name = Application.MOJO_GOAL, defaultPhase = LifecyclePhase.PROCESS_SOURCES)
 public class Application extends AbstractMojo {
 
@@ -86,9 +86,6 @@ public class Application extends AbstractMojo {
     @Parameter(property = Application.MOJO_NAME + ".use-schema-caching", defaultValue = "false")
     private Boolean useSchemaCaching;
 
-    // allow static access to the log
-    private static Log log;
-
     /**
      * @throws MojoExecutionException if anything goes wrong
      */
@@ -104,7 +101,7 @@ public class Application extends AbstractMojo {
 
         // Eh, cache?
         if (useSchemaCaching && Utilities.areSchemasPresent(schemas, outputDirectory)) {
-            getLogger().info("Schema found & caching was requested; skipping schema update.");
+            log.info("Schema found & caching was requested; skipping schema update.");
             return;
         }
 
@@ -120,25 +117,25 @@ public class Application extends AbstractMojo {
      */
     private void log() {
 
-        getLogger().info("execute: " + Application.MOJO_NAME);
+        log.info("execute: " + Application.MOJO_NAME);
 
         if (project != null) {
-            getLogger().info(" MavenProject (ArtifactId): " + project.getArtifactId());
-            getLogger().info(" MavenProject (GroupId): " + project.getGroupId());
+            log.info(" MavenProject (ArtifactId): " + project.getArtifactId());
+            log.info(" MavenProject (GroupId): " + project.getGroupId());
         }
 
-        getLogger().info(" schemaNamespace: " + schemaNamespace);
-        getLogger().info(" schemaName: " + schemaName);
-        getLogger().info(" fileExtension: " + fileExtension);
-        getLogger().info(" schemaFileIdentifier: " + schemaFileIdentifier);
-        getLogger().info(" outputDirectory: " + outputDirectory.getAbsolutePath());
-        getLogger().info(" validateSchema: " + validateSchema);
-        getLogger().info(" generateVersion: " + generateVersion);
-        getLogger().info(" namespaceOverrideMap: " + (namespaceOverrideMap == null ? "null" : namespaceOverrideMap.toString()));
-        getLogger().info(" useSchemaCaching: " + useSchemaCaching);
-        getLogger().info(" schemaIncludes: " + (schemaIncludes == null ? "null" : schemaIncludes.toString()));
-        getLogger().info(" specifiedDependencies: " + (specifiedDependencies == null ? "null" : specifiedDependencies.toString()));
-        getLogger().info(" consolidatedSchemas: " + consolidatedSchemas);
+        log.info(" schemaNamespace: " + schemaNamespace);
+        log.info(" schemaName: " + schemaName);
+        log.info(" fileExtension: " + fileExtension);
+        log.info(" schemaFileIdentifier: " + schemaFileIdentifier);
+        log.info(" outputDirectory: " + outputDirectory.getAbsolutePath());
+        log.info(" validateSchema: " + validateSchema);
+        log.info(" generateVersion: " + generateVersion);
+        log.info(" namespaceOverrideMap: " + (namespaceOverrideMap == null ? "null" : namespaceOverrideMap.toString()));
+        log.info(" useSchemaCaching: " + useSchemaCaching);
+        log.info(" schemaIncludes: " + (schemaIncludes == null ? "null" : schemaIncludes.toString()));
+        log.info(" specifiedDependencies: " + (specifiedDependencies == null ? "null" : specifiedDependencies.toString()));
+        log.info(" consolidatedSchemas: " + consolidatedSchemas);
     }
 
     /**
@@ -165,10 +162,10 @@ public class Application extends AbstractMojo {
             if (consolidatedSchemas != null && !consolidatedSchemas) {
                 List<ClasspathReference> classpathReferenceList = Utilities.buildProjectClasspathList(reference,
                         ClasspathSearchType.DEPENDENCIES);
-                getLogger().debug("Dependencies found: " + classpathReferenceList.size());
+                log.debug("Dependencies found: " + classpathReferenceList.size());
                 for (ClasspathReference classpathReference : classpathReferenceList) {
                     Schema dependencySchema = new Schema();
-                    getLogger().debug(" namespace: " + classpathReference.getDerivedNamespace());
+                    log.debug(" namespace: " + classpathReference.getDerivedNamespace());
                     dependencySchema.setName(classpathReference.getArtifact());
                     dependencySchema.setNamespace(classpathReference.getDerivedNamespace());
                     dependencySchema.setClasspathReferenceList(Arrays.asList(classpathReference));
@@ -221,9 +218,9 @@ public class Application extends AbstractMojo {
      */
     private void write(List<Schema> processedSchemas) {
         if (outputDirectory == null) {
-            getLogger().debug("outputDirectory is NULL");
+            log.debug("outputDirectory is NULL");
         } else {
-            getLogger().debug("outputDirectory is: " + outputDirectory);
+            log.debug("outputDirectory is: " + outputDirectory);
         }
 
         FileGeneration fg = new FileGeneration(outputDirectory);
@@ -232,18 +229,7 @@ public class Application extends AbstractMojo {
                 fg.writeSchema(completeSchema);
             }
         } catch (IOException e) {
-            getLogger().error("Unable to write schemas to disk", e);
+            log.error("Unable to write schemas to disk", e);
         }
-    }
-
-    /**
-     * @return the application logger defaulting to {@link}SystemStreamLog
-     */
-    public static Log getLogger() {
-        if (log == null) {
-            log = new SystemStreamLog();
-        }
-
-        return log;
     }
 }

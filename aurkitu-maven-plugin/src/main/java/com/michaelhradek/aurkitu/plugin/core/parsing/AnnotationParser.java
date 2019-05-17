@@ -1,7 +1,7 @@
 package com.michaelhradek.aurkitu.plugin.core.parsing;
 
-import com.michaelhradek.aurkitu.plugin.Application;
 import com.michaelhradek.aurkitu.plugin.core.Utilities;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.reflections.Reflections;
@@ -16,6 +16,7 @@ import java.util.Set;
  * @author m.hradek
  *
  */
+@Slf4j
 public class AnnotationParser {
 
     /**
@@ -66,7 +67,7 @@ public class AnnotationParser {
         Set<Class<?>> classes = reflections.getTypesAnnotatedWith(input);
         for (Class<?> clazz : classes) {
             String prefix = "Find: " + input.getName();
-            Application.getLogger().debug(prefix + " -> Found annotated class: " + clazz.getName());
+            log.debug(prefix + " -> Found annotated class: " + clazz.getName());
         }
 
         return classes;

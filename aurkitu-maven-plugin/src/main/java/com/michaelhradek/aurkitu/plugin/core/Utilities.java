@@ -1,11 +1,11 @@
 package com.michaelhradek.aurkitu.plugin.core;
 
-import com.michaelhradek.aurkitu.plugin.Application;
 import com.michaelhradek.aurkitu.plugin.Config;
 import com.michaelhradek.aurkitu.plugin.core.output.Schema;
 import com.michaelhradek.aurkitu.plugin.core.parsing.ArtifactReference;
 import com.michaelhradek.aurkitu.plugin.core.parsing.ClasspathReference;
 import com.michaelhradek.aurkitu.plugin.core.parsing.ClasspathSearchType;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -31,6 +31,7 @@ import java.util.Set;
 /**
  * @author m.hradek
  */
+@Slf4j
 public class Utilities {
 
     private static Set<Artifact> dependencyArtifactsCache;
@@ -39,6 +40,7 @@ public class Utilities {
 
     // Never need to instantiate this
     private Utilities() {
+        // Empty
     }
 
     /**
@@ -61,8 +63,8 @@ public class Utilities {
      * @throws DependencyResolutionRequiredException if unable to MavenProject#getCompileClasspathElements()
      * @throws MojoExecutionException                if getting NULL from MavenProject#getCompileClasspathElements()
      */
-    public static Reflections buildReflections(ArtifactReference artifactReference,
-                                               List<ClasspathReference> classpathReferenceList) throws DependencyResolutionRequiredException, MojoExecutionException {
+    public static synchronized Reflections buildReflections(ArtifactReference artifactReference,
+                                                            List<ClasspathReference> classpathReferenceList) throws DependencyResolutionRequiredException, MojoExecutionException {
 
         List<String> classpathElements;
 
@@ -106,8 +108,8 @@ public class Utilities {
      * @throws MalformedURLException                 if unable to convert paths for classes to URL format
      * @throws DependencyResolutionRequiredException if unable to MavenProject#getCompileClasspathElements()
      */
-    public static List<ClasspathReference> buildProjectClasspathList(ArtifactReference artifactReference,
-                                                                     ClasspathSearchType classpathSearchType) throws ArtifactResolutionException, MalformedURLException, DependencyResolutionRequiredException {
+    public static synchronized List<ClasspathReference> buildProjectClasspathList(ArtifactReference artifactReference,
+                                                                                  ClasspathSearchType classpathSearchType) throws ArtifactResolutionException, MalformedURLException, DependencyResolutionRequiredException {
 
         List<ClasspathReference> classpathReferenceList = new ArrayList<>();
         final MavenProject mavenProject = artifactReference.getMavenProject();
@@ -115,13 +117,13 @@ public class Utilities {
         if (classpathSearchType == ClasspathSearchType.BOTH || classpathSearchType == ClasspathSearchType.PROJECT) {
             // Load build class path
             if (classpathElementsCache == null || workingProject == null || !workingProject.equalsIgnoreCase(getCurrentProject(artifactReference))) {
-                Application.getLogger().debug("Compile Classpath Elements Cache was null; fetching update");
+                log.debug("Compile Classpath Elements Cache was null; fetching update");
                 classpathElementsCache = mavenProject.getCompileClasspathElements();
             }
 
             for (String element : classpathElementsCache) {
-                Application.getLogger().debug("Looking at compile classpath element (via MavenProject): " + element);
-                Application.getLogger().debug("  Adding: " + element);
+                log.debug("Looking at compile classpath element (via MavenProject): " + element);
+                log.debug("  Adding: " + element);
                 final ClasspathReference classpathReference = new ClasspathReference(
                         new File(element).toURI().toURL(), mavenProject.getArtifactId(),
                         mavenProject.getGroupId());
@@ -132,18 +134,18 @@ public class Utilities {
         if (classpathSearchType == ClasspathSearchType.BOTH || classpathSearchType == ClasspathSearchType.DEPENDENCIES) {
             // Load artifact(s) jars using resolver
             if (dependencyArtifactsCache == null || workingProject == null || !workingProject.equalsIgnoreCase(getCurrentProject(artifactReference))) {
-                Application.getLogger().debug("Dependency Artifacts Cache was null; fetching update");
+                log.debug("Dependency Artifacts Cache was null; fetching update");
                 dependencyArtifactsCache = artifactReference.getMavenProject().getDependencyArtifacts();
             }
 
-            Application.getLogger().debug("Number of artifacts to resolve: "
+            log.debug("Number of artifacts to resolve: "
                     + dependencyArtifactsCache.size());
 
             for (Artifact unresolvedArtifact : dependencyArtifactsCache) {
                 String artifactId = unresolvedArtifact.getArtifactId();
 
                 if (!isArtifactResolutionRequired(unresolvedArtifact, artifactReference)) {
-                    Application.getLogger().debug("  Skipping: " + unresolvedArtifact.toString());
+                    log.debug("  Skipping: " + unresolvedArtifact.toString());
                     continue;
                 }
 
@@ -166,13 +168,13 @@ public class Utilities {
                 // The file should exist, but we never know.
                 File file = resolutionResult.getArtifact().getFile();
                 if (file == null || !file.exists()) {
-                    Application.getLogger().warn("Artifact " + artifactId +
+                    log.warn("Artifact " + artifactId +
                             " has no attached file. Its content will not be copied in the target model directory.");
                     continue;
                 }
 
                 String jarPath = "jar:file:" + file.getAbsolutePath() + "!/";
-                Application.getLogger().debug("Adding resolved artifact: " + file.getAbsolutePath());
+                log.debug("Adding resolved artifact: " + file.getAbsolutePath());
                 final ClasspathReference classpathReference = new ClasspathReference(
                         new URL(jarPath), resolutionResult.getArtifact().getArtifactId(),
                         resolutionResult.getArtifact().getGroupId());
@@ -198,7 +200,7 @@ public class Utilities {
         try {
             Thread.currentThread().setContextClassLoader(classLoaderToSwitchTo);
             for (URL url : ((URLClassLoader) (Thread.currentThread().getContextClassLoader())).getURLs()) {
-                Application.getLogger().debug("Classloader loaded with: " + url.toString());
+                log.debug("Classloader loaded with: " + url.toString());
             }
 
             return actionToPerformOnProvidedClassLoader.run();
@@ -226,7 +228,7 @@ public class Utilities {
      * @param outputDirectory Where we have configured the schema to be written to
      * @return boolean whether or not the schema file exists in the location specified
      */
-    public static boolean isSchemaPresent(final Schema schema, final File outputDirectory) {
+    public static synchronized boolean isSchemaPresent(final Schema schema, final File outputDirectory) {
         if (!outputDirectory.exists()) {
             return false;
         }
@@ -271,7 +273,7 @@ public class Utilities {
 
         // if a dependency search is specified, use it
         if (artifactReference.getSpecifiedDependencies() != null && !artifactReference.getSpecifiedDependencies().isEmpty()) {
-            Application.getLogger().debug("Targeted dependency search requested. Will skip artifacts not specified in" +
+            log.debug("Targeted dependency search requested. Will skip artifacts not specified in" +
                     " configuration.");
 
             int matchesFound = 0;
@@ -280,7 +282,7 @@ public class Utilities {
             for (String dependency : artifactReference.getSpecifiedDependencies()) {
 
                 // Using groupId or is artifactId included? Using the Maven notation
-                Application.getLogger().debug("  Testing against: " + dependency);
+                log.debug("  Testing against: " + dependency);
                 String specifiedGroupId;
                 String specifiedArtifactId;
                 if (dependency.contains(":")) {
@@ -292,9 +294,9 @@ public class Utilities {
                     specifiedArtifactId = null;
                 }
 
-                Application.getLogger().debug(String.format("  Specified groupId: %s, artifactId: %s",
+                log.debug(String.format("  Specified groupId: %s, artifactId: %s",
                         specifiedGroupId, specifiedArtifactId));
-                Application.getLogger().debug(String.format("  Unresolved groupId: %s, artifactId: %s",
+                log.debug(String.format("  Unresolved groupId: %s, artifactId: %s",
                         unresolvedArtifact.getGroupId(), unresolvedArtifact.getArtifactId()));
 
                 // If only a groupId is specified...
@@ -329,7 +331,7 @@ public class Utilities {
     public static String getCurrentProject(final ArtifactReference artifactReference) {
         final String projectName = String.join(":",
                 artifactReference.getMavenProject().getGroupId(), artifactReference.getMavenProject().getArtifactId());
-        Application.getLogger().debug("  Current project name: " + projectName);
+        log.debug("  Current project name: " + projectName);
         return projectName;
     }
 

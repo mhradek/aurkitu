@@ -1,6 +1,7 @@
 package com.michaelhradek.aurkitu.annotations;
 
 import com.michaelhradek.aurkitu.annotations.types.EnumType;
+
 import java.lang.annotation.Documented;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
