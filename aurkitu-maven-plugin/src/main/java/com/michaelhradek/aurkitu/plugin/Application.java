@@ -83,6 +83,10 @@ public class Application extends AbstractMojo {
     @Parameter(property = Application.MOJO_NAME + ".consolidated-schemas", defaultValue = "true")
     private Boolean consolidatedSchemas;
 
+    // Needs thought
+    // @Parameter(property = Application.MOJO_NAME + ".build-dependency-schemas", defaultValue = "true")
+    // private Boolean buildDependencySchemas;
+
     @Parameter(property = Application.MOJO_NAME + ".use-schema-caching", defaultValue = "false")
     private Boolean useSchemaCaching;
 
