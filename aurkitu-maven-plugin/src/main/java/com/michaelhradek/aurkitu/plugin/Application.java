@@ -32,7 +32,7 @@ import java.util.*;
  *
  */
 @Slf4j
-@Mojo(name = Application.MOJO_GOAL, defaultPhase = LifecyclePhase.PROCESS_SOURCES)
+@Mojo(name = Application.MOJO_GOAL, defaultPhase = LifecyclePhase.PROCESS_SOURCES, threadSafe = true)
 public class Application extends AbstractMojo {
 
     public static final String MOJO_NAME = "aurkitu-maven-plugin";
