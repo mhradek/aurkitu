@@ -1,5 +1,6 @@
 # aurkitu 
 
+[![Latest release](https://img.shields.io/github/release/mhradek/aurkitu.svg)](https://github.com/mhradek/aurkitu/releases/latest)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/706cead2b38643d2be38efbae95f40ed)](https://app.codacy.com/app/mhradek/aurkitu?utm_source=github.com&utm_medium=referral&utm_content=mhradek/aurkitu&utm_campaign=Badge_Grade_Dashboard)
 [![Build Status](https://travis-ci.org/mhradek/aurkitu.svg?branch=master)](https://travis-ci.org/mhradek/aurkitu)
 [![codecov](https://codecov.io/gh/mhradek/aurkitu/branch/master/graph/badge.svg)](https://codecov.io/gh/mhradek/aurkitu)
@@ -36,7 +37,7 @@ Add the following to your dependencies within your `pom.xml`:
 <dependency>
     <groupId>com.michaelhradek</groupId>
     <artifactId>aurkitu-annotations</artifactId>
-    <version>0.0.5.1</version>
+    <version>0.0.6</version>
 </dependency>
 ```
 ### Maven Plugin
@@ -45,7 +46,7 @@ Followed by the following to the `plugins` of your `build` specifications within
 <plugin>
     <groupId>com.michaelhradek</groupId>
     <artifactId>aurkitu-maven-plugin</artifactId>
-    <version>0.0.5.1</version>
+    <version>0.0.6</version>
     <configuration>
         <schemaName>user</schemaName>
         <schemaNamespace>com.company.package.subpackage.flatbuffers</schemaNamespace>
@@ -87,8 +88,10 @@ Followed by the following to the `plugins` of your `build` specifications within
 *   __namespaceOverrideMap__: allows for schema namespaces to be overriden. This is handy when using includes and schemas from other projects (e.g `<com.company.package.search>com.company.package.replace</com.company.package.search>`)
 *   __schemaIncludes__: allows for configuration of schema includes (e.g. `<include>"../../../../target/maven-shared-archive-resources/flatbuffers/other.fbs"</include>`)
 *   __specifiedDependencies__: allows for configuration of targeted dependency searching for specific dependencies for annotations. If this is specified, a artifact resolution will be kept to a minimum greatly increasing build speed. You can specify any number of packages. If you specify the `groupId` only then the entirety of the group will be included in artifact resolution (e.g. `<dependency>com.company.group</dependency>`) . To specify a specific artifact use `groupId:artifactId` (e.g. `<dependency>com.company.group:artifact</dependency>`)
+*   __consolidatedSchemas__: if true, create one schema. If false, create one schema for the project and then one schema _per dependecy_. (default: `true`) This is useful in situations where the dependencies are used across projects where namespaces are useful.
 #### planned
-*   __consolidatedSchemas__: if true, create one schema. If false, create one schema for the project and then one schema _per dependecy_. (default: `true`) This is useful in situations where the dependencies are used across projects where namespaces are useful.  
+*   __buildDependencySchemas__: if true, build, validate, and write all the dependency schema. If false, it will still need to build them to verify the target schema but won't validate and write them out. (default: `true`)
+  
 
 ## usage
 Through the use of annotations:
