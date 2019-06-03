@@ -200,6 +200,8 @@ public class ProcessorTest extends AbstractMojoTestCase {
                     }
 
                     if ("dataMap".equals(property.name)) {
+
+                        // TODO: Finish this block
                         System.out.println(property.name);
                         System.out.println(property.type);
                         System.out.println(property.options);
@@ -341,6 +343,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
         Assert.assertEquals(FieldType.INT, prop.type);
         Assert.assertEquals(true, prop.options.isEmpty());
 
+        // Test "List<T>" array
         field = SampleClassTable.class.getDeclaredField("tokens");
         prop = processor.getPropertyForField(schema, field);
         Assert.assertEquals("tokens", prop.name);
@@ -348,6 +351,26 @@ public class ProcessorTest extends AbstractMojoTestCase {
         Assert.assertEquals(false, prop.options.isEmpty());
         Assert.assertEquals(true, prop.options.containsKey(Property.PropertyOptionKey.ARRAY));
         Assert.assertEquals("string", prop.options.get(Property.PropertyOptionKey.ARRAY));
+
+        // Test "int[]" array
+        field = SampleClassTable.class.getDeclaredField("options");
+        prop = processor.getPropertyForField(schema, field);
+        Assert.assertEquals("options", prop.name);
+        Assert.assertEquals(FieldType.ARRAY, prop.type);
+        Assert.assertEquals(false, prop.options.isEmpty());
+        Assert.assertEquals(true, prop.options.containsKey(Property.PropertyOptionKey.ARRAY));
+        Assert.assertEquals("int", prop.options.get(Property.PropertyOptionKey.ARRAY));
+
+        // Test "T[]" array
+        field = SampleClassTable.class.getDeclaredField("anomalousSamples");
+        prop = processor.getPropertyForField(schema, field);
+        Assert.assertEquals("anomalousSamples", prop.name);
+        Assert.assertEquals(FieldType.ARRAY, prop.type);
+        Assert.assertEquals(false, prop.options.isEmpty());
+        Assert.assertEquals(true, prop.options.containsKey(Property.PropertyOptionKey.ARRAY));
+        Assert.assertEquals("SimpleUndefinedClass", prop.options.get(Property.PropertyOptionKey.ARRAY));
+
+        // Test "List<int>" array
 
         field = SampleClassTable.class.getDeclaredField("deleted");
         prop = processor.getPropertyForField(schema, field);

@@ -160,7 +160,7 @@ public class Utilities {
                         .setRepositories(artifactReference.getRepositories())
                         .setArtifact(aetherArtifact);
 
-                // This takes time; minimizing what needs to be resolved is the goal of the specified dependency code
+                // This takes time; minimizing what needs to be resolved is the goal of the specified base code
                 // block
                 ArtifactResult resolutionResult = artifactReference.getRepoSystem()
                         .resolveArtifact(artifactReference.getRepoSession(), artifactRequest);
@@ -271,9 +271,9 @@ public class Utilities {
     public static boolean isArtifactResolutionRequired(final Artifact unresolvedArtifact,
                                                        final ArtifactReference artifactReference) {
 
-        // if a dependency search is specified, use it
+        // if a base search is specified, use it
         if (artifactReference.getSpecifiedDependencies() != null && !artifactReference.getSpecifiedDependencies().isEmpty()) {
-            log.debug("Targeted dependency search requested. Will skip artifacts not specified in" +
+            log.debug("Targeted base search requested. Will skip artifacts not specified in" +
                     " configuration.");
 
             int matchesFound = 0;

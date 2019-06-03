@@ -24,6 +24,8 @@ public class EnumDeclaration {
     private List<String> values = new ArrayList<>();
     private String comment;
 
+    private boolean isDependencyEnum;
+
     public EnumDeclaration(EnumStructureType structure) {
         this.structure = structure;
     }
