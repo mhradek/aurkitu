@@ -18,6 +18,7 @@ public class ApplicationTest {
     private static final String FILENAME_CONSOLIDATED = "test-service-consolidated.fbs";
     private static final String FILENAME_SEPERATED = "test-service-seperated.fbs";
     private static final String FILENAME_DEPENDENCY = "aurkitu-test-dependency.fbs";
+    private static final String FILENAME_SPECIFIED_DEPENDENCY = "test-service-specific-dependencies.fbs";
 
     // Test strings
     private static final String SCHEMA_NAMESPACE = "namespace com.michaelhradek.aurkitu.test.flatbuffers;";
@@ -116,5 +117,34 @@ public class ApplicationTest {
         Assert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_TABLE_WALLET));
         Assert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_TABLE_LOOKUP_ERROR));
         Assert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_ENUM_CALLTYPE));
+    }
+
+    @Test
+    public void testSpecifiedDependencies() throws IOException {
+
+        // File should exist at this point as the plugin runs during the Maven process-classes stage
+        BufferedReader br = new BufferedReader(new FileReader(OUTPUT_DIRECTORY + File.separator + FILENAME_SPECIFIED_DEPENDENCY));
+        StringBuilder builder = new StringBuilder();
+        String lineContents;
+        while ((lineContents = br.readLine()) != null) {
+            // The new lines are stripped via FileReader
+            builder.append(lineContents);
+            builder.append(System.lineSeparator());
+        }
+
+        // These definitions exist in the test schema file. Ordering is random hence the contains way of testing
+        final String schemaFileContents = builder.toString();
+        Assert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_NAMESPACE));
+        Assert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_ENUM_USERSTATE));
+        Assert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_ENUM_CALLTYPE));
+        Assert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_TABLE_REQUEST));
+        Assert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_TABLE_RESPONSE));
+        Assert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_TABLE_WALLET));
+        Assert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_TABLE_LOOKUP_ERROR));
+        Assert.assertThat(schemaFileContents, not(CoreMatchers.containsString(TABLE_PROPERTY_WALLET_WITH_NAMESPACE)));
+        Assert.assertThat(schemaFileContents, not(CoreMatchers.containsString(TABLE_PROPERTY_LOOKUP_ERROR_WITH_NAMESPACE)));
+        Assert.assertThat(schemaFileContents, not(CoreMatchers.containsString(TABLE_PROPERTY_REQUEST_CALLTYPE_WITH_NAMESPACE)));
+        Assert.assertThat(schemaFileContents, CoreMatchers.containsString(TABLE_PROPERTY_LOOKUP_ERROR_WITHOUT_NAMESPACE));
+        Assert.assertThat(schemaFileContents, CoreMatchers.containsString(TABLE_PROPERTY_REQUEST_CALLTYPE_WITHOUT_NAMESPACE));
     }
 }

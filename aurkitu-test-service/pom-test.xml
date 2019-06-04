@@ -76,7 +76,7 @@
                 <version>0.0.6.1</version>
                 <executions>
                     <execution>
-                        <id>execution1</id>
+                        <id>execution-generic</id>
                         <phase>process-classes</phase>
                         <goals>
                             <goal>build-schema</goal>
@@ -90,7 +90,7 @@
                         </configuration>
                     </execution>
                     <execution>
-                        <id>execution2</id>
+                        <id>execution-unconsolidated</id>
                         <phase>process-classes</phase>
                         <goals>
                             <goal>build-schema</goal>
@@ -101,6 +101,23 @@
                             <consolidatedSchemas>false</consolidatedSchemas>
                             <useSchemaCaching>false</useSchemaCaching>
                             <validateSchema>true</validateSchema>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>execution-sepcific-dependencies</id>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>build-schema</goal>
+                        </goals>
+                        <configuration>
+                            <schemaName>test-service-specific-dependencies</schemaName>
+                            <schemaNamespace>com.michaelhradek.aurkitu.test.flatbuffers</schemaNamespace>
+                            <consolidatedSchemas>true</consolidatedSchemas>
+                            <useSchemaCaching>false</useSchemaCaching>
+                            <validateSchema>true</validateSchema>
+                            <specifiedDependencies>
+                                <dependency>com.michaelhradek:aurkitu-test-dependency</dependency>
+                            </specifiedDependencies>
                         </configuration>
                     </execution>
                 </executions>
