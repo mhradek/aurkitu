@@ -59,7 +59,7 @@ public class Processor {
      * Therefore, each schema will need to be aware of which dependencies it has and what models in that schema refer
      * to these dependencies.
      * <p>
-     * The schema namespace will be the decider of the dependency/schema ownership. If the artifact &amp; group ids do
+     * The schema namespace will be the decider of the base/schema ownership. If the artifact &amp; group ids do
      * not match
      * then a new schema is assumed. Then those models will be marked as requiring a full path. Finally, a new schema
      * is added.
@@ -120,7 +120,7 @@ public class Processor {
 
     /**
      *
-     * @param specifiedDependencies Override the default target project dependency search and only search these dependencies with this group id
+     * @param specifiedDependencies Override the default target project base search and only search these dependencies with this group id
      * @return an instance of the Processor object
      */
     public Processor withSpecifiedDependencies(List<String> specifiedDependencies) {
@@ -263,7 +263,7 @@ public class Processor {
         // The targetClasses includes ALL annotated classes including those inside dependencies
         int rootTypeCount = 0;
         for (Class<?> clazz : targetClasses) {
-            if (isEnumWorkaround(clazz)) {
+            if (isEnumWorkaround(clazz) && (consolidatedSchemas || !getExternalClassDefinitionDetails(clazz).locatedOutside)) {
                 schema.addEnumDeclaration(buildEnumDeclaration(clazz));
                 continue;
             }
@@ -301,9 +301,7 @@ public class Processor {
 
                     log.debug("  Found type...");
                     // Inner classes cannot be root type
-                    if (consolidatedSchemas || !getExternalClassDefinitionDetails(inner).locatedOutside) {
-                        schema.addTypeDeclaration(buildTypeDeclaration(schema, inner));
-                    }
+                    schema.addTypeDeclaration(buildTypeDeclaration(schema, inner));
                 }
             }
         }
@@ -468,8 +466,8 @@ public class Processor {
             }
         }
 
-        // TODO: If we aren't separated schemas then check to see if the fields are a class which lives im a dependency.
-        //  This will be challenging for things like a List or Map of dependency types
+        // TODO: If we aren't separated schemas then check to see if the fields are a class which lives im a base.
+        //  This will be challenging for things like a List or Map of base types
         List<Field> fields = getDeclaredAndInheritedPrivateFields(clazz);
         for (Field field : fields) {
             log.debug("Number of annotations found: " + field.getDeclaredAnnotations().length);
@@ -595,18 +593,18 @@ public class Processor {
         }
 
         // EX: String[], SomeClass[]
-        if (field.getType().isArray()) {
+        if (field.getType().isArray() && !field.getType().isAssignableFrom(List.class)) {
             return processArray(property, field, useFullName);
+        }
+
+        // EX: List<String>, List<SomeClass>, and Sets<E>
+        if (field.getType().isAssignableFrom(List.class) || field.getType().isAssignableFrom(Set.class)) {
+            return processList(property, field, useFullName);
         }
 
         // EX: Map<String, Object>
         if (field.getType().isAssignableFrom(Map.class)) {
             return processMap(property, schema, field, useFullName);
-        }
-
-        // EX: List<String>, List<SomeClass>
-        if (field.getType().isAssignableFrom(List.class)) {
-            return processList(property, field, useFullName);
         }
 
         // Anything else
@@ -703,7 +701,7 @@ public class Processor {
             log.debug("Array parameter is primitive, wrapper, or String: " + field.getName());
             name = name.toLowerCase();
         } else {
-            // It may be a Class<?> which isn't a primative (i.e. lowerCaseType)
+            // It may be a Class<?> which isn't a primitive (i.e. lowerCaseType)
             if (useFullName) {
                 name = field.getType().getComponentType().getName();
 
@@ -760,8 +758,6 @@ public class Processor {
                 ClassLoader urlClassLoader = Thread.currentThread().getContextClassLoader();
                 if (artifactReference != null && artifactReference.getMavenProject() != null) {
                     urlClassLoader = URLClassLoader
-
-                            // TODO This needs thought
                             .newInstance(Utilities.arrayForClasspathReferenceList(
                                     Utilities.buildProjectClasspathList(artifactReference, ClasspathSearchType.BOTH)), urlClassLoader);
                 }
@@ -826,24 +822,40 @@ public class Processor {
         try {
             // Load all paths into custom classloader
             ClassLoader urlClassLoader = Thread.currentThread().getContextClassLoader();
-            if (artifactReference != null && artifactReference.getMavenProject() != null)
-                if (consolidatedSchemas) {
-                    urlClassLoader =
-                            URLClassLoader.newInstance(Utilities.buildProjectClasspathList(artifactReference,
-                                    ClasspathSearchType.BOTH).toArray(new URL[]{}), urlClassLoader);
-                } else {
-                    // TODO This needs thought
+            if (artifactReference != null && artifactReference.getMavenProject() != null) {
+
+                List<ClasspathReference> classpathReferenceList = Utilities.buildProjectClasspathList(artifactReference, ClasspathSearchType.BOTH);
+                URL[] targetUrlArray = new URL[classpathReferenceList.size()];
+                for(int i = 0; i < classpathReferenceList.size(); i++) {
+                    targetUrlArray[i] = classpathReferenceList.get(i).getUrl();
                 }
+
+                urlClassLoader = URLClassLoader.newInstance(targetUrlArray, urlClassLoader);
+            }
 
             // Parse Field signature
             String parametrizedTypeString = parseFieldSignatureForParametrizedTypeStringOnList(field);
             listTypeClass = urlClassLoader.loadClass(parametrizedTypeString);
         } catch (Exception e) {
             log.warn("Unable to find and load class for List<?> parameter, using String instead (field name): ", field.getName());
+            log.warn("Exception:", e);
             listTypeClass = String.class;
         }
 
+        // Consolidated versus separated schema check
         String name = getName(listTypeClass, field, useFullName);
+        try {
+            if (!consolidatedSchemas) {
+                log.debug("Separated schemas requested; reviewing class");
+                ExternalClassDefinition externalClassDefinition = getExternalClassDefinitionDetails(listTypeClass);
+                if (externalClassDefinition.locatedOutside) {
+                    name = externalClassDefinition.targetNamespace + "." + listTypeClass.getSimpleName();
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Unable to get external class definition for unconsolidated schema", e);
+        }
+
 
         property.options.put(PropertyOptionKey.ARRAY, name);
         return property;
@@ -983,9 +995,9 @@ public class Processor {
     public ExternalClassDefinition getExternalClassDefinitionDetails(Class<?> clazz) throws MojoExecutionException {
         ExternalClassDefinition externalClassDefintion = new ExternalClassDefinition();
 
-        log.debug("This is a dependency. Therefor, skipping external class check. This assumes that a dependency schema is the sum of its sef and its dependencies. ");
+        log.debug("This is a base. Therefor, skipping external class check. This assumes that a base schema is the sum of its self and its dependencies. ");
         if (currentSchema.isDependency()) {
-            // Consider if we want to recursivesly add more schemas as we find them.
+            // Consider if we want to recursively add more schemas as we find them.
             return externalClassDefintion;
         }
 

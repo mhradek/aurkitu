@@ -45,7 +45,7 @@
     <parent>
         <groupId>com.michaelhradek</groupId>
         <artifactId>aurkitu-parent</artifactId>
-        <version>0.0.6</version>
+        <version>0.0.6.1</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -53,7 +53,7 @@
         <dependency>
             <groupId>com.michaelhradek</groupId>
             <artifactId>aurkitu-test-dependency</artifactId>
-            <version>0.0.6</version>
+            <version>0.0.6.1</version>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -64,7 +64,7 @@
         <dependency>
             <groupId>com.michaelhradek</groupId>
             <artifactId>aurkitu-annotations</artifactId>
-            <version>0.0.6</version>
+            <version>0.0.6.1</version>
         </dependency>
     </dependencies>
 
@@ -73,10 +73,10 @@
             <plugin>
                 <groupId>com.michaelhradek</groupId>
                 <artifactId>aurkitu-maven-plugin</artifactId>
-                <version>0.0.6</version>
+                <version>0.0.6.1</version>
                 <executions>
                     <execution>
-                        <id>execution1</id>
+                        <id>execution-generic</id>
                         <phase>process-classes</phase>
                         <goals>
                             <goal>build-schema</goal>
@@ -86,10 +86,11 @@
                             <schemaNamespace>com.michaelhradek.aurkitu.test.flatbuffers</schemaNamespace>
                             <consolidatedSchemas>true</consolidatedSchemas>
                             <useSchemaCaching>false</useSchemaCaching>
+                            <validateSchema>true</validateSchema>
                         </configuration>
                     </execution>
                     <execution>
-                        <id>execution2</id>
+                        <id>execution-unconsolidated</id>
                         <phase>process-classes</phase>
                         <goals>
                             <goal>build-schema</goal>
@@ -99,6 +100,24 @@
                             <schemaNamespace>com.michaelhradek.aurkitu.test.flatbuffers</schemaNamespace>
                             <consolidatedSchemas>false</consolidatedSchemas>
                             <useSchemaCaching>false</useSchemaCaching>
+                            <validateSchema>true</validateSchema>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>execution-sepcific-dependencies</id>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>build-schema</goal>
+                        </goals>
+                        <configuration>
+                            <schemaName>test-service-specific-dependencies</schemaName>
+                            <schemaNamespace>com.michaelhradek.aurkitu.test.flatbuffers</schemaNamespace>
+                            <consolidatedSchemas>true</consolidatedSchemas>
+                            <useSchemaCaching>false</useSchemaCaching>
+                            <validateSchema>true</validateSchema>
+                            <specifiedDependencies>
+                                <dependency>com.michaelhradek:aurkitu-test-dependency</dependency>
+                            </specifiedDependencies>
                         </configuration>
                     </execution>
                 </executions>

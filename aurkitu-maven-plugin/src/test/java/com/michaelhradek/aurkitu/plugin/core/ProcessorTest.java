@@ -172,7 +172,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
         for (TypeDeclaration type : schema.getTypes()) {
 
             if (type.getName().equals(SampleClassTable.class.getSimpleName())) {
-                Assert.assertEquals(15, type.getProperties().size());
+                Assert.assertEquals(16, type.getProperties().size());
 
                 Assert.assertNotNull(type.getComment());
 
@@ -200,9 +200,10 @@ public class ProcessorTest extends AbstractMojoTestCase {
                     }
 
                     if ("dataMap".equals(property.name)) {
-                        System.out.println(property.name);
-                        System.out.println(property.type);
-                        System.out.println(property.options);
+                        Assert.assertEquals(FieldType.MAP, property.type);
+                        Assert.assertTrue(property.options.containsKey(PropertyOptionKey.MAP));
+                        Assert.assertEquals(TypeDeclaration.MapValueSet.class.getSimpleName() + "_" +
+                                SampleClassTable.class.getSimpleName() + "_" + property.name, property.options.get(PropertyOptionKey.MAP));
                     }
                 }
 
@@ -317,30 +318,35 @@ public class ProcessorTest extends AbstractMojoTestCase {
         Processor processor = new Processor();
         Schema schema = new Schema();
 
+        // Test "Long"
         Field field = SampleClassTable.class.getDeclaredField("id");
         Property prop = processor.getPropertyForField(schema, field);
         Assert.assertEquals("id", prop.name);
         Assert.assertEquals(FieldType.LONG, prop.type);
         Assert.assertEquals(true, prop.options.isEmpty());
 
+        // Test "String"
         field = SampleClassTable.class.getDeclaredField("name");
         prop = processor.getPropertyForField(schema, field);
         Assert.assertEquals("name", prop.name);
         Assert.assertEquals(FieldType.STRING, prop.type);
         Assert.assertEquals(true, prop.options.isEmpty());
 
+        // Test "short"
         field = SampleClassTable.class.getDeclaredField("level");
         prop = processor.getPropertyForField(schema, field);
         Assert.assertEquals("level", prop.name);
         Assert.assertEquals(FieldType.SHORT, prop.type);
         Assert.assertEquals(false, prop.options.isEmpty());
 
+        // Test "int"
         field = SampleClassTable.class.getDeclaredField("currency");
         prop = processor.getPropertyForField(schema, field);
         Assert.assertEquals("currency", prop.name);
         Assert.assertEquals(FieldType.INT, prop.type);
         Assert.assertEquals(true, prop.options.isEmpty());
 
+        // Test "List<T>" array
         field = SampleClassTable.class.getDeclaredField("tokens");
         prop = processor.getPropertyForField(schema, field);
         Assert.assertEquals("tokens", prop.name);
@@ -349,6 +355,58 @@ public class ProcessorTest extends AbstractMojoTestCase {
         Assert.assertEquals(true, prop.options.containsKey(Property.PropertyOptionKey.ARRAY));
         Assert.assertEquals("string", prop.options.get(Property.PropertyOptionKey.ARRAY));
 
+        // Test "int[]" array
+        field = SampleClassTable.class.getDeclaredField("options");
+        prop = processor.getPropertyForField(schema, field);
+        Assert.assertEquals("options", prop.name);
+        Assert.assertEquals(FieldType.ARRAY, prop.type);
+        Assert.assertEquals(false, prop.options.isEmpty());
+        Assert.assertEquals(true, prop.options.containsKey(Property.PropertyOptionKey.ARRAY));
+        Assert.assertEquals("int", prop.options.get(Property.PropertyOptionKey.ARRAY));
+
+        // Test "T[]" array
+        field = SampleClassTable.class.getDeclaredField("anomalousSamples");
+        prop = processor.getPropertyForField(schema, field);
+        Assert.assertEquals("anomalousSamples", prop.name);
+        Assert.assertEquals(FieldType.ARRAY, prop.type);
+        Assert.assertEquals(false, prop.options.isEmpty());
+        Assert.assertEquals(true, prop.options.containsKey(Property.PropertyOptionKey.ARRAY));
+        Assert.assertEquals("SimpleUndefinedClass", prop.options.get(Property.PropertyOptionKey.ARRAY));
+
+        // Test "Set<E>"
+        field = SampleClassTable.class.getDeclaredField("regionLocations");
+        prop = processor.getPropertyForField(schema, field);
+        Assert.assertEquals("regionLocations", prop.name);
+        Assert.assertEquals(FieldType.ARRAY, prop.type);
+        Assert.assertEquals(false, prop.options.isEmpty());
+        Assert.assertEquals(true, prop.options.containsKey(Property.PropertyOptionKey.ARRAY));
+
+        // FIXME This needs to be corrected - how do we want to serialize things in Set
+        Assert.assertEquals("URL", prop.options.get(Property.PropertyOptionKey.ARRAY));
+
+        // Test "long"
+        field = SampleClassTable.class.getDeclaredField("createTime");
+        prop = processor.getPropertyForField(schema, field);
+        Assert.assertEquals("createTime", prop.name);
+        Assert.assertEquals(FieldType.LONG, prop.type);
+        Assert.assertEquals(true, prop.options.isEmpty());
+
+        // Test "Double"
+        field = SampleClassTable.class.getDeclaredField("weight");
+        prop = processor.getPropertyForField(schema, field);
+        Assert.assertEquals("weight", prop.name);
+        Assert.assertEquals(FieldType.DOUBLE, prop.type);
+        Assert.assertEquals(true, prop.options.isEmpty());
+
+        // Test "Map<?, ?>"
+        field = SampleClassTable.class.getDeclaredField("dataMap");
+        prop = processor.getPropertyForField(schema, field);
+        Assert.assertEquals("dataMap", prop.name);
+        Assert.assertEquals(FieldType.MAP, prop.type);
+        Assert.assertEquals(false, prop.options.isEmpty());
+        Assert.assertEquals(true, prop.options.containsKey(Property.PropertyOptionKey.MAP));
+
+        // Test "boolean"
         field = SampleClassTable.class.getDeclaredField("deleted");
         prop = processor.getPropertyForField(schema, field);
         Assert.assertEquals("deleted", prop.name);
@@ -357,6 +415,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
         // FIXME This should be false; boolean has a default value assigned to it
         Assert.assertEquals(true, prop.options.isEmpty());
 
+        // Test ""byte"
         field = SampleClassTable.class.getDeclaredField("energy");
         prop = processor.getPropertyForField(schema, field);
         Assert.assertEquals("energy", prop.name);

@@ -7,8 +7,10 @@ import com.michaelhradek.aurkitu.annotations.FlatBufferTable;
 import com.michaelhradek.aurkitu.annotations.types.FieldType;
 import com.michaelhradek.aurkitu.plugin.test.SampleClassReferenced.SampleClassTableInnerEnumInt;
 
+import java.net.URL;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * @author m.hradek
@@ -17,7 +19,7 @@ import java.util.Map;
 @FlatBufferTable(rootType = true)
 public class SampleClassTable {
 
-    protected long id;
+    protected Long id;
     protected String name;
     @FlatBufferComment(comment = "This is a field level comment")
     protected short level;
@@ -30,6 +32,7 @@ public class SampleClassTable {
     protected int[] options;
     protected SimpleUndefinedClass[] anomalousSamples;
     public Map<String, Object> dataMap;
+    public Set<URL> regionLocations;
 
     @FlatBufferFieldOptions(fieldType = FieldType.IDENT, useFullName = true)
     protected SampleClassTableInnerEnumInt[] definedInnerEnumArray;
