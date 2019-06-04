@@ -17,7 +17,7 @@ public class ApplicationTest {
     private static final String OUTPUT_DIRECTORY = "target/aurkitu/schemas";
     private static final String FILENAME_CONSOLIDATED = "test-service-consolidated.fbs";
     private static final String FILENAME_SEPERATED = "test-service-seperated.fbs";
-    private static final String FILENAME_DEPENDENCY = "aurkitu-test-base.fbs";
+    private static final String FILENAME_DEPENDENCY = "aurkitu-test-dependency.fbs";
 
     // Test strings
     private static final String SCHEMA_NAMESPACE = "namespace com.michaelhradek.aurkitu.test.flatbuffers;";
@@ -29,11 +29,11 @@ public class ApplicationTest {
     private static final String SCHEMA_ENUM_USERSTATE = "enum UserState : byte { GUEST, ACTIVE, DISABLED, INACTIVE }";
     private static final String SCHEMA_ENUM_CALLTYPE = "enum CallType : byte { UNKNOWN, WINDOWS, MAC_OC, IOS, ANDROID }";
 
-    private static final String TABLE_PROPERTY_REQUEST_CALLTYPE_WITH_NAMESPACE = "callType:aurkitu-test-base.com.michaelhradek.CallType;";
+    private static final String TABLE_PROPERTY_REQUEST_CALLTYPE_WITH_NAMESPACE = "callType:aurkitu-test-dependency.com.michaelhradek.CallType;";
     private static final String TABLE_PROPERTY_REQUEST_CALLTYPE_WITHOUT_NAMESPACE = "callType:CallType;";
 
-    private static final String TABLE_PROPERTY_WALLET_WITH_NAMESPACE = "wallet:aurkitu-test-base.com.michaelhradek.Wallet;";
-    private static final String TABLE_PROPERTY_LOOKUP_ERROR_WITH_NAMESPACE = "errors:[aurkitu-test-base.com.michaelhradek.LookupError];";
+    private static final String TABLE_PROPERTY_WALLET_WITH_NAMESPACE = "wallet:aurkitu-test-dependency.com.michaelhradek.Wallet;";
+    private static final String TABLE_PROPERTY_LOOKUP_ERROR_WITH_NAMESPACE = "errors:[aurkitu-test-dependency.com.michaelhradek.LookupError];";
     private static final String TABLE_PROPERTY_LOOKUP_ERROR_WITHOUT_NAMESPACE = "errors:[LookupError];";
 
     @Test

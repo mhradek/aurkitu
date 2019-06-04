@@ -597,8 +597,8 @@ public class Processor {
             return processArray(property, field, useFullName);
         }
 
-        // EX: List<String>, List<SomeClass>
-        if (field.getType().isAssignableFrom(List.class)) {
+        // EX: List<String>, List<SomeClass>, and Sets<E>
+        if (field.getType().isAssignableFrom(List.class) || field.getType().isAssignableFrom(Set.class)) {
             return processList(property, field, useFullName);
         }
 

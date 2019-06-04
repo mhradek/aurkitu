@@ -186,10 +186,6 @@ public class Validator {
             log.debug("    is an ident: " + input.name);
             String identTypeName = input.options.get(PropertyOptionKey.IDENT);
 
-            System.out.println(input.name);
-            System.out.println(input.type);
-            System.out.println(input.options);
-
             log.debug("    with type name: " + identTypeName);
             if (Character.isUpperCase(identTypeName.charAt(0))) {
                 for (TypeDeclaration type : schema.getTypes()) {

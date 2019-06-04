@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Build and test convenience script
-mvn clean install
+mvn clean install -T 1C
 
 # Kill script if anything goes wrong in the previous step
 if [[ "$?" -ne 0 ]] ; then
