@@ -132,14 +132,12 @@ public class Validator {
         }
 
         // Check the namespace
-        if (checkNamespace) {
-            if (!StringUtils.isEmpty(schema.getNamespace()) && !schema.getNamespace().matches(REGEX_NAMESPACE)) {
-                Error error = new Error();
-                error.setLocation("Schema -> namespace");
-                error.setType(ErrorType.INVALID_NAMESPACE);
-                error.setComment(String.format("If specified, namespace must be %s was [%s]", REGEX_NAMESPACE, schema.getNamespace()));
-                errors.add(error);
-            }
+        if (checkNamespace && !StringUtils.isEmpty(schema.getNamespace()) && !schema.getNamespace().matches(REGEX_NAMESPACE)) {
+            Error error = new Error();
+            error.setLocation("Schema -> namespace");
+            error.setType(ErrorType.INVALID_NAMESPACE);
+            error.setComment(String.format("If specified, namespace must be %s was [%s]", REGEX_NAMESPACE, schema.getNamespace()));
+            errors.add(error);
         }
     }
 
