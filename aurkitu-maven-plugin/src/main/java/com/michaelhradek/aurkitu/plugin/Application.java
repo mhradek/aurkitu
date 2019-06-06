@@ -50,7 +50,7 @@ public class Application extends AbstractMojo {
     @Parameter(defaultValue = "${project.remoteProjectRepositories}", readonly = true, required = true)
     private List<RemoteRepository> repositories;
 
-    @Parameter(property = Application.MOJO_NAME + ".ouput-dir", defaultValue = "${project.build.directory}/aurkitu/schemas")
+    @Parameter(property = Application.MOJO_NAME + ".output-dir", defaultValue = "${project.build.directory}/aurkitu/schemas")
     private File outputDirectory;
 
     @Parameter(property = Application.MOJO_NAME + ".specified-dependencies")

@@ -11,13 +11,13 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Wither;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * @author m.hradek
- *
  */
 @Slf4j
 @Getter
@@ -26,26 +26,31 @@ import java.util.List;
 @AllArgsConstructor
 public class Validator {
 
+    private final static String REGEX_NAMESPACE = "[a-zA-Z_\\.]{1,}";
+
     private Schema schema;
     private boolean checkTables;
     private boolean checkEnums;
+    private boolean checkNamespace;
     private List<Error> errors;
 
     public Validator() {
         errors = new ArrayList<>();
+
+        // Default is to run all testing
         checkTables = true;
         checkEnums = true;
+        checkNamespace = true;
     }
 
     /**
      *
-     *
      */
     public void validateSchema() {
-        log.debug("Starting validator");
+        log.debug("Starting validator...");
 
         if (schema == null) {
-            log.debug(" was null; ending");
+            log.debug(" Schema was null; ending");
             return;
         }
 
@@ -56,35 +61,35 @@ public class Validator {
                     log.debug("  Examining property: " + property.name);
                     log.debug("  with type: " + property.type);
                     if (property.type != FieldType.IDENT && property.type != FieldType.ARRAY
-                        && property.type != FieldType.MAP
+                            && property.type != FieldType.MAP
                             && Utilities.isLowerCaseType(property.type.targetClass)) {
                         log.debug("    Property is lower case type: " + property.name);
                         continue;
                     }
 
                     if (property.options.get(PropertyOptionKey.IDENT) != null && property.options
-                        .get(PropertyOptionKey.IDENT).contains("$")) {
+                            .get(PropertyOptionKey.IDENT).contains("$")) {
                         log.debug("    Error located in IDENT: " + property.name);
                         Error error = new Error();
                         error.setLocation(type.getName());
                         error.setType(ErrorType.INVALID_PATH);
                         error.setProperty(property);
                         error.setComment(
-                            "Ident type name contains '$'; using '@FlatBufferOptions(useFullName = true)' on inner not recommended: "
-                                + property.options.get(PropertyOptionKey.IDENT));
+                                "Ident type name contains '$'; using '@FlatBufferOptions(useFullName = true)' on inner not recommended: "
+                                        + property.options.get(PropertyOptionKey.IDENT));
                         errors.add(error);
                     }
 
                     if (property.options.get(PropertyOptionKey.ARRAY) != null && property.options
-                        .get(PropertyOptionKey.ARRAY).contains("$")) {
+                            .get(PropertyOptionKey.ARRAY).contains("$")) {
                         log.debug("    Error located in ARRAY: " + property.name);
                         Error error = new Error();
                         error.setLocation(type.getName());
                         error.setType(ErrorType.INVALID_PATH);
                         error.setProperty(property);
                         error.setComment(
-                            "Array type name contains '$'; using '@FlatBufferOptions(useFullName = true)' on inner not recommended: "
-                                + property.options.get(PropertyOptionKey.ARRAY));
+                                "Array type name contains '$'; using '@FlatBufferOptions(useFullName = true)' on inner not recommended: "
+                                        + property.options.get(PropertyOptionKey.ARRAY));
                         errors.add(error);
                     }
 
@@ -125,10 +130,18 @@ public class Validator {
                 }
             }
         }
+
+        // Check the namespace
+        if (checkNamespace && !StringUtils.isEmpty(schema.getNamespace()) && !schema.getNamespace().matches(REGEX_NAMESPACE)) {
+            Error error = new Error();
+            error.setLocation("Schema -> namespace");
+            error.setType(ErrorType.INVALID_NAMESPACE);
+            error.setComment(String.format("If specified, namespace must be %s was [%s]", REGEX_NAMESPACE, schema.getNamespace()));
+            errors.add(error);
+        }
     }
 
     /**
-     *
      * @param input the Property to validate as having a definition within the Schema's list of known TypeDeclaration and EnumDeclaration.
      * @return boolean true or false
      */
@@ -187,6 +200,18 @@ public class Validator {
             String identTypeName = input.options.get(PropertyOptionKey.IDENT);
 
             log.debug("    with type name: " + identTypeName);
+            if (StringUtils.isEmpty(identTypeName)) {
+                log.debug("    NULL identType name");
+                Error error = new Error();
+                error.setLocation(input.name);
+                error.setType(ErrorType.MISSING_OR_INVALID_TYPE);
+                error.setProperty(input);
+                error.setComment(
+                        String.format("The field for the type [%s] exists but is defined as null or empty", input.name));
+                errors.add(error);
+                return false;
+            }
+
             if (Character.isUpperCase(identTypeName.charAt(0))) {
                 for (TypeDeclaration type : schema.getTypes()) {
                     log.debug("    against type (ident): " + type.getName());
@@ -252,11 +277,12 @@ public class Validator {
         TYPE_DEFINITION_NOT_DEFINED,
         ENUM_DEFINITION_NOT_DEFINED,
         MISCONFIGURED_DEFINITION,
-        INVALID_PATH
+        INVALID_PATH,
+        MISSING_OR_INVALID_TYPE,
+        INVALID_NAMESPACE
     }
 
     /**
-     *
      * @return Any error comments generated during Schema validation
      */
     public String getErrorComments() {

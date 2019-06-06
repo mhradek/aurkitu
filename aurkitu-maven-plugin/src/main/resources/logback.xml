@@ -8,10 +8,10 @@
     </appender>
 
     <logger name="org.reflections">
-        <level value="warn"/>
+        <level value="ERROR"/>
     </logger>
 
-    <root level="DEBUG">
+    <root level="WARN">
         <appender-ref ref="STDOUT"/>
     </root>
 

@@ -6,6 +6,7 @@ import com.michaelhradek.aurkitu.plugin.core.parsing.ClasspathReference;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.*;
 
@@ -119,7 +120,7 @@ public class Schema {
      * @param input Set the 4 character file identifier.
      */
     public void setFileIdentifier(String input) {
-        if(input == null) {
+        if(StringUtils.isEmpty(input)) {
             fileIdentifier = null;
             return;
         }
@@ -135,7 +136,7 @@ public class Schema {
      * @param input Set the file extension. Default is {@link Config#FILE_EXTENSION}
      */
     public void setFileExtension(String input) {
-        if(input == null) {
+        if(StringUtils.isEmpty(input)) {
             fileExtension = null;
             return;
         }
@@ -145,6 +146,19 @@ public class Schema {
         }
 
         fileExtension = input.toLowerCase();
+    }
+
+    /**
+     *
+     * @param input The namespace for the schema. Dashes are replaced with underscores - otherwise flatc compilation will fail.
+     */
+    public void setNamespace(String input) {
+        if(StringUtils.isEmpty(input)) {
+            this.namespace = null;
+            return;
+        }
+
+        this.namespace = input.replaceAll("-", "_");
     }
 
     @Override
@@ -160,10 +174,13 @@ public class Schema {
 
         if (includes != null && includes.size() > 0) {
             for (String include : includes) {
-                builder.append("include ");
+                builder.append("include \"");
                 builder.append(include);
+                builder.append("." + Config.FILE_EXTENSION);
                 if(!include.endsWith(";"))
-                    builder.append(";");
+                    builder.append("\";");
+                else
+                    builder.insert(builder.length(), "\";");
                 builder.append(System.lineSeparator());
             }
 

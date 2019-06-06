@@ -9,62 +9,29 @@
 
     <name>Aurkitu Test Dependency</name>
     <description>Test project to create dependency with Aurkitu annotations.</description>
-    <url>http://aurkitu.michaelhradek.com</url>
-
-    <developers>
-        <developer>
-            <name>Michael Hradek</name>
-            <id>mhradek</id>
-            <url>https://github.com/mhradek/</url>
-            <roles>
-                <role>architect</role>
-                <role>developer</role>
-            </roles>
-            <timezone>GMT-8</timezone>
-        </developer>
-    </developers>
-
-    <licenses>
-        <license>
-            <name>The MIT License (MIT)</name>
-            <url>http://opensource.org/licenses/MIT</url>
-            <distribution>repo</distribution>
-        </license>
-    </licenses>
-
-    <scm>
-        <connection>scm:git:git://github.com/mhradek/aurkitu.git</connection>
-        <url>https://github.com/mhradek/aurkitu/tree/master</url>
-    </scm>
-
-    <issueManagement>
-        <system>GitHub</system>
-        <url>https://github.com/mhradek/aurkitu/issues</url>
-    </issueManagement>
 
     <parent>
         <groupId>com.michaelhradek</groupId>
         <artifactId>aurkitu-parent</artifactId>
-        <version>0.0.6.1</version>
-        <relativePath>../pom.xml</relativePath>
+        <version>0.0.6.2</version>
+        <relativePath>..</relativePath>
     </parent>
 
     <dependencies>
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>1.16.22</version>
-            <scope>provided</scope>
+            <version>${lombok.version}</version>
         </dependency>
         <dependency>
             <groupId>com.michaelhradek</groupId>
             <artifactId>aurkitu-annotations</artifactId>
-            <version>0.0.6.1</version>
+            <version>${aurkitu.version}</version>
         </dependency>
         <dependency>
             <groupId>com.michaelhradek</groupId>
             <artifactId>aurkitu-test-base</artifactId>
-            <version>0.0.6.1</version>
+            <version>${aurkitu.version}</version>
         </dependency>
     </dependencies>
 

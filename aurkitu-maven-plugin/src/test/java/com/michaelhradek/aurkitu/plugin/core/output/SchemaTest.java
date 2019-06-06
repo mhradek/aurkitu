@@ -51,15 +51,15 @@ public class SchemaTest {
 
     @Test
     public void testToString() {
-        final String INCLUDE_1 = "../../../some/file.fbs";
-        final String INCLUDE_2 = "../../../another/file.fbs;";
+        final String INCLUDE_1 = "base-test-include-alpha";
+        final String INCLUDE_2 = "test-include-beta;";
         final String ATTRIBUTE = "someAttribute";
         final String INT_CONST_NAME = "int_const_name";
         final int INT_CONST_VALUE = 44;
         final String FLOAT_CONST_NAME = "float_const_name";
         final float FLOAT_CONST_VALUE = 34.2F;
         final String FILE_ID = "AB43";
-        final String FILE_EXT = "fbs";
+        final String FILE_EXT = "ext";
         final String NAMESPACE = "com.some.namespace";
 
         Schema schema = new Schema();
@@ -84,12 +84,12 @@ public class SchemaTest {
 
         for (String line : schema.toString().split(System.lineSeparator())) {
             if (line.contains(INCLUDE_1)) {
-                Assert.assertEquals("include " + INCLUDE_1 + ";", line);
+                Assert.assertEquals("include \"" + INCLUDE_1 + "." + Config.FILE_EXTENSION + "\";", line);
                 continue;
             }
 
             if (line.contains(INCLUDE_2)) {
-                Assert.assertEquals("include " + INCLUDE_2, line);
+                Assert.assertEquals("include \"" + INCLUDE_2 + "." + Config.FILE_EXTENSION + "\";", line);
                 continue;
             }
 
@@ -231,5 +231,29 @@ public class SchemaTest {
         Assert.assertFalse(schema.isEmpty());
         schema.isEmpty(true);
         Assert.assertTrue(schema.isEmpty());
+    }
+
+    @Test
+    public void testSetNamespace() {
+        final String testNamespaceA = "some.namespace.for.testing";
+        final String testNamespaceB = "base-lib.namespace.for.testing";
+
+        Schema schema = new Schema();
+        Assert.assertNull(schema.getNamespace());
+        schema.setNamespace(null);
+        Assert.assertNull(schema.getNamespace());
+
+        schema.setNamespace(testNamespaceA);
+        Assert.assertNotNull(schema.getNamespace());
+        Assert.assertEquals(testNamespaceA, schema.getNamespace());
+
+        schema = new Schema();
+        schema.setName("");
+        Assert.assertNull(schema.getNamespace());
+
+        schema.setNamespace(testNamespaceB);
+        Assert.assertNotNull(schema.getNamespace());
+        Assert.assertNotEquals(testNamespaceB, schema.getNamespace());
+        Assert.assertEquals("base_lib.namespace.for.testing", schema.getNamespace());
     }
 }

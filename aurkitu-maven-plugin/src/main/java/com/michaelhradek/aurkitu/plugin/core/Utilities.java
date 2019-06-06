@@ -5,6 +5,8 @@ import com.michaelhradek.aurkitu.plugin.core.output.Schema;
 import com.michaelhradek.aurkitu.plugin.core.parsing.ArtifactReference;
 import com.michaelhradek.aurkitu.plugin.core.parsing.ClasspathReference;
 import com.michaelhradek.aurkitu.plugin.core.parsing.ClasspathSearchType;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
@@ -16,9 +18,13 @@ import org.eclipse.aether.resolution.ArtifactResolutionException;
 import org.eclipse.aether.resolution.ArtifactResult;
 import org.reflections.Reflections;
 import org.reflections.adapters.JavassistAdapter;
-import org.reflections.scanners.*;
+import org.reflections.scanners.FieldAnnotationsScanner;
+import org.reflections.scanners.MethodAnnotationsScanner;
+import org.reflections.scanners.SubTypesScanner;
+import org.reflections.scanners.TypeAnnotationsScanner;
 import org.reflections.util.ClasspathHelper;
 import org.reflections.util.ConfigurationBuilder;
+import org.reflections.util.FilterBuilder;
 
 import java.io.File;
 import java.net.MalformedURLException;
@@ -63,8 +69,8 @@ public class Utilities {
      * @throws DependencyResolutionRequiredException if unable to MavenProject#getCompileClasspathElements()
      * @throws MojoExecutionException                if getting NULL from MavenProject#getCompileClasspathElements()
      */
-    public static synchronized Reflections buildReflections(ArtifactReference artifactReference,
-                                                            List<ClasspathReference> classpathReferenceList) throws DependencyResolutionRequiredException, MojoExecutionException {
+    public static synchronized Reflections buildReflections(ArtifactReference artifactReference, List<ClasspathReference> classpathReferenceList)
+            throws DependencyResolutionRequiredException, MojoExecutionException, MalformedURLException {
 
         List<String> classpathElements;
 
@@ -83,18 +89,28 @@ public class Utilities {
         JavassistAdapter javassistAdapter = new JavassistAdapter();
         JavassistAdapter.includeInvisibleTag = false;
 
+        FilterBuilder filterBuilder = null;
+        if(artifactReference.getSpecifiedDependencies() != null && artifactReference.getSpecifiedDependencies().size() > 0) {
+            log.debug("Adding specified dependencies to filter for `org.reflections` package scanning...");
+            filterBuilder = new FilterBuilder();
+            for(String dependency : artifactReference.getSpecifiedDependencies()) {
+                filterBuilder.include(FilterBuilder.prefix(extractDependencyDetails(dependency).specifiedGroupId));
+            }
+        }
+
         return new Reflections(
-                new ConfigurationBuilder().setUrls(
-                        ClasspathHelper.forClassLoader(urlClassLoader)
-                ).addClassLoader(urlClassLoader).setScanners(
-                        new SubTypesScanner(false),
-                        new TypeAnnotationsScanner(),
-                        new FieldAnnotationsScanner(),
-                        new MethodAnnotationsScanner(),
-                        new MethodParameterScanner(),
-                        new MethodParameterNamesScanner(),
-                        new MemberUsageScanner()
-                ).setMetadataAdapter(javassistAdapter)
+                new ConfigurationBuilder()
+                        .filterInputsBy(filterBuilder)
+                        .setUrls(ClasspathHelper.forClassLoader(urlClassLoader))
+                        .addClassLoader(urlClassLoader)
+                        .setScanners(
+                                new SubTypesScanner(false),
+                                new TypeAnnotationsScanner(),
+                                new FieldAnnotationsScanner(),
+                                new MethodAnnotationsScanner()
+                        )
+                        .setMetadataAdapter(javassistAdapter)
+                        .useParallelExecutor()
         );
     }
 
@@ -283,31 +299,20 @@ public class Utilities {
 
                 // Using groupId or is artifactId included? Using the Maven notation
                 log.debug("  Testing against: " + dependency);
-                String specifiedGroupId;
-                String specifiedArtifactId;
-                if (dependency.contains(":")) {
-                    String[] temp = dependency.split(":");
-                    specifiedGroupId = temp[0];
-                    specifiedArtifactId = temp[1];
-                } else {
-                    specifiedGroupId = dependency;
-                    specifiedArtifactId = null;
-                }
+                DependencyDetails dependencyDetails = extractDependencyDetails(dependency);
 
-                log.debug(String.format("  Specified groupId: %s, artifactId: %s",
-                        specifiedGroupId, specifiedArtifactId));
                 log.debug(String.format("  Unresolved groupId: %s, artifactId: %s",
                         unresolvedArtifact.getGroupId(), unresolvedArtifact.getArtifactId()));
 
                 // If only a groupId is specified...
-                if (specifiedArtifactId == null && specifiedGroupId.equalsIgnoreCase(unresolvedArtifact.getGroupId())) {
+                if (dependencyDetails.specifiedArtifactId == null && dependencyDetails.specifiedGroupId.equalsIgnoreCase(unresolvedArtifact.getGroupId())) {
                     matchesFound++;
                 }
 
                 // If both a group and artifactId are specified...
-                if (specifiedArtifactId != null &&
-                        specifiedArtifactId.equalsIgnoreCase(unresolvedArtifact.getArtifactId()) &&
-                        specifiedGroupId.equalsIgnoreCase(unresolvedArtifact.getGroupId())) {
+                if (dependencyDetails.specifiedArtifactId != null &&
+                        dependencyDetails.specifiedArtifactId.equalsIgnoreCase(unresolvedArtifact.getArtifactId()) &&
+                        dependencyDetails.specifiedGroupId.equalsIgnoreCase(unresolvedArtifact.getGroupId())) {
                     matchesFound++;
                 }
             }
@@ -335,12 +340,50 @@ public class Utilities {
         return projectName;
     }
 
+    /**
+     *
+     * @param classpathReferenceList a List&lt;ClasspathReference&gt;
+     * @return an array of URLs
+     */
     public static URL[] arrayForClasspathReferenceList(List<ClasspathReference> classpathReferenceList) {
+        if(classpathReferenceList == null) {
+            return null;
+        }
+
         URL[] urls = new URL[classpathReferenceList.size()];
         for (int i = 0; i < classpathReferenceList.size(); i++) {
             urls[i] = classpathReferenceList.get(i).getUrl();
         }
 
         return urls;
+    }
+
+    /**
+     *
+     * @param dependencyStringFromPom The groupId:artifactId dependency string from the configuration.
+     * @return A helper object with the required details
+     */
+    private static DependencyDetails extractDependencyDetails(String dependencyStringFromPom) {
+        String specifiedGroupId;
+        String specifiedArtifactId;
+        if (dependencyStringFromPom.contains(":")) {
+            String[] temp = dependencyStringFromPom.split(":");
+            specifiedGroupId = temp[0];
+            specifiedArtifactId = temp[1];
+        } else {
+            specifiedGroupId = dependencyStringFromPom;
+            specifiedArtifactId = null;
+        }
+
+        log.debug(String.format("Dependency specified groupId: %s, artifactId: %s", specifiedGroupId, specifiedArtifactId));
+
+        return new DependencyDetails(specifiedGroupId, specifiedArtifactId);
+    }
+
+    @Getter
+    @AllArgsConstructor
+    private static class DependencyDetails {
+        private String specifiedGroupId;
+        private String specifiedArtifactId;
     }
 }

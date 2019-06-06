@@ -33,7 +33,6 @@ import java.util.jar.JarInputStream;
 
 /**
  * @author m.hradek
- *
  */
 @Getter
 @Slf4j
@@ -49,6 +48,7 @@ public class Processor {
     private List<Schema> candidateSchemas;
     private List<Schema> processedSchemas;
     private boolean validateSchemas = false;
+    private Validator validator;
 
     // Internal member
     private Schema currentSchema;
@@ -84,7 +84,6 @@ public class Processor {
     }
 
     /**
-     *
      * @param artifactReference The ArtifactReference component
      * @return an instance of the Processor object
      */
@@ -119,7 +118,6 @@ public class Processor {
     }
 
     /**
-     *
      * @param specifiedDependencies Override the default target project base search and only search these dependencies with this group id
      * @return an instance of the Processor object
      */
@@ -146,7 +144,6 @@ public class Processor {
     }
 
     /**
-     *
      * @param schema Set the processor to use this schema. Clear any previously added schemas
      * @return an instance of the Processor object
      */
@@ -185,7 +182,6 @@ public class Processor {
     }
 
     /**
-     *
      * @param validateSchemas Set whether or not the processor should validate the schemas. Sending null does not alter the setting
      * @return an instance of the Processor object
      */
@@ -224,10 +220,11 @@ public class Processor {
 
             for (int i = 0; i < processedSchemas.size(); i++) {
                 Schema validationSchema = processedSchemas.get(i);
-                Validator validator = new Validator().withSchema(validationSchema);
+                validator = new Validator().withSchema(validationSchema);
                 validator.validateSchema();
                 validationSchema.setIsValid(validator.getErrors().isEmpty());
                 validationSchema.setValidator(validator);
+                log.info("Validation result for schema: " + validationSchema.getName());
                 log.info(validator.getErrorComments());
                 processedSchemas.set(i, validationSchema);
             }
@@ -252,6 +249,11 @@ public class Processor {
                 targetClasses.addAll(AnnotationParser.findAnnotatedClasses(artifactReference,
                         schema.getClasspathReferenceList(), source));
             }
+        }
+
+        log.debug(String.format("   Got target [%d] classes for schema: %s", targetClasses.size(), schema.getName()));
+        for (Class<?> targetClass : targetClasses) {
+            log.debug("  Target class to use in schema: " + targetClass.getName());
         }
 
         if (targetClasses.size() < 1) {
@@ -282,6 +284,9 @@ public class Processor {
 
                 if (consolidatedSchemas || !getExternalClassDefinitionDetails(clazz).locatedOutside) {
                     schema.addTypeDeclaration(temp);
+                } else {
+                    // Don't get the inner stuff of this class if we're not consolidated.
+                    continue;
                 }
 
                 // Now examine inner classes
@@ -310,7 +315,6 @@ public class Processor {
     }
 
     /**
-     *
      * @param enumClass Class to test if it is an Enum
      * @return boolean
      */
@@ -434,9 +438,8 @@ public class Processor {
     }
 
     /**
-     *
      * @param schema The schema currently being considered while reviewing this class
-     * @param clazz Class which is being considered for an TypeDeclaration
+     * @param clazz  Class which is being considered for an TypeDeclaration
      * @return a TypeDeclaration
      */
     public TypeDeclaration buildTypeDeclaration(Schema schema, Class<?> clazz) {
@@ -486,7 +489,7 @@ public class Processor {
 
     /**
      * @param type Class which needs to be traversed up to determine which fields are to be
-     *        considered as candidates for declaration
+     *             considered as candidates for declaration
      * @return A list of valid fields
      */
     private List<Field> getDeclaredAndInheritedPrivateFields(Class<?> type) {
@@ -506,12 +509,11 @@ public class Processor {
     }
 
     /**
-     *
      * @param schema The schema currently being considered while reviewing this field
-     * @param field A class field
+     * @param field  A class field
      * @return A type declaration Property. This contains the name of the field and type
-     *         {@link FieldType}. When encountering an array or ident (Indentifier) the options
-     *         property is used to store additional information.
+     * {@link FieldType}. When encountering an array or ident (Indentifier) the options
+     * property is used to store additional information.
      */
     public Property getPropertyForField(Schema schema, final Field field) {
         Property property = new Property();
@@ -607,7 +609,7 @@ public class Processor {
             return processMap(property, schema, field, useFullName);
         }
 
-        // Anything else
+        // Anything else - enum, class, etc.
         return processClass(property, field, useFullName);
     }
 
@@ -619,12 +621,13 @@ public class Processor {
      */
     public Property processClass(Property property, Field field, boolean useFullName) {
         String name = field.getName();
-        log.debug("Found unrecognized type; assuming Type.IDENT(IFIER): " + name);
+        log.debug("Found unrecognized type; assuming FieldType.IDENT(IFIER) and running processClass(...): " + name);
+
         property.name = name;
         property.type = FieldType.IDENT;
 
         Type fieldType = field.getGenericType();
-        String identName = null;
+        String identName;
 
         try {
             Class<?> clazz;
@@ -640,6 +643,8 @@ public class Processor {
                 ExternalClassDefinition externalClassDefinition = getExternalClassDefinitionDetails(clazz);
                 if (externalClassDefinition.locatedOutside) {
                     identName = externalClassDefinition.targetNamespace + "." + clazz.getSimpleName();
+                } else {
+                    identName = useFullName ? clazz.getName() : clazz.getSimpleName();
                 }
             } else {
                 identName = useFullName ? clazz.getName() : clazz.getSimpleName();
@@ -692,6 +697,7 @@ public class Processor {
      * @return The completed property struct
      */
     public Property processArray(Property property, Field field, boolean useFullName) {
+        log.debug("Found array (e.g. int[]) type. Setting FieldType.ARRAY and processing: " + field.getName());
         property.name = field.getName();
         property.type = FieldType.ARRAY;
 
@@ -728,12 +734,13 @@ public class Processor {
 
     /**
      * @param property    The property to populate with additional data about a field
-     * @param schema The schema currently being considered while reviewing this field
+     * @param schema      The schema currently being considered while reviewing this field
      * @param field       The field to examine. In this case the field is a map
      * @param useFullName Whether or not to use the full class name including the package or just the name
      * @return The completed property struct
      */
     public Property processMap(Property property, Schema schema, Field field, boolean useFullName) {
+        log.debug("Found map type. Setting FieldType.MAP and processing: " + field.getName());
         property.name = field.getName();
         property.type = FieldType.MAP;
 
@@ -748,7 +755,7 @@ public class Processor {
             log.warn("Unable to determine classes for Map<?, ?> parameter types", e);
         }
 
-        // Attempt to load each type
+        // Attempt to load each type (technically will run twice as in A and B in example Map<A, B>)
         for (int i = 0; i < parametrizedTypeStrings.length; i++) {
             Class<?> mapTypeClass;
             Property mapTypeProperty = new Property();
@@ -777,7 +784,22 @@ public class Processor {
                 mapTypeClass = String.class;
             }
 
-            String name = getName(mapTypeClass, field, useFullName);
+            String name = null;
+            try {
+                if (!consolidatedSchemas) {
+                    log.debug("Separated schemas requested; reviewing class");
+                    ExternalClassDefinition externalClassDefinition = getExternalClassDefinitionDetails(mapTypeClass);
+                    if (externalClassDefinition.locatedOutside) {
+                        name = externalClassDefinition.targetNamespace + "." + mapTypeClass.getSimpleName();
+                    } else {
+                        name = getName(mapTypeClass, field, useFullName);
+                    }
+                } else {
+                    name = getName(mapTypeClass, field, useFullName);
+                }
+            } catch (MojoExecutionException e) {
+                name = getName(mapTypeClass, field, useFullName);
+            }
 
             // Stuffing...
             if (i == 0) {
@@ -814,6 +836,7 @@ public class Processor {
      * @return The completed property struct
      */
     public Property processList(Property property, Field field, boolean useFullName) {
+        log.debug("Found set or list type. Setting FieldType.ARRAY and processing: " + field.getName());
         property.name = field.getName();
         property.type = FieldType.ARRAY;
 
@@ -826,7 +849,7 @@ public class Processor {
 
                 List<ClasspathReference> classpathReferenceList = Utilities.buildProjectClasspathList(artifactReference, ClasspathSearchType.BOTH);
                 URL[] targetUrlArray = new URL[classpathReferenceList.size()];
-                for(int i = 0; i < classpathReferenceList.size(); i++) {
+                for (int i = 0; i < classpathReferenceList.size(); i++) {
                     targetUrlArray[i] = classpathReferenceList.get(i).getUrl();
                 }
 
@@ -862,15 +885,14 @@ public class Processor {
     }
 
     /**
-     *
      * @param mavenProject The project details for class loader functionality
-     * @param schema The schema currently being considered while reviewing this class
-     * @param className The name of the class we need to locate
+     * @param schema       The schema currently being considered while reviewing this class
+     * @param className    The name of the class we need to locate
      * @return The class we located
-     * @throws ClassNotFoundException if the class cannot be located
-     * @throws IOException if one of the classpathElements are a malformed URL
+     * @throws ClassNotFoundException                if the class cannot be located
+     * @throws IOException                           if one of the classpathElements are a malformed URL
      * @throws DependencyResolutionRequiredException if MavenProject is unable to resolve the
-     *         compiled classpath elements
+     *                                               compiled classpath elements
      */
     public static Class<?> getClassForClassName(MavenProject mavenProject, Schema schema, String className)
             throws ClassNotFoundException, DependencyResolutionRequiredException, IOException {
@@ -887,7 +909,7 @@ public class Processor {
             projectClasspathList.add(reference.getUrl());
         }
 
-        URLClassLoader urlClassLoader = new URLClassLoader(projectClasspathList.toArray(new URL[] {}), Thread.currentThread().getContextClassLoader());
+        URLClassLoader urlClassLoader = new URLClassLoader(projectClasspathList.toArray(new URL[]{}), Thread.currentThread().getContextClassLoader());
 
         Class<?> result = urlClassLoader.loadClass(className);
         urlClassLoader.close();
@@ -895,11 +917,10 @@ public class Processor {
     }
 
     /**
-     *
      * @param input The List with a type declaration
      * @return a String which parses: com.company.team.service.model.Person from the following:
-     *         Ljava/util/List&lt;Lcom/company/team/service/model/Person;&gt;;
-     * @throws NoSuchFieldException if the Field does not exist in the class
+     * Ljava/util/List&lt;Lcom/company/team/service/model/Person;&gt;;
+     * @throws NoSuchFieldException   if the Field does not exist in the class
      * @throws IllegalAccessException if the Field is inaccessible
      */
     public static String parseFieldSignatureForParametrizedTypeStringOnList(Field input)
@@ -918,7 +939,7 @@ public class Processor {
      * @param input The Map with a set of type declarations
      * @return a list of String which parses {"java.lang.String", "java.lang.Object"} from the following:
      * Ljava/util/Map&lt;Ljava/lang/String;Ljava/lang/Object;&gt;;
-     * @throws NoSuchFieldException if the Field does not exist in the class
+     * @throws NoSuchFieldException   if the Field does not exist in the class
      * @throws IllegalAccessException if the Field is inaccessible
      */
     public static String[] parseFieldSignatureForParametrizedTypeStringsOnMap(Field input)
@@ -993,12 +1014,12 @@ public class Processor {
      * @throws MojoExecutionException if something goes wrong
      */
     public ExternalClassDefinition getExternalClassDefinitionDetails(Class<?> clazz) throws MojoExecutionException {
-        ExternalClassDefinition externalClassDefintion = new ExternalClassDefinition();
+        ExternalClassDefinition externalClassDefinition = new ExternalClassDefinition();
 
-        log.debug("This is a base. Therefor, skipping external class check. This assumes that a base schema is the sum of its self and its dependencies. ");
         if (currentSchema.isDependency()) {
+            log.debug(String.format("This [%s] is a dependency. Therefor, skipping external class check for [%s]. This assumes that a base schema is the sum of its self and its dependencies.", currentSchema.getName(), clazz.getName()));
             // Consider if we want to recursively add more schemas as we find them.
-            return externalClassDefintion;
+            return externalClassDefinition;
         }
 
         log.debug("Determining if class was defined outside this schema");
@@ -1040,8 +1061,8 @@ public class Processor {
 
             if (classNames.contains(clazz.getName()) && !oneOfSchemas.equals(currentSchema)) {
                 log.debug("  Found location of class which is outside current schema");
-                externalClassDefintion.targetNamespace = oneOfSchemas.getNamespace();
-                currentSchema.addInclude(externalClassDefintion.targetNamespace);
+                externalClassDefinition.targetNamespace = oneOfSchemas.getNamespace();
+                currentSchema.addInclude(oneOfSchemas.getName());
 
                 classLocatedOutside = true;
                 break;
@@ -1052,8 +1073,8 @@ public class Processor {
             log.debug("  Did not find class outside schema; continue processing");
         }
 
-        externalClassDefintion.locatedOutside = classLocatedOutside;
-        return externalClassDefintion;
+        externalClassDefinition.locatedOutside = classLocatedOutside;
+        return externalClassDefinition;
     }
 
     /**
