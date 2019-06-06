@@ -29,7 +29,7 @@ public class FileGenerationTest {
      * Test method for
      * {@link com.michaelhradek.aurkitu.plugin.core.FileGeneration#writeSchema(com.michaelhradek.aurkitu.plugin.core.output.Schema)}.
      *
-     * @throws IOException if unable to locate directory/file used in tests
+     * @throws IOException            if unable to locate directory/file used in tests
      * @throws MojoExecutionException if an error occurs attempting to execute plugin
      */
     @Test

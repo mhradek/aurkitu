@@ -14,7 +14,6 @@ import java.util.Map;
 
 /**
  * @author m.hradek
- *
  */
 @Getter
 @Setter
@@ -42,25 +41,6 @@ public class TypeDeclaration {
      */
     public void addProperty(Property input) {
         properties.add(input);
-    }
-
-    /**
-     * A TypeDeclaration contains a list of Property in addition to top level fields such as the Type's name, whether or
-     * not it is root, and potentially a comment.
-     *
-     */
-    public static class Property {
-        public String name;
-        public FieldType type;
-        public Map<PropertyOptionKey, String> options = new HashMap<>();
-
-        public enum PropertyOptionKey {
-            ARRAY,
-            IDENT,
-            DEFAULT_VALUE,
-            COMMENT,
-            MAP
-        }
     }
 
     @Override
@@ -119,6 +99,24 @@ public class TypeDeclaration {
         builder.append(System.lineSeparator());
 
         return builder.toString();
+    }
+
+    /**
+     * A TypeDeclaration contains a list of Property in addition to top level fields such as the Type's name, whether or
+     * not it is root, and potentially a comment.
+     */
+    public static class Property {
+        public String name;
+        public FieldType type;
+        public Map<PropertyOptionKey, String> options = new HashMap<>();
+
+        public enum PropertyOptionKey {
+            ARRAY,
+            IDENT,
+            DEFAULT_VALUE,
+            COMMENT,
+            MAP
+        }
     }
 
     public static class MapValueSet {

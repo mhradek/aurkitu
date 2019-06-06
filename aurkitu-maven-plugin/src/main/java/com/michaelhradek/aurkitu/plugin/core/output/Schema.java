@@ -12,7 +12,6 @@ import java.util.*;
 
 /**
  * @author m.hradek
- *
  */
 @Getter
 @Setter
@@ -107,20 +106,10 @@ public class Schema {
     }
 
     /**
-     * @param <T> A class which contains the name, value, and options used to define Numbers at the schema level
-     *
-     */
-    public static class Constant<T extends Number> {
-        public String name;
-        public T value;
-        public Map<String, String> options = new HashMap<>();
-    }
-
-    /**
      * @param input Set the 4 character file identifier.
      */
     public void setFileIdentifier(String input) {
-        if(StringUtils.isEmpty(input)) {
+        if (StringUtils.isEmpty(input)) {
             fileIdentifier = null;
             return;
         }
@@ -136,7 +125,7 @@ public class Schema {
      * @param input Set the file extension. Default is {@link Config#FILE_EXTENSION}
      */
     public void setFileExtension(String input) {
-        if(StringUtils.isEmpty(input)) {
+        if (StringUtils.isEmpty(input)) {
             fileExtension = null;
             return;
         }
@@ -149,11 +138,10 @@ public class Schema {
     }
 
     /**
-     *
      * @param input The namespace for the schema. Dashes are replaced with underscores - otherwise flatc compilation will fail.
      */
     public void setNamespace(String input) {
-        if(StringUtils.isEmpty(input)) {
+        if (StringUtils.isEmpty(input)) {
             this.namespace = null;
             return;
         }
@@ -177,7 +165,7 @@ public class Schema {
                 builder.append("include \"");
                 builder.append(include);
                 builder.append("." + Config.FILE_EXTENSION);
-                if(!include.endsWith(";"))
+                if (!include.endsWith(";"))
                     builder.append("\";");
                 else
                     builder.insert(builder.length(), "\";");
@@ -228,7 +216,7 @@ public class Schema {
         if (namespace != null) {
             builder.append("namespace ");
             builder.append(namespace);
-            if(!namespace.endsWith(";"))
+            if (!namespace.endsWith(";"))
                 builder.append(";");
             builder.append(System.lineSeparator());
             builder.append(System.lineSeparator());
@@ -282,5 +270,14 @@ public class Schema {
         }
 
         return result;
+    }
+
+    /**
+     * @param <T> A class which contains the name, value, and options used to define Numbers at the schema level
+     */
+    public static class Constant<T extends Number> {
+        public String name;
+        public T value;
+        public Map<String, String> options = new HashMap<>();
     }
 }

@@ -246,6 +246,33 @@ public class Validator {
         return false;
     }
 
+    /**
+     * @return Any error comments generated during Schema validation
+     */
+    public String getErrorComments() {
+        if (errors.isEmpty()) {
+            return "// Schema passed validation";
+        }
+
+        StringBuilder builder = new StringBuilder("// Schema failed validation (i.e. flatc will likely fail): ");
+        builder.append(System.lineSeparator());
+        for (Error error : errors) {
+            builder.append(error.toString());
+        }
+        builder.append(System.lineSeparator());
+
+        return builder.toString();
+    }
+
+    enum ErrorType {
+        TYPE_DEFINITION_NOT_DEFINED,
+        ENUM_DEFINITION_NOT_DEFINED,
+        MISCONFIGURED_DEFINITION,
+        INVALID_PATH,
+        MISSING_OR_INVALID_TYPE,
+        INVALID_NAMESPACE
+    }
+
     @Getter
     @Setter
     class Error {
@@ -271,32 +298,5 @@ public class Validator {
 
             return builder.toString();
         }
-    }
-
-    enum ErrorType {
-        TYPE_DEFINITION_NOT_DEFINED,
-        ENUM_DEFINITION_NOT_DEFINED,
-        MISCONFIGURED_DEFINITION,
-        INVALID_PATH,
-        MISSING_OR_INVALID_TYPE,
-        INVALID_NAMESPACE
-    }
-
-    /**
-     * @return Any error comments generated during Schema validation
-     */
-    public String getErrorComments() {
-        if (errors.isEmpty()) {
-            return "// Schema passed validation";
-        }
-
-        StringBuilder builder = new StringBuilder("// Schema failed validation (i.e. flatc will likely fail): ");
-        builder.append(System.lineSeparator());
-        for (Error error : errors) {
-            builder.append(error.toString());
-        }
-        builder.append(System.lineSeparator());
-
-        return builder.toString();
     }
 }

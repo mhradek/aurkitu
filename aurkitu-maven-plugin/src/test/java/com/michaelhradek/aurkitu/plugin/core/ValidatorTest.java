@@ -118,7 +118,7 @@ public class ValidatorTest {
 
     @Test
     public void testValidateNamespace() {
-        Schema schema =  new Schema();
+        Schema schema = new Schema();
         Validator validator = new Validator().withSchema(schema).withCheckEnums(false).withCheckTables(false);
 
         validator.validateSchema();

@@ -15,16 +15,14 @@ import java.util.Set;
 
 /**
  * @author m.hradek
- *
  */
 @Slf4j
 public class AnnotationParser {
 
     /**
-     *
-     * @param artifactReference The ArtifactReference
+     * @param artifactReference      The ArtifactReference
      * @param classpathReferenceList A list of paths to consider when searching for annotations
-     * @param input A list of Aurkitu annotations to search for
+     * @param input                  A list of Aurkitu annotations to search for
      * @return A list of classes which are annotated with the above annotations.
      * @throws MojoExecutionException when there is a MalformedURLException in the classpathElements
      */
@@ -50,7 +48,7 @@ public class AnnotationParser {
     }
 
     /**
-     * @param path The path to traverse.
+     * @param path  The path to traverse.
      * @param input A list of Aurkitu annotations.
      * @return A list of classes which are annotated with the above annotations.
      */
@@ -60,7 +58,7 @@ public class AnnotationParser {
 
     /**
      * @param reflections Reflections to traverse.
-     * @param input A list of Aurkitu annotations.
+     * @param input       A list of Aurkitu annotations.
      * @return A list of classes which are annotated with the above annotations.
      */
     private static Set<Class<?>> findAnnotatedClasses(Reflections reflections, Class<? extends Annotation> input) {

@@ -62,8 +62,8 @@ public class Utilities {
     }
 
     /**
-     * @param artifactReference Our helper which contains all the goodies needed from the MavenProject and the other
-     *                          artifact handling stuff
+     * @param artifactReference      Our helper which contains all the goodies needed from the MavenProject and the other
+     *                               artifact handling stuff
      * @param classpathReferenceList List of classpath references to consider when building the class list
      * @return initialized Reflections object
      * @throws DependencyResolutionRequiredException if unable to MavenProject#getCompileClasspathElements()
@@ -90,10 +90,10 @@ public class Utilities {
         JavassistAdapter.includeInvisibleTag = false;
 
         FilterBuilder filterBuilder = null;
-        if(artifactReference.getSpecifiedDependencies() != null && artifactReference.getSpecifiedDependencies().size() > 0) {
+        if (artifactReference.getSpecifiedDependencies() != null && artifactReference.getSpecifiedDependencies().size() > 0) {
             log.debug("Adding specified dependencies to filter for `org.reflections` package scanning...");
             filterBuilder = new FilterBuilder();
-            for(String dependency : artifactReference.getSpecifiedDependencies()) {
+            for (String dependency : artifactReference.getSpecifiedDependencies()) {
                 filterBuilder.include(FilterBuilder.prefix(extractDependencyDetails(dependency).specifiedGroupId));
             }
         }
@@ -115,12 +115,12 @@ public class Utilities {
     }
 
     /**
-     * @param artifactReference Our helper which contains all the goodies needed from the MavenProject and the other
-     *                          artifact handling stuff
+     * @param artifactReference   Our helper which contains all the goodies needed from the MavenProject and the other
+     *                            artifact handling stuff
      * @param classpathSearchType Which type of classpath search should we use. BOTH, PROJECT, DEPENDENCIES.
      * @return an array of URLs which will be used to attempt to initialize our classes
      * @throws ArtifactResolutionException           if unable to Utilities#buildProjectClasspathList#resolveArtifact
-     * via Repo System
+     *                                               via Repo System
      * @throws MalformedURLException                 if unable to convert paths for classes to URL format
      * @throws DependencyResolutionRequiredException if unable to MavenProject#getCompileClasspathElements()
      */
@@ -226,20 +226,6 @@ public class Utilities {
     }
 
     /**
-     * Encapsulates action to be executed.
-     */
-    public interface ExecutableAction<T> {
-
-        /**
-         * Execute the operation.
-         *
-         * @return Optional value returned by this operation; implementations should document what, if anything, is
-         * returned by implementations of this method.
-         */
-        T run();
-    }
-
-    /**
      * @param schema          The target schema (used to determine filename)
      * @param outputDirectory Where we have configured the schema to be written to
      * @return boolean whether or not the schema file exists in the location specified
@@ -341,12 +327,11 @@ public class Utilities {
     }
 
     /**
-     *
      * @param classpathReferenceList a List&lt;ClasspathReference&gt;
      * @return an array of URLs
      */
     public static URL[] arrayForClasspathReferenceList(List<ClasspathReference> classpathReferenceList) {
-        if(classpathReferenceList == null) {
+        if (classpathReferenceList == null) {
             return null;
         }
 
@@ -359,7 +344,6 @@ public class Utilities {
     }
 
     /**
-     *
      * @param dependencyStringFromPom The groupId:artifactId dependency string from the configuration.
      * @return A helper object with the required details
      */
@@ -378,6 +362,20 @@ public class Utilities {
         log.debug(String.format("Dependency specified groupId: %s, artifactId: %s", specifiedGroupId, specifiedArtifactId));
 
         return new DependencyDetails(specifiedGroupId, specifiedArtifactId);
+    }
+
+    /**
+     * Encapsulates action to be executed.
+     */
+    public interface ExecutableAction<T> {
+
+        /**
+         * Execute the operation.
+         *
+         * @return Optional value returned by this operation; implementations should document what, if anything, is
+         * returned by implementations of this method.
+         */
+        T run();
     }
 
     @Getter

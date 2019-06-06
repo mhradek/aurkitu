@@ -11,7 +11,7 @@ package com.michaelhradek.aurkitu.annotations.types;
 public enum FieldType {
     BOOL(boolean.class), BYTE(byte.class), UBYTE(byte.class), SHORT(short.class), USHORT(
             short.class), INT(int.class), UINT(int.class), FLOAT(float.class), LONG(long.class), ULONG(
-        long.class), DOUBLE(double.class), STRING(String.class), IDENT(null), ARRAY(null), MAP(null);
+            long.class), DOUBLE(double.class), STRING(String.class), IDENT(null), ARRAY(null), MAP(null);
 
     public Class<?> targetClass;
 

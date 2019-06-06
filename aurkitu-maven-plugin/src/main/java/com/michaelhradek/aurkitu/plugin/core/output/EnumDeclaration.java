@@ -11,7 +11,6 @@ import java.util.List;
 
 /**
  * @author m.hradek
- *
  */
 @Getter
 @Setter

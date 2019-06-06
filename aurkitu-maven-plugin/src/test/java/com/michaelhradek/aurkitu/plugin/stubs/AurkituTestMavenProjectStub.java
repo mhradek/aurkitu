@@ -26,9 +26,9 @@ public class AurkituTestMavenProjectStub extends MavenProjectStub {
         Model model;
 
         try {
-            File pomFile = new File(aurkituTestDir,"pom.xml");
+            File pomFile = new File(aurkituTestDir, "pom.xml");
             // TODO: Once plexus-utils has been bumped to 1.4.4, use ReaderFactory.newXmlReader()
-            model = pomReader.read( new InputStreamReader(new FileInputStream(pomFile),"UTF-8"));
+            model = pomReader.read(new InputStreamReader(new FileInputStream(pomFile), "UTF-8"));
             setModel(model);
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -44,18 +44,18 @@ public class AurkituTestMavenProjectStub extends MavenProjectStub {
         build = new Build();
         Resource resource = new Resource();
 
-        build.setFinalName(model.getArtifactId() );
+        build.setFinalName(model.getArtifactId());
         build.setDirectory(getBasedir().getAbsolutePath() + "/target");
 
         build.setSourceDirectory(aurkituTestDir + "/src/main/java");
         resource.setDirectory(aurkituTestDir + "/src/main/resources");
-        build.setResources(Collections.singletonList( resource ));
+        build.setResources(Collections.singletonList(resource));
         build.setOutputDirectory(getBasedir().getAbsolutePath() + "/target/classes");
 
         build.setTestSourceDirectory(aurkituTestDir + "/src/test/java");
         resource = new Resource();
         resource.setDirectory(aurkituTestDir + "/src/test/resources");
-        build.setTestResources(Collections.singletonList( resource));
+        build.setTestResources(Collections.singletonList(resource));
         build.setTestOutputDirectory(getBasedir().getAbsolutePath() + "/target/test-classes");
 
         setBuild(build);

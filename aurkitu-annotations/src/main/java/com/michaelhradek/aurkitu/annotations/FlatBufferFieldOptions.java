@@ -6,7 +6,6 @@ import java.lang.annotation.*;
 
 /**
  * @author m.hradek
- *
  */
 @Documented
 @Retention(RetentionPolicy.RUNTIME)

@@ -35,14 +35,6 @@ import java.util.UUID;
 public class UtilitiesTest extends AbstractMojoTestCase {
 
     private static String OUTPUT_DIRECTORY = "target/aurkitu/utilities/test";
-
-    @Override
-    protected void setUp() throws Exception {
-
-        // required for mojo lookups to work
-        super.setUp();
-    }
-
     @Rule
     public MojoRule rule = new MojoRule() {
 
@@ -56,6 +48,13 @@ public class UtilitiesTest extends AbstractMojoTestCase {
             // Empty
         }
     };
+
+    @Override
+    protected void setUp() throws Exception {
+
+        // required for mojo lookups to work
+        super.setUp();
+    }
 
     @Test()
     public void testPrivateConstructor() throws NoSuchMethodException {
@@ -105,16 +104,16 @@ public class UtilitiesTest extends AbstractMojoTestCase {
     @Test
     public void testExecuteActionOnSpecifiedClassLoader() {
         Class<?> result = Utilities.executeActionOnSpecifiedClassLoader(URLClassLoader.getSystemClassLoader(),
-            new Utilities.ExecutableAction<Class<?>>() {
+                new Utilities.ExecutableAction<Class<?>>() {
 
-                public Class<?> run() {
-                    try {
-                        return Class.forName(SampleClassTable.class.getName());
-                    } catch (ClassNotFoundException e) {
-                        return null;
+                    public Class<?> run() {
+                        try {
+                            return Class.forName(SampleClassTable.class.getName());
+                        } catch (ClassNotFoundException e) {
+                            return null;
+                        }
                     }
-                }
-            });
+                });
 
         Assert.assertNotNull(result);
         Assert.assertEquals(SampleClassTable.class, result);
@@ -252,7 +251,7 @@ public class UtilitiesTest extends AbstractMojoTestCase {
 
         final int LIMIT = 10;
         List<ClasspathReference> list = new ArrayList<>();
-        for(int i = 0; i < LIMIT; i++) {
+        for (int i = 0; i < LIMIT; i++) {
             list.add(new ClasspathReference(new URL("file:/" + UUID.randomUUID().toString() + "/"), UUID.randomUUID().toString(), UUID.randomUUID().toString()));
         }
 
@@ -319,8 +318,16 @@ public class UtilitiesTest extends AbstractMojoTestCase {
                 return groupId;
             }
 
+            public void setGroupId(String s) {
+                // Empty
+            }
+
             public String getArtifactId() {
                 return artifactId;
+            }
+
+            public void setArtifactId(String s) {
+                // Empty
             }
 
             public String getVersion() {
@@ -333,6 +340,10 @@ public class UtilitiesTest extends AbstractMojoTestCase {
 
             public String getScope() {
                 return null;
+            }
+
+            public void setScope(String s) {
+                // Empty
             }
 
             public String getType() {
@@ -379,12 +390,12 @@ public class UtilitiesTest extends AbstractMojoTestCase {
                 return null;
             }
 
-            public void setRepository(ArtifactRepository artifactRepository) {
-                // Empty
-            }
-
             public ArtifactRepository getRepository() {
                 return null;
+            }
+
+            public void setRepository(ArtifactRepository artifactRepository) {
+                // Empty
             }
 
             public void updateVersion(String s, ArtifactRepository artifactRepository) {
@@ -411,15 +422,15 @@ public class UtilitiesTest extends AbstractMojoTestCase {
                 return null;
             }
 
+            public void setArtifactHandler(ArtifactHandler artifactHandler) {
+                // Empty
+            }
+
             public List<String> getDependencyTrail() {
                 return null;
             }
 
             public void setDependencyTrail(List<String> list) {
-                // Empty
-            }
-
-            public void setScope(String s) {
                 // Empty
             }
 
@@ -435,15 +446,11 @@ public class UtilitiesTest extends AbstractMojoTestCase {
                 // Empty
             }
 
-            public void setGroupId(String s) {
-                // Empty
-            }
-
-            public void setArtifactId(String s) {
-                // Empty
-            }
-
             public boolean isSnapshot() {
+                return false;
+            }
+
+            public boolean isResolved() {
                 return false;
             }
 
@@ -451,15 +458,7 @@ public class UtilitiesTest extends AbstractMojoTestCase {
                 // Empty
             }
 
-            public boolean isResolved() {
-                return false;
-            }
-
             public void setResolvedVersion(String s) {
-                // Empty
-            }
-
-            public void setArtifactHandler(ArtifactHandler artifactHandler) {
                 // Empty
             }
 

@@ -4,7 +4,7 @@ import java.lang.annotation.*;
 
 /**
  * @author m.hradek
- *
+ * <p>
  * Used to add comments to any Type, Enum, Field, etc.
  */
 @Documented

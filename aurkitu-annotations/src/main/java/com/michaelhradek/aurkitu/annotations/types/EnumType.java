@@ -7,8 +7,8 @@ package com.michaelhradek.aurkitu.annotations.types;
  */
 public enum EnumType {
     BYTE(byte.class), UBYTE(byte.class), SHORT(short.class), USHORT(
-        short.class), INT(int.class), UINT(int.class), LONG(long.class), ULONG(
-        long.class);
+            short.class), INT(int.class), UINT(int.class), LONG(long.class), ULONG(
+            long.class);
 
     public Class<?> targetClass;
 

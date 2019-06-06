@@ -19,6 +19,8 @@ import java.util.Set;
 @FlatBufferTable(rootType = true)
 public class SampleClassTable {
 
+    public Map<String, Object> dataMap;
+    public Set<URL> regionLocations;
     protected Long id;
     protected String name;
     @FlatBufferComment(comment = "This is a field level comment")
@@ -31,19 +33,14 @@ public class SampleClassTable {
     protected Double weight;
     protected int[] options;
     protected SimpleUndefinedClass[] anomalousSamples;
-    public Map<String, Object> dataMap;
-    public Set<URL> regionLocations;
-
     @FlatBufferFieldOptions(fieldType = FieldType.IDENT, useFullName = true)
     protected SampleClassTableInnerEnumInt[] definedInnerEnumArray;
 
     @FlatBufferFieldOptions(fieldType = FieldType.IDENT, defaultValue = "SHORT_SWORD")
     protected SampleClassTableInnerEnumInt innerEnum;
-
-    @FlatBufferFieldOptions(fieldType = FieldType.IDENT, useFullName = true)
-    SampleClassReferenced fullnameClass;
-
     @FlatBufferComment(comment = "This is a comment which won't appear")
     @FlatBufferIgnore
     protected String ignore;
+    @FlatBufferFieldOptions(fieldType = FieldType.IDENT, useFullName = true)
+    SampleClassReferenced fullnameClass;
 }

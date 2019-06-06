@@ -7,13 +7,17 @@ import com.michaelhradek.aurkitu.annotations.types.FieldType;
 @FlatBufferTable
 public class SampleAnonymousEnum {
 
+    public Option option;
+    public VectorSize size;
+    public SplineEstimate estimate;
+    @FlatBufferFieldOptions(fieldType = FieldType.IDENT, defaultValue = "SMALL")
+    public Matrix matrix;
+
     private enum Option {
         FirstOption,
         SecondOption,
         ThirdOption
     }
-
-    public Option option;
 
     @FlatBufferComment(comment = "This is a enum comment")
     @FlatBufferEnum(enumType = EnumType.SHORT)
@@ -29,8 +33,6 @@ public class SampleAnonymousEnum {
         }
     }
 
-    public VectorSize size;
-
     @FlatBufferEnum(enumType = EnumType.LONG)
     protected enum SplineEstimate {
 
@@ -44,8 +46,6 @@ public class SampleAnonymousEnum {
         }
     }
 
-    public SplineEstimate estimate;
-
     @FlatBufferEnum(enumType = EnumType.INT)
     protected enum Matrix {
 
@@ -58,7 +58,4 @@ public class SampleAnonymousEnum {
             this.id = id;
         }
     }
-
-    @FlatBufferFieldOptions(fieldType = FieldType.IDENT, defaultValue = "SMALL")
-    public Matrix matrix;
 }

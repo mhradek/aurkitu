@@ -23,12 +23,12 @@ public class SampleClassReferenced extends SampleClassAbstract {
         DAGGER, SHORT_SWORD, SWORD, GREAT_SWORD
     }
 
+    public static class InnerClassStatic {
+        public boolean virulant;
+    }
+
     public class InnerClass {
         public boolean processed;
         public SampleClassTableInnerEnumInt weaponType;
-    }
-
-    public static class InnerClassStatic {
-        public boolean virulant;
     }
 }

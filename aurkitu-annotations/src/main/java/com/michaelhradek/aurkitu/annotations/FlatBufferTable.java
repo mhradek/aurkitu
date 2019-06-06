@@ -13,7 +13,7 @@ import java.lang.annotation.*;
  */
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
-@Target(value={ElementType.TYPE})
+@Target(value = {ElementType.TYPE})
 public @interface FlatBufferTable {
     boolean rootType() default false;
 

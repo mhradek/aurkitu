@@ -29,7 +29,6 @@ import java.util.*;
 
 /**
  * @author m.hradek
- *
  */
 @Slf4j
 @Mojo(name = Application.MOJO_GOAL, defaultPhase = LifecyclePhase.PROCESS_SOURCES, threadSafe = true)

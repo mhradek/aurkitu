@@ -30,6 +30,28 @@ public class ApplicationTest extends AbstractMojoTestCase {
     @Mock
     private MavenProject mockProject;
 
+    /**
+     * @param application
+     * @param methodName
+     * @return
+     */
+    private static Method getPrivateApplicationMethod(Application application, String methodName) {
+
+        Method targetMethod = null;
+        for (Method method : application.getClass().getDeclaredMethods()) {
+            if (method.getName().equals(methodName)) {
+                targetMethod = method;
+                break;
+            }
+        }
+
+        // Makes sure it was found and that it is accessible
+        Assert.assertNotNull(targetMethod);
+        targetMethod.setAccessible(true);
+
+        return targetMethod;
+    }
+
     @Override
     protected void setUp() throws Exception {
 
@@ -168,28 +190,6 @@ public class ApplicationTest extends AbstractMojoTestCase {
         } catch (NoSuchFieldException | IllegalAccessException | InvocationTargetException e) {
             Assert.fail("Unable to execute plugin via Application::execute " + e.getMessage());
         }
-    }
-
-    /**
-     * @param application
-     * @param methodName
-     * @return
-     */
-    private static Method getPrivateApplicationMethod(Application application, String methodName) {
-
-        Method targetMethod = null;
-        for (Method method : application.getClass().getDeclaredMethods()) {
-            if (method.getName().equals(methodName)) {
-                targetMethod = method;
-                break;
-            }
-        }
-
-        // Makes sure it was found and that it is accessible
-        Assert.assertNotNull(targetMethod);
-        targetMethod.setAccessible(true);
-
-        return targetMethod;
     }
 
     /**

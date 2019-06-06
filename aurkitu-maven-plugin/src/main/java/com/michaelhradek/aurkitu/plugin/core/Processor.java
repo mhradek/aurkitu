@@ -75,6 +75,94 @@ public class Processor {
     }
 
     /**
+     * @param mavenProject The project details for class loader functionality
+     * @param schema       The schema currently being considered while reviewing this class
+     * @param className    The name of the class we need to locate
+     * @return The class we located
+     * @throws ClassNotFoundException                if the class cannot be located
+     * @throws IOException                           if one of the classpathElements are a malformed URL
+     * @throws DependencyResolutionRequiredException if MavenProject is unable to resolve the
+     *                                               compiled classpath elements
+     */
+    public static Class<?> getClassForClassName(MavenProject mavenProject, Schema schema, String className)
+            throws ClassNotFoundException, DependencyResolutionRequiredException, IOException {
+
+        List<String> classpathElements = mavenProject.getCompileClasspathElements();
+        List<URL> projectClasspathList = new ArrayList<>();
+        for (String element : classpathElements) {
+            log.debug("Adding compiled classpath element (via MavenProject): " + element);
+            projectClasspathList.add(new File(element).toURI().toURL());
+        }
+
+        for (ClasspathReference reference : schema.getClasspathReferenceList()) {
+            log.debug("Adding classpath reference (via currentSchema): " + reference.getUrl());
+            projectClasspathList.add(reference.getUrl());
+        }
+
+        URLClassLoader urlClassLoader = new URLClassLoader(projectClasspathList.toArray(new URL[]{}), Thread.currentThread().getContextClassLoader());
+
+        Class<?> result = urlClassLoader.loadClass(className);
+        urlClassLoader.close();
+        return result;
+    }
+
+    /**
+     * @param input The List with a type declaration
+     * @return a String which parses: com.company.team.service.model.Person from the following:
+     * Ljava/util/List&lt;Lcom/company/team/service/model/Person;&gt;;
+     * @throws NoSuchFieldException   if the Field does not exist in the class
+     * @throws IllegalAccessException if the Field is inaccessible
+     */
+    public static String parseFieldSignatureForParametrizedTypeStringOnList(Field input)
+            throws NoSuchFieldException, IllegalAccessException {
+        String typeSignature = getFieldTypeSignature(input);
+
+        typeSignature = typeSignature.replaceFirst("[a-zA-Z]{1}", "");
+        typeSignature = typeSignature.replaceAll("/", ".");
+        typeSignature = typeSignature.replaceAll(";", "");
+        log.debug("Derived class: " + typeSignature);
+
+        return typeSignature;
+    }
+
+    /**
+     * @param input The Map with a set of type declarations
+     * @return a list of String which parses {"java.lang.String", "java.lang.Object"} from the following:
+     * Ljava/util/Map&lt;Ljava/lang/String;Ljava/lang/Object;&gt;;
+     * @throws NoSuchFieldException   if the Field does not exist in the class
+     * @throws IllegalAccessException if the Field is inaccessible
+     */
+    public static String[] parseFieldSignatureForParametrizedTypeStringsOnMap(Field input)
+            throws NoSuchFieldException, IllegalAccessException {
+        String typeSignature = getFieldTypeSignature(input);
+
+        typeSignature = typeSignature.replaceAll("/", ".");
+        String[] listOfTypes = typeSignature.split(";");
+        for (int i = 0; i < listOfTypes.length; i++) {
+            listOfTypes[i] = listOfTypes[i].replaceAll(";", "");
+            listOfTypes[i] = listOfTypes[i].replaceFirst("[a-zA-Z]{1}", "");
+            log.debug(String.format("Derived class #%d: %s", i, listOfTypes[i]));
+        }
+
+        return listOfTypes;
+    }
+
+    /**
+     * @param input The field for which we want the signature String.
+     * @return The field type signature which is a private field in classes called "signature"
+     * @throws NoSuchFieldException   if the field doesn't exist
+     * @throws IllegalAccessException if access to the field is unavailable
+     */
+    public static String getFieldTypeSignature(Field input) throws NoSuchFieldException, IllegalAccessException {
+        Field privateField = input.getClass().getDeclaredField("signature");
+        privateField.setAccessible(true);
+        String signature = (String) privateField.get(input);
+        log.debug("Examining signature: " + signature);
+
+        return signature.substring(signature.indexOf("<") + 1, signature.indexOf(">"));
+    }
+
+    /**
      * @param targetAnnotation Add Aurkitu annotation to process.
      * @return an instance of the Processor object
      */
@@ -882,94 +970,6 @@ public class Processor {
 
         property.options.put(PropertyOptionKey.ARRAY, name);
         return property;
-    }
-
-    /**
-     * @param mavenProject The project details for class loader functionality
-     * @param schema       The schema currently being considered while reviewing this class
-     * @param className    The name of the class we need to locate
-     * @return The class we located
-     * @throws ClassNotFoundException                if the class cannot be located
-     * @throws IOException                           if one of the classpathElements are a malformed URL
-     * @throws DependencyResolutionRequiredException if MavenProject is unable to resolve the
-     *                                               compiled classpath elements
-     */
-    public static Class<?> getClassForClassName(MavenProject mavenProject, Schema schema, String className)
-            throws ClassNotFoundException, DependencyResolutionRequiredException, IOException {
-
-        List<String> classpathElements = mavenProject.getCompileClasspathElements();
-        List<URL> projectClasspathList = new ArrayList<>();
-        for (String element : classpathElements) {
-            log.debug("Adding compiled classpath element (via MavenProject): " + element);
-            projectClasspathList.add(new File(element).toURI().toURL());
-        }
-
-        for (ClasspathReference reference : schema.getClasspathReferenceList()) {
-            log.debug("Adding classpath reference (via currentSchema): " + reference.getUrl());
-            projectClasspathList.add(reference.getUrl());
-        }
-
-        URLClassLoader urlClassLoader = new URLClassLoader(projectClasspathList.toArray(new URL[]{}), Thread.currentThread().getContextClassLoader());
-
-        Class<?> result = urlClassLoader.loadClass(className);
-        urlClassLoader.close();
-        return result;
-    }
-
-    /**
-     * @param input The List with a type declaration
-     * @return a String which parses: com.company.team.service.model.Person from the following:
-     * Ljava/util/List&lt;Lcom/company/team/service/model/Person;&gt;;
-     * @throws NoSuchFieldException   if the Field does not exist in the class
-     * @throws IllegalAccessException if the Field is inaccessible
-     */
-    public static String parseFieldSignatureForParametrizedTypeStringOnList(Field input)
-            throws NoSuchFieldException, IllegalAccessException {
-        String typeSignature = getFieldTypeSignature(input);
-
-        typeSignature = typeSignature.replaceFirst("[a-zA-Z]{1}", "");
-        typeSignature = typeSignature.replaceAll("/", ".");
-        typeSignature = typeSignature.replaceAll(";", "");
-        log.debug("Derived class: " + typeSignature);
-
-        return typeSignature;
-    }
-
-    /**
-     * @param input The Map with a set of type declarations
-     * @return a list of String which parses {"java.lang.String", "java.lang.Object"} from the following:
-     * Ljava/util/Map&lt;Ljava/lang/String;Ljava/lang/Object;&gt;;
-     * @throws NoSuchFieldException   if the Field does not exist in the class
-     * @throws IllegalAccessException if the Field is inaccessible
-     */
-    public static String[] parseFieldSignatureForParametrizedTypeStringsOnMap(Field input)
-            throws NoSuchFieldException, IllegalAccessException {
-        String typeSignature = getFieldTypeSignature(input);
-
-        typeSignature = typeSignature.replaceAll("/", ".");
-        String[] listOfTypes = typeSignature.split(";");
-        for (int i = 0; i < listOfTypes.length; i++) {
-            listOfTypes[i] = listOfTypes[i].replaceAll(";", "");
-            listOfTypes[i] = listOfTypes[i].replaceFirst("[a-zA-Z]{1}", "");
-            log.debug(String.format("Derived class #%d: %s", i, listOfTypes[i]));
-        }
-
-        return listOfTypes;
-    }
-
-    /**
-     * @param input The field for which we want the signature String.
-     * @return The field type signature which is a private field in classes called "signature"
-     * @throws NoSuchFieldException   if the field doesn't exist
-     * @throws IllegalAccessException if access to the field is unavailable
-     */
-    public static String getFieldTypeSignature(Field input) throws NoSuchFieldException, IllegalAccessException {
-        Field privateField = input.getClass().getDeclaredField("signature");
-        privateField.setAccessible(true);
-        String signature = (String) privateField.get(input);
-        log.debug("Examining signature: " + signature);
-
-        return signature.substring(signature.indexOf("<") + 1, signature.indexOf(">"));
     }
 
     /**

@@ -43,7 +43,6 @@ import java.util.*;
 
 /**
  * @author m.hradek
- *
  */
 public class ProcessorTest extends AbstractMojoTestCase {
 
@@ -59,6 +58,66 @@ public class ProcessorTest extends AbstractMojoTestCase {
 
     @Rule
     public ExpectedException exceptionRule = ExpectedException.none();
+
+    private static Class<?> createTestClassRootType(String name) throws CannotCompileException {
+        CtClass targetClass = ClassPool.getDefault().makeClass(name);
+        ClassFile ccFile = targetClass.getClassFile();
+        ConstPool constpool = ccFile.getConstPool();
+
+        AnnotationsAttribute attribute = new AnnotationsAttribute(constpool, AnnotationsAttribute.visibleTag);
+        Annotation annotation = new Annotation(FlatBufferTable.class.getName(), constpool);
+        annotation.addMemberValue("rootType", new BooleanMemberValue(true, constpool));
+        attribute.addAnnotation(annotation);
+
+        ccFile.addAttribute(attribute);
+
+        return targetClass.toClass();
+    }
+
+    /**
+     * TestEnumMultipleType
+     *
+     * @param name
+     * @param setEnumType
+     * @return
+     * @throws CannotCompileException
+     */
+    private static Class<?> createTestEnum(String name, boolean setEnumType, boolean setMultipleEnumTypeFields) throws CannotCompileException {
+        CtClass enumMultipleType = ClassPool.getDefault().makeClass(name);
+
+        ClassFile ccFile = enumMultipleType.getClassFile();
+        ConstPool constpool = ccFile.getConstPool();
+
+        AnnotationsAttribute attrField = new AnnotationsAttribute(constpool, AnnotationsAttribute.visibleTag);
+        Annotation annotField = new Annotation(FlatBufferEnumTypeField.class.getName(), constpool);
+        attrField.addAnnotation(annotField);
+
+        CtField field = new CtField(CtClass.intType, "key", enumMultipleType);
+        field.getFieldInfo().addAttribute(attrField);
+        enumMultipleType.addField(field);
+
+        field = new CtField(CtClass.booleanType, "value", enumMultipleType);
+
+        // Unnecessary. Leaving in for now.
+        if (setMultipleEnumTypeFields) {
+            field.getFieldInfo().addAttribute(attrField);
+        }
+
+        enumMultipleType.addField(field);
+
+        CtMethod method = CtNewMethod.make("public java.lang.Object[] getEnumConstants() { return new java.lang.Object[0]; }", enumMultipleType);
+        method.setModifiers(enumMultipleType.getModifiers() & -Modifier.PUBLIC);
+        enumMultipleType.addMethod(method);
+
+        if (setEnumType) {
+            AnnotationsAttribute attrClass = new AnnotationsAttribute(constpool, AnnotationsAttribute.visibleTag);
+            Annotation annotClass = new Annotation(FlatBufferEnum.class.getName(), constpool);
+            attrClass.addAnnotation(annotClass);
+            ccFile.addAttribute(attrClass);
+        }
+
+        return enumMultipleType.toClass();
+    }
 
     /**
      * @see junit.framework.TestCase#setUp()
@@ -310,7 +369,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
      * Test method for
      * {@link com.michaelhradek.aurkitu.plugin.core.Processor#getPropertyForField(com.michaelhradek.aurkitu.plugin.core.output.Schema, java.lang.reflect.Field)}.
      *
-     * @throws SecurityException if unable to access field via getDeclaredField()
+     * @throws SecurityException    if unable to access field via getDeclaredField()
      * @throws NoSuchFieldException if unable to locate field via getDeclaredField()
      */
     @Test
@@ -785,64 +844,8 @@ public class ProcessorTest extends AbstractMojoTestCase {
 
     }
 
-    private static Class<?> createTestClassRootType(String name) throws CannotCompileException {
-        CtClass targetClass = ClassPool.getDefault().makeClass(name);
-        ClassFile ccFile = targetClass.getClassFile();
-        ConstPool constpool = ccFile.getConstPool();
-
-        AnnotationsAttribute attribute = new AnnotationsAttribute(constpool, AnnotationsAttribute.visibleTag);
-        Annotation annotation = new Annotation(FlatBufferTable.class.getName(), constpool);
-        annotation.addMemberValue("rootType", new BooleanMemberValue(true, constpool));
-        attribute.addAnnotation(annotation);
-
-        ccFile.addAttribute(attribute);
-
-        return targetClass.toClass();
-    }
-
-    /**
-     * TestEnumMultipleType
-     *
-     * @param name
-     * @param setEnumType
-     * @return
-     * @throws CannotCompileException
-     */
-    private static Class<?> createTestEnum(String name, boolean setEnumType, boolean setMultipleEnumTypeFields) throws CannotCompileException {
-        CtClass enumMultipleType = ClassPool.getDefault().makeClass(name);
-
-        ClassFile ccFile = enumMultipleType.getClassFile();
-        ConstPool constpool = ccFile.getConstPool();
-
-        AnnotationsAttribute attrField = new AnnotationsAttribute(constpool, AnnotationsAttribute.visibleTag);
-        Annotation annotField = new Annotation(FlatBufferEnumTypeField.class.getName(), constpool);
-        attrField.addAnnotation(annotField);
-
-        CtField field = new CtField(CtClass.intType, "key", enumMultipleType);
-        field.getFieldInfo().addAttribute(attrField);
-        enumMultipleType.addField(field);
-
-        field = new CtField(CtClass.booleanType, "value", enumMultipleType);
-
-        // Unnecessary. Leaving in for now.
-        if (setMultipleEnumTypeFields) {
-            field.getFieldInfo().addAttribute(attrField);
-        }
-
-        enumMultipleType.addField(field);
-
-        CtMethod method = CtNewMethod.make("public java.lang.Object[] getEnumConstants() { return new java.lang.Object[0]; }", enumMultipleType);
-        method.setModifiers(enumMultipleType.getModifiers() & -Modifier.PUBLIC);
-        enumMultipleType.addMethod(method);
-
-        if (setEnumType) {
-            AnnotationsAttribute attrClass = new AnnotationsAttribute(constpool, AnnotationsAttribute.visibleTag);
-            Annotation annotClass = new Annotation(FlatBufferEnum.class.getName(), constpool);
-            attrClass.addAnnotation(annotClass);
-            ccFile.addAttribute(attrClass);
-        }
-
-        return enumMultipleType.toClass();
+    interface TestInterface {
+        void someTestMethod();
     }
 
     class TestAnonymousClass {
@@ -852,9 +855,5 @@ public class ProcessorTest extends AbstractMojoTestCase {
         public void someClassMethod(TestInterface input) {
             innerAnonymousField = input;
         }
-    }
-
-    interface TestInterface {
-        void someTestMethod();
     }
 }
