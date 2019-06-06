@@ -5,6 +5,7 @@ import com.michaelhradek.aurkitu.annotations.FlatBufferTable;
 import com.michaelhradek.aurkitu.plugin.Application;
 import com.michaelhradek.aurkitu.plugin.core.output.Schema;
 import com.michaelhradek.aurkitu.plugin.core.parsing.ArtifactReference;
+import com.michaelhradek.aurkitu.plugin.core.parsing.ClasspathReference;
 import com.michaelhradek.aurkitu.plugin.test.SampleClassTable;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.handler.ArtifactHandler;
@@ -22,13 +23,14 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.File;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
+import java.lang.reflect.*;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 public class UtilitiesTest extends AbstractMojoTestCase {
 
@@ -236,6 +238,72 @@ public class UtilitiesTest extends AbstractMojoTestCase {
 
         final String projectName = Utilities.getCurrentProject(new ArtifactReference(mavenProject, null, null, null, null));
         Assert.assertEquals("com.michaelhradek.aurkitu.test:plugin-basic", projectName);
+    }
+
+    @Test
+    public void testArrayForClasspathReferenceList() throws MalformedURLException {
+        URL[] result = Utilities.arrayForClasspathReferenceList(null);
+        Assert.assertNull(result);
+
+        result = Utilities.arrayForClasspathReferenceList(new ArrayList<>());
+        Assert.assertNotNull(result);
+
+        Assert.assertEquals(0, result.length);
+
+        final int LIMIT = 10;
+        List<ClasspathReference> list = new ArrayList<>();
+        for(int i = 0; i < LIMIT; i++) {
+            list.add(new ClasspathReference(new URL("file:/" + UUID.randomUUID().toString() + "/"), UUID.randomUUID().toString(), UUID.randomUUID().toString()));
+        }
+
+        result = Utilities.arrayForClasspathReferenceList(list);
+        Assert.assertEquals(LIMIT, result.length);
+    }
+
+    @Test
+    public void testExtractDependencyDetails() throws NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException, NoSuchFieldException {
+        final String testDependencyGroupIdOnly = "com.test.package";
+        final String testDependencyGroupIdAndArtifactId = "com.test.package-group:test-artifact";
+
+        // Get an instance of the private constructor Utilities class.
+        Constructor<Utilities> constructor = Utilities.class.getDeclaredConstructor();
+        constructor.setAccessible(true);
+        Utilities utilities = constructor.newInstance();
+
+        // Get the private method that we are testing
+        Method method = utilities.getClass().getDeclaredMethod("extractDependencyDetails", String.class);
+        method.setAccessible(true);
+
+        // This is a private, static inner class used nowhere else but inside the parser
+        Object details = method.invoke(utilities, testDependencyGroupIdOnly);
+
+        // Get the details from the fields
+        Field specifiedGroupIdField = details.getClass().getDeclaredField("specifiedGroupId");
+        specifiedGroupIdField.setAccessible(true);
+        String specifiedGroupId = (String) specifiedGroupIdField.get(details);
+
+        Field specifiedArtifactIdField = details.getClass().getDeclaredField("specifiedArtifactId");
+        specifiedArtifactIdField.setAccessible(true);
+        String specifiedArtifactId = (String) specifiedArtifactIdField.get(details);
+
+        // Test "package" only scenario
+        Assert.assertEquals(testDependencyGroupIdOnly, specifiedGroupId);
+        Assert.assertEquals(null, specifiedArtifactId);
+
+        details = method.invoke(utilities, testDependencyGroupIdAndArtifactId);
+
+        // Get the details from the fields
+        specifiedGroupIdField = details.getClass().getDeclaredField("specifiedGroupId");
+        specifiedGroupIdField.setAccessible(true);
+        specifiedGroupId = (String) specifiedGroupIdField.get(details);
+
+        specifiedArtifactIdField = details.getClass().getDeclaredField("specifiedArtifactId");
+        specifiedArtifactIdField.setAccessible(true);
+        specifiedArtifactId = (String) specifiedArtifactIdField.get(details);
+
+        // Test "package" and "artifact" scenario
+        Assert.assertEquals("com.test.package-group", specifiedGroupId);
+        Assert.assertEquals("test-artifact", specifiedArtifactId);
     }
 
     /**

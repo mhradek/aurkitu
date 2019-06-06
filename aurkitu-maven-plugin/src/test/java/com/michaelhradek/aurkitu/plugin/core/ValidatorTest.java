@@ -8,6 +8,8 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.ArrayList;
+
 public class ValidatorTest {
 
     @Test
@@ -111,6 +113,38 @@ public class ValidatorTest {
         Assert.assertFalse(validator.isCheckEnums());
         validator.validateSchema();
 
+        Assert.assertEquals(0, validator.getErrors().size());
+    }
+
+    @Test
+    public void testValidateNamespace() {
+        Schema schema =  new Schema();
+        Validator validator = new Validator().withSchema(schema).withCheckEnums(false).withCheckTables(false);
+
+        validator.validateSchema();
+
+        Assert.assertEquals(0, validator.getErrors().size());
+
+        schema.setNamespace("");
+        validator.setSchema(schema);
+        validator.validateSchema();
+        Assert.assertEquals(0, validator.getErrors().size());
+
+        schema.setNamespace("test-valid-namespace.com.michaelhradek");
+        validator.setSchema(schema);
+        validator.validateSchema();
+
+        Assert.assertEquals(0, validator.getErrors().size());
+
+        schema.setNamespace("test-invalid-nam3space.com.michaelhradek");
+        validator.setSchema(schema);
+        validator.validateSchema();
+        Assert.assertEquals(1, validator.getErrors().size());
+        Assert.assertEquals(Validator.ErrorType.INVALID_NAMESPACE, validator.getErrors().get(0).getType());
+
+        validator.setErrors(new ArrayList<>());
+        validator.setCheckNamespace(false);
+        validator.validateSchema();
         Assert.assertEquals(0, validator.getErrors().size());
     }
 }

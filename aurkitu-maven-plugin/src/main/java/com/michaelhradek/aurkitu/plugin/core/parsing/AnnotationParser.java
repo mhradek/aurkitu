@@ -9,6 +9,7 @@ import org.reflections.util.ClasspathHelper;
 import org.reflections.util.ConfigurationBuilder;
 
 import java.lang.annotation.Annotation;
+import java.net.MalformedURLException;
 import java.util.List;
 import java.util.Set;
 
@@ -32,7 +33,7 @@ public class AnnotationParser {
             extends Annotation> input) throws MojoExecutionException {
         try {
             return findAnnotatedClasses(Utilities.buildReflections(artifactReference, classpathReferenceList), input);
-        } catch (DependencyResolutionRequiredException e) {
+        } catch (DependencyResolutionRequiredException | MalformedURLException e) {
             throw new MojoExecutionException("Dependency resolution failed", e);
         }
     }
