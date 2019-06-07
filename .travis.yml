@@ -6,7 +6,14 @@ jdk: openjdk8
 
 script: mvn install -B
 
+before_install:
+  - sudo apt-get install jq
+  - curl $(curl https://api.github.com/repos/codacy/codacy-coverage-reporter/releases/latest | jq -r '.assets | map({content_type, browser_download_url} | select(.content_type | contains("application/x-java-archive"))) | .[0].browser_download_url') -o codacy-coverage-reporter-assembly.jar
+
 after_success:
   - cd aurkitu-maven-plugin && mvn jacoco:report org.eluder.coveralls:coveralls-maven-plugin:report
   - cd ../aurkitu-annotations && mvn jacoco:report org.eluder.coveralls:coveralls-maven-plugin:report
   - cd ../ && pip install --user codecov && codecov
+  - java -jar ~/codacy-coverage-reporter-assembly.jar report -l Java -r aurkitu-maven-plugin/target/jacoco-ut/jacoco.xml --partial
+  - java -jar ~/codacy-coverage-reporter-assembly.jar report -l Java -r aurkitu-annotations/target/jacoco-ut/jacoco.xml --partial 
+  - java -jar ~/codacy-coverage-reporter-assembly.jar final
