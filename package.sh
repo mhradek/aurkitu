@@ -15,7 +15,7 @@ fi
 
 echo "Checking GPG installed..."
 gpgInstalled=$(type gpg 2>/dev/null)
-if [ "gpgInstalled" = "" ]; then
+if [ "$gpgInstalled" = "" ]; then
     echo "Installing GPG..."
 
     brew install gpg
