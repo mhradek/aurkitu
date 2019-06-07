@@ -82,4 +82,10 @@ public class AnnotationParserTest {
             Assert.assertEquals("No valid compile classpath elements exist; is there source code for this project?", e.getMessage());
         }
     }
+
+    @Test
+    public void testConstructor() {
+        AnnotationParser annotationParser = new AnnotationParser();
+        Assert.assertNotNull(annotationParser);
+    }
 }

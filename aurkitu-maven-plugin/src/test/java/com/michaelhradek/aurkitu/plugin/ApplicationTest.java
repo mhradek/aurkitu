@@ -59,6 +59,7 @@ public class ApplicationTest extends AbstractMojoTestCase {
         super.setUp();
     }
 
+    @Override
     protected void tearDown() throws Exception {
         super.tearDown();
     }

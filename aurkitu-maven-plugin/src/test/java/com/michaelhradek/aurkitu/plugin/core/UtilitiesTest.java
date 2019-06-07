@@ -1,5 +1,6 @@
 package com.michaelhradek.aurkitu.plugin.core;
 
+import com.google.common.base.Predicate;
 import com.michaelhradek.aurkitu.annotations.FlatBufferEnum;
 import com.michaelhradek.aurkitu.annotations.FlatBufferTable;
 import com.michaelhradek.aurkitu.plugin.Application;
@@ -8,6 +9,7 @@ import com.michaelhradek.aurkitu.plugin.core.parsing.ArtifactReference;
 import com.michaelhradek.aurkitu.plugin.core.parsing.ClasspathReference;
 import com.michaelhradek.aurkitu.plugin.test.SampleClassTable;
 import org.apache.maven.artifact.Artifact;
+import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.artifact.handler.ArtifactHandler;
 import org.apache.maven.artifact.metadata.ArtifactMetadata;
 import org.apache.maven.artifact.repository.ArtifactRepository;
@@ -15,12 +17,15 @@ import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.artifact.versioning.OverConstrainedVersionException;
 import org.apache.maven.artifact.versioning.VersionRange;
+import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
 import org.apache.maven.plugin.testing.MojoRule;
 import org.apache.maven.project.MavenProject;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
+import org.mockito.Mockito;
+import org.reflections.Reflections;
 
 import java.io.File;
 import java.lang.reflect.*;
@@ -125,8 +130,46 @@ public class UtilitiesTest extends AbstractMojoTestCase {
     }
 
     @Test
-    public void testBuildReflections() {
-        // TODO
+    public void testCheckFlags() {
+        Validator validator = new Validator();
+        Assert.assertTrue(validator.isCheckEnums());
+        Assert.assertTrue(validator.isCheckTables());
+        Assert.assertTrue(validator.isCheckNamespace());
+
+        validator.setCheckNamespace(false);
+        validator.setCheckEnums(false);
+        validator.setCheckTables(false);
+        Assert.assertFalse(validator.isCheckEnums());
+        Assert.assertFalse(validator.isCheckTables());
+        Assert.assertFalse(validator.isCheckNamespace());
+    }
+
+    @Test
+    public void testBuildReflections() throws DependencyResolutionRequiredException, MojoExecutionException, MalformedURLException {
+        MavenProject mockedMavenProject = Mockito.mock(MavenProject.class);
+
+        List<String> specifiedDependencies = new ArrayList<>();
+        specifiedDependencies.add("bork_kasjf:j2;3jr");
+        specifiedDependencies.add("com.somecompany.team");
+        specifiedDependencies.add("com.othercompany.clan:the-project");
+        specifiedDependencies.add("org.ngo.subversive:yet-another-project:0.0.3");
+
+        Mockito.when(mockedMavenProject.getCompileClasspathElements()).thenReturn(new ArrayList<>());
+        ArtifactReference artifactReference = new ArtifactReference(mockedMavenProject, null, null, null, null);
+
+        Reflections reflections = Utilities.buildReflections(artifactReference, new ArrayList<>());
+        Predicate<String> inputsFilter = reflections.getConfiguration().getInputsFilter();
+
+        Assert.assertNull(inputsFilter);
+
+        Mockito.when(mockedMavenProject.getCompileClasspathElements()).thenReturn(new ArrayList<>());
+
+        artifactReference = new ArtifactReference(mockedMavenProject, null, null, null, specifiedDependencies);
+        reflections = Utilities.buildReflections(artifactReference, new ArrayList<>());
+        inputsFilter = reflections.getConfiguration().getInputsFilter();
+
+        Assert.assertNotNull(inputsFilter);
+        Assert.assertEquals("+bork_kasjf.*, +com\\.somecompany\\.team.*, +com\\.othercompany\\.clan.*, +org\\.ngo\\.subversive.*", inputsFilter.toString());
     }
 
     @Test
@@ -263,6 +306,7 @@ public class UtilitiesTest extends AbstractMojoTestCase {
     public void testExtractDependencyDetails() throws NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException, NoSuchFieldException {
         final String testDependencyGroupIdOnly = "com.test.package";
         final String testDependencyGroupIdAndArtifactId = "com.test.package-group:test-artifact";
+        final String testDependencyDetailsMethods = "test-group-id:test-artifact-id";
 
         // Get an instance of the private constructor Utilities class.
         Constructor<Utilities> constructor = Utilities.class.getDeclaredConstructor();
@@ -303,6 +347,17 @@ public class UtilitiesTest extends AbstractMojoTestCase {
         // Test "package" and "artifact" scenario
         Assert.assertEquals("com.test.package-group", specifiedGroupId);
         Assert.assertEquals("test-artifact", specifiedArtifactId);
+
+        details = method.invoke(utilities, testDependencyDetailsMethods);
+        method = details.getClass().getMethod("getSpecifiedGroupId");
+        specifiedGroupId = (String) method.invoke(details);
+
+        method = details.getClass().getMethod("getSpecifiedArtifactId");
+        specifiedArtifactId = (String) method.invoke(details);
+
+        // Test methods
+        Assert.assertEquals("test-group-id", specifiedGroupId);
+        Assert.assertEquals("test-artifact-id", specifiedArtifactId);
     }
 
     /**
