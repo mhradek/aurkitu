@@ -7,5 +7,6 @@ jdk: openjdk8
 script: mvn install -B
 
 after_success:
-  - mvn clean jacoco:report org.eluder.coveralls:coveralls-maven-plugin:report
+  - cd aurkitu-maven-plugin && mvn clean jacoco:report org.eluder.coveralls:coveralls-maven-plugin:report
+  - cd aurkitu-annotations && mvn clean jacoco:report org.eluder.coveralls:coveralls-maven-plugin:report
   - pip install --user codecov && codecov
