@@ -2,6 +2,7 @@ package com.michaelhradek.aurkitu.plugin;
 
 import com.michaelhradek.aurkitu.plugin.core.output.Schema;
 import com.michaelhradek.aurkitu.plugin.core.parsing.ArtifactReference;
+import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
 import org.apache.maven.project.MavenProject;
 import org.junit.Assert;
@@ -117,16 +118,20 @@ public class ApplicationTest extends AbstractMojoTestCase {
     }
 
     @Test
-    public void testSetup() {
+    public void testSetup() throws DependencyResolutionRequiredException {
         try {
             Application application = new Application();
 
             // Get the private method
             Method setupMethod = getPrivateApplicationMethod(application, "setup");
 
+            List<String> compileclasspathElements = new ArrayList<>();
+            compileclasspathElements.add("./aurkitu-test-service/target/classes");
+
             Mockito.when(mockProject.getDependencyArtifacts()).thenReturn(new HashSet<>());
             Mockito.when(mockProject.getGroupId()).thenReturn("test.group.id");
             Mockito.when(mockProject.getArtifactId()).thenReturn("test.artifact.id");
+            Mockito.when(mockProject.getCompileClasspathElements()).thenReturn(compileclasspathElements);
             ArtifactReference reference = new ArtifactReference(mockProject, null, null, null, null);
 
             // Fill application with required values
