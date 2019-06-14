@@ -54,4 +54,13 @@ public class NamespaceTest {
         namespace.setArtifactId(TEST_NAMESPACE_ARTIFACTID);
         Assert.assertTrue(namespace.toString().endsWith("d"));
     }
+
+    @Test
+    public void testEqualsAndHashCode() {
+        Namespace namespaceA = new Namespace("groupIdA", "identifierA", "artifactIdA");
+        Namespace namespaceB = new Namespace("groupIdA", "identifierA", "artifactIdA");
+
+        Assert.assertTrue(namespaceA.equals(namespaceB) && namespaceB.equals(namespaceA));
+        Assert.assertTrue(namespaceA.hashCode() == namespaceB.hashCode());
+    }
 }
