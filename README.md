@@ -39,7 +39,7 @@ Add the following to your dependencies within your `pom.xml`:
 <dependency>
     <groupId>com.michaelhradek</groupId>
     <artifactId>aurkitu-annotations</artifactId>
-    <version>0.0.6.2</version>
+    <version>0.0.6.3</version>
 </dependency>
 ```
 ### Maven Plugin
@@ -48,7 +48,7 @@ Followed by the following to the `plugins` of your `build` specifications within
 <plugin>
     <groupId>com.michaelhradek</groupId>
     <artifactId>aurkitu-maven-plugin</artifactId>
-    <version>0.0.6.2</version>
+    <version>0.0.6.3</version>
     <configuration>
         <schemaName>user</schemaName>
         <schemaNamespace>com.company.package.subpackage.flatbuffers</schemaNamespace>
@@ -80,7 +80,7 @@ Followed by the following to the `plugins` of your `build` specifications within
 #### required
 *   __schemaName__: sets the name of the generated schema which is then used for the output filename (e.g. `<schemaName>.<flatcFilename>` or `myschema.fbs`)
 #### optional
-*   __schemaNamespace__: sets the namespace of schema. All objects in this schema will have this namespace (default: `generated.flatbuffers`)
+*   __schemaNamespace__: sets the namespace of schema. All objects in this schema will have this namespace (default: `generated.flatbuffers`). The options are `group_id:identifier:artifact_id`. To omit, follow pattern `::artifact_id`.
 *   __flatcExtention__: sets the output file extension (default `fbs`)
 *   __schemaFileIdentifier__: flatbuffer file identifier (e.g. `file_identifier "MYFI";`)
 *   __outputDir__: where the generated schema will be written to (default: `${project.build.directory}/aurkitu/schemas`)
