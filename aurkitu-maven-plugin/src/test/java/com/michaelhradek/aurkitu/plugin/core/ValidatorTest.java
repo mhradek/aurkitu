@@ -10,6 +10,8 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -204,5 +206,26 @@ public class ValidatorTest {
         validator.setErrors(errors);
         Assert.assertFalse(validator.getErrors().isEmpty());
         Assert.assertEquals(1, validator.getErrors().size());
+    }
+
+    @Test
+    public void testDefinitionExists() throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+        Validator validator = new Validator();
+
+        Method definitionExistsMethod = validator.getClass().getDeclaredMethod("definitionExists", TypeDeclaration.Property.class);
+        definitionExistsMethod.setAccessible(true);
+
+        TypeDeclaration.Property property = new TypeDeclaration.Property();
+        property.type = FieldType.IDENT;
+        property.name = "test-missing-ident-type";
+        property.options.put(TypeDeclaration.Property.PropertyOptionKey.IDENT, null);
+
+        Boolean exists = (Boolean) definitionExistsMethod.invoke(validator, property);
+        Assert.assertFalse(exists);
+        Validator.Error error = validator.getErrors().get(0);
+
+        Assert.assertNotNull(error);
+        Assert.assertEquals(Validator.ErrorType.MISSING_OR_INVALID_TYPE, error.getType());
+        Assert.assertEquals(property.name, error.getLocation());
     }
 }
