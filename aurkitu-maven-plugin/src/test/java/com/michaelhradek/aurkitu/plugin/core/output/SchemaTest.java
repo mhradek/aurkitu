@@ -215,6 +215,8 @@ public class SchemaTest {
         Assert.assertFalse(schemaOne.equals(schemaTwo));
         schemaTwo.setNamespace("nameOne");
         Assert.assertTrue(schemaOne.equals(schemaTwo));
+
+        Assert.assertTrue(schemaOne.hashCode() == schemaTwo.hashCode());
     }
 
     @Test
