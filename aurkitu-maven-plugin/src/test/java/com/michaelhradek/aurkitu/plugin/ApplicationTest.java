@@ -28,6 +28,8 @@ import java.util.List;
 @RunWith(MockitoJUnitRunner.class)
 public class ApplicationTest extends AbstractMojoTestCase {
 
+    private static final String DIR_UNIT_TEST = "./target/unit-test";
+
     @Mock
     private MavenProject mockProject;
 
@@ -87,7 +89,7 @@ public class ApplicationTest extends AbstractMojoTestCase {
             // Fill application with required values
             Field outputDirectoryField = application.getClass().getDeclaredField("outputDirectory");
             outputDirectoryField.setAccessible(true);
-            outputDirectoryField.set(application, new File("./target/unit-test"));
+            outputDirectoryField.set(application, new File(DIR_UNIT_TEST));
 
             writeMethod.invoke(application, processedSchemas);
 
@@ -160,7 +162,7 @@ public class ApplicationTest extends AbstractMojoTestCase {
             // Fill application with required values
             Field outputDirectoryField = application.getClass().getDeclaredField("outputDirectory");
             outputDirectoryField.setAccessible(true);
-            outputDirectoryField.set(application, new File("./unit-test"));
+            outputDirectoryField.set(application, new File(DIR_UNIT_TEST));
 
             logMethod.invoke(application);
         } catch (NoSuchFieldException | IllegalAccessException | InvocationTargetException e) {
@@ -179,7 +181,7 @@ public class ApplicationTest extends AbstractMojoTestCase {
             // Fill application with required values
             Field outputDirectoryField = application.getClass().getDeclaredField("outputDirectory");
             outputDirectoryField.setAccessible(true);
-            outputDirectoryField.set(application, new File("./unit-test"));
+            outputDirectoryField.set(application, new File(DIR_UNIT_TEST));
 
             Field generateVersionField = application.getClass().getDeclaredField("generateVersion");
             generateVersionField.setAccessible(true);
@@ -193,6 +195,10 @@ public class ApplicationTest extends AbstractMojoTestCase {
             Field useSchemaCachingField = application.getClass().getDeclaredField("useSchemaCaching");
             useSchemaCachingField.setAccessible(true);
             useSchemaCachingField.set(application, false);
+
+            executeMethod.invoke(application);
+
+            useSchemaCachingField.set(application, true);
 
             executeMethod.invoke(application);
         } catch (NoSuchFieldException | IllegalAccessException | InvocationTargetException e) {
