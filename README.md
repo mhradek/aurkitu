@@ -20,8 +20,8 @@ This is a very early proof-of-concept currently being developed in spare time.
 ## roadmap
 *   [x] enable thread safety
 *   [ ] handle options, deprecation, and default values
-*   [ ] validate dependencies (optional)
-*   [ ] automate testing with flatc
+*   [x] validate dependencies (optional)
+*   [x] automate testing with flatc
 *   [ ] improve validation
 *   [ ] update with current (1.8) feature support (i.e. gRPC, Field, String constant, etc.)
 
@@ -241,10 +241,14 @@ root_type SampleClassTable;
 ```      
 With schema validation enabled, comments will be added to the end of the generated schema file which should assist in the resolution of issues which may likely cause `flatc` to fail.
 
-<!---
-## manual execution
-At minimum you must provide the schema name. Like so:
+## compile to flatbuffers
+The `flatc` executable can be downloaded or compiled from the Flatbuffer project site. For example:
 ```commandline
-mvn aurkitu:build-schema -Daurkitu-maven-plugin.schema-name=sample-schema-name
+echo "Compiling schemas to java"
+target/bin/flatc --java --gen-mutable -o target/aurkitu/output/java target/aurkitu/schemas/*.fbs
+
+echo "Compiling schemas to cpp"
+target/bin/flatc --cpp -o target/aurkitu/output/cpp target/aurkitu/schemas/*.fbs
 ```
---->
+
+All this can be automated via Maven. Examples can be found in the `aurkitu-test-service/pom-test.xml`.
