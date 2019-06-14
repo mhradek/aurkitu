@@ -2,8 +2,10 @@ package com.michaelhradek.aurkitu.plugin.core;
 
 import com.michaelhradek.aurkitu.annotations.FlatBufferEnum;
 import com.michaelhradek.aurkitu.annotations.FlatBufferTable;
+import com.michaelhradek.aurkitu.annotations.types.FieldType;
 import com.michaelhradek.aurkitu.plugin.Config;
 import com.michaelhradek.aurkitu.plugin.core.output.Schema;
+import com.michaelhradek.aurkitu.plugin.core.output.TypeDeclaration;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.junit.Assert;
 import org.junit.Test;
@@ -115,6 +117,37 @@ public class ValidatorTest {
         validator.validateSchema();
 
         Assert.assertEquals(0, validator.getErrors().size());
+
+        List<TypeDeclaration> types = schema.getTypes();
+        TypeDeclaration type = types.remove(0);
+
+        TypeDeclaration.Property property = new TypeDeclaration.Property();
+        property.name = "test-bad-ident-property";
+        property.type = FieldType.IDENT;
+        property.options.put(TypeDeclaration.Property.PropertyOptionKey.IDENT, "bad$ident-option");
+        type.addProperty(property);
+
+        types.add(type);
+        schema.setTypes(types);
+
+        validator.withSchema(schema);
+        validator.setCheckTables(true);
+        validator.validateSchema();
+        List<Validator.Error> errors = validator.getErrors();
+
+        Assert.assertNotNull(errors);
+        Assert.assertEquals(13, errors.size());
+
+        boolean foundError = false;
+        for (Validator.Error error : errors) {
+            if ("test-bad-ident-property".equals(error.getProperty().name)) {
+                Assert.assertEquals(Validator.ErrorType.INVALID_PATH, error.getType());
+                foundError = true;
+                break;
+            }
+        }
+
+        Assert.assertTrue(foundError);
     }
 
     @Test
