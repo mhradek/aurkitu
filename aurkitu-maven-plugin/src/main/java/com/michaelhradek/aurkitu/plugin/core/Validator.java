@@ -132,7 +132,7 @@ public class Validator {
         }
 
         // Check the namespace
-        if (checkNamespace && !StringUtils.isEmpty(schema.getNamespace()) && !schema.getNamespace().matches(REGEX_NAMESPACE)) {
+        if (checkNamespace && schema.getNamespace() != null && !schema.getNamespace().isEmpty() && !schema.getNamespace().toString().matches(REGEX_NAMESPACE)) {
             Error error = new Error();
             error.setLocation("Schema -> namespace");
             error.setType(ErrorType.INVALID_NAMESPACE);

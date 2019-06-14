@@ -6,6 +6,7 @@ import com.michaelhradek.aurkitu.plugin.core.FileGeneration;
 import com.michaelhradek.aurkitu.plugin.core.Processor;
 import com.michaelhradek.aurkitu.plugin.core.Utilities;
 import com.michaelhradek.aurkitu.plugin.core.output.Schema;
+import com.michaelhradek.aurkitu.plugin.core.output.components.Namespace;
 import com.michaelhradek.aurkitu.plugin.core.parsing.ArtifactReference;
 import com.michaelhradek.aurkitu.plugin.core.parsing.ClasspathReference;
 import com.michaelhradek.aurkitu.plugin.core.parsing.ClasspathSearchType;
@@ -149,6 +150,16 @@ public class Application extends AbstractMojo {
     private List<Schema> setup(ArtifactReference reference) throws MojoExecutionException {
         Schema schema = new Schema();
         schema.setNamespace(schemaNamespace);
+        if (schema.getNamespace() == null || schema.getNamespace().isEmpty()) {
+            schema.setNamespace(
+                    new Namespace(
+                            reference.getMavenProject().getGroupId(),
+                            Config.SCHEMA_NAMESPACE_IDENTIFIER_DEFAULT,
+                            reference.getMavenProject().getArtifactId()
+                    )
+            );
+        }
+
         schema.setName(schemaName);
         schema.setFileExtension(fileExtension);
         schema.setFileIdentifier(schemaFileIdentifier);
@@ -168,10 +179,18 @@ public class Application extends AbstractMojo {
                 log.debug("Dependencies found: " + classpathReferenceList.size());
                 for (ClasspathReference classpathReference : classpathReferenceList) {
                     Schema dependencySchema = new Schema();
-                    log.debug(" namespace: " + classpathReference.getDerivedNamespace());
-                    dependencySchema.setName(classpathReference.getArtifact());
-                    dependencySchema.setNamespace(classpathReference.getDerivedNamespace());
-                    dependencySchema.setClasspathReferenceList(Arrays.asList(classpathReference));
+                    log.debug(" namespace: " + classpathReference.getNamespace().toString());
+
+                    Namespace dependencyNamespace = classpathReference.getNamespace();
+                    if (!schema.getNamespace().isEmpty() && schema.getNamespace().getIdentifier() != null) {
+                        dependencyNamespace.setIdentifier(schema.getNamespace().getIdentifier());
+                    } else {
+                        dependencyNamespace.setIdentifier(Config.SCHEMA_NAMESPACE_IDENTIFIER_DEFAULT);
+                    }
+
+                    dependencySchema.setName(classpathReference.getNamespace().getArtifactId());
+                    dependencySchema.setNamespace(dependencyNamespace);
+                    dependencySchema.setClasspathReferenceList(new ArrayList<>(Arrays.asList(classpathReference)));
                     dependencySchema.setDependency(true);
                     dependencySchemas.add(dependencySchema);
                 }

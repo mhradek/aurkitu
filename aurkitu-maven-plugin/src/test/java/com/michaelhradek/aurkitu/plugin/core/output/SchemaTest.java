@@ -240,12 +240,12 @@ public class SchemaTest {
 
         Schema schema = new Schema();
         Assert.assertNull(schema.getNamespace());
-        schema.setNamespace(null);
+        schema.setNamespace("");
         Assert.assertNull(schema.getNamespace());
 
         schema.setNamespace(testNamespaceA);
         Assert.assertNotNull(schema.getNamespace());
-        Assert.assertEquals(testNamespaceA, schema.getNamespace());
+        Assert.assertEquals(testNamespaceA, schema.getNamespace().toString());
 
         schema = new Schema();
         schema.setName("");
@@ -254,6 +254,6 @@ public class SchemaTest {
         schema.setNamespace(testNamespaceB);
         Assert.assertNotNull(schema.getNamespace());
         Assert.assertNotEquals(testNamespaceB, schema.getNamespace());
-        Assert.assertEquals("base_lib.namespace.for.testing", schema.getNamespace());
+        Assert.assertEquals("base_lib.namespace.for.testing", schema.getNamespace().toString());
     }
 }

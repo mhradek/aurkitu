@@ -25,9 +25,15 @@ public final class Config {
      * {@link Config#SCHEMA_VERSION_COMMENT}
      */
     public static final String SCHEMA_VERSION_PLACEHOLDER = "AURKITU-SCHEMA-VERSION-ghjtyu567FHGFD";
+
     /**
      * Optional which includes a {@link String#hashCode()} of the contents of the schema file.
      */
     public static final String SCHEMA_VERSION_COMMENT =
             "// @version: " + Config.SCHEMA_VERSION_PLACEHOLDER;
+
+    /**
+     * In a schema namespace, the default is &lt;groupId&gt;.&lt;SCHEMA_NAMESPACE_IDENTIFIER_DEFAULT&gt;.&lt;aetifactId&gt;
+     */
+    public static final String SCHEMA_NAMESPACE_IDENTIFIER_DEFAULT = "flatbuffers";
 }

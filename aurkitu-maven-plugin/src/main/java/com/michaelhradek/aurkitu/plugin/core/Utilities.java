@@ -70,7 +70,7 @@ public class Utilities {
      * @throws MojoExecutionException                if getting NULL from MavenProject#getCompileClasspathElements()
      */
     public static synchronized Reflections buildReflections(ArtifactReference artifactReference, List<ClasspathReference> classpathReferenceList)
-            throws DependencyResolutionRequiredException, MojoExecutionException, MalformedURLException {
+            throws DependencyResolutionRequiredException, MojoExecutionException {
 
         List<String> classpathElements;
 
@@ -141,8 +141,10 @@ public class Utilities {
                 log.debug("Looking at compile classpath element (via MavenProject): " + element);
                 log.debug("  Adding: " + element);
                 final ClasspathReference classpathReference = new ClasspathReference(
-                        new File(element).toURI().toURL(), mavenProject.getArtifactId(),
-                        mavenProject.getGroupId());
+                        new File(element).toURI().toURL(),
+                        mavenProject.getGroupId(),
+                        mavenProject.getArtifactId()
+                );
                 classpathReferenceList.add(classpathReference);
             }
         }
@@ -192,8 +194,10 @@ public class Utilities {
                 String jarPath = "jar:file:" + file.getAbsolutePath() + "!/";
                 log.debug("Adding resolved artifact: " + file.getAbsolutePath());
                 final ClasspathReference classpathReference = new ClasspathReference(
-                        new URL(jarPath), resolutionResult.getArtifact().getArtifactId(),
-                        resolutionResult.getArtifact().getGroupId());
+                        new URL(jarPath),
+                        resolutionResult.getArtifact().getGroupId(),
+                        resolutionResult.getArtifact().getArtifactId()
+                );
                 classpathReferenceList.add(classpathReference);
             }
         }

@@ -2,6 +2,7 @@ package com.michaelhradek.aurkitu.plugin.core.output;
 
 import com.michaelhradek.aurkitu.plugin.Config;
 import com.michaelhradek.aurkitu.plugin.core.Validator;
+import com.michaelhradek.aurkitu.plugin.core.output.components.Namespace;
 import com.michaelhradek.aurkitu.plugin.core.parsing.ClasspathReference;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -22,7 +23,7 @@ public class Schema {
     private String name;
     private String fileIdentifier;
     private String fileExtension;
-    private String namespace;
+    private Namespace namespace;
     private String rootType;
     private List<EnumDeclaration> enums;
     private List<TypeDeclaration> types;
@@ -141,12 +142,14 @@ public class Schema {
      * @param input The namespace for the schema. Dashes are replaced with underscores - otherwise flatc compilation will fail.
      */
     public void setNamespace(String input) {
-        if (StringUtils.isEmpty(input)) {
-            this.namespace = null;
-            return;
-        }
+        this.namespace = Namespace.parse(input);
+    }
 
-        this.namespace = input.replaceAll("-", "_");
+    /**
+     * @param namespace The namespace. See {@link Schema#setNamespace(String)}
+     */
+    public void setNamespace(Namespace namespace) {
+        this.namespace = namespace;
     }
 
     @Override
@@ -213,10 +216,11 @@ public class Schema {
             builder.append(System.lineSeparator());
         }
 
-        if (namespace != null) {
+        if (namespace != null && !namespace.isEmpty()) {
             builder.append("namespace ");
-            builder.append(namespace);
-            if (!namespace.endsWith(";"))
+            final String outputNamespace = namespace.toString();
+            builder.append(outputNamespace);
+            if (!outputNamespace.endsWith(";"))
                 builder.append(";");
             builder.append(System.lineSeparator());
             builder.append(System.lineSeparator());

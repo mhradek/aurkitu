@@ -1,5 +1,6 @@
 package com.michaelhradek.aurkitu.plugin.core.parsing;
 
+import com.michaelhradek.aurkitu.plugin.core.output.components.Namespace;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -11,17 +12,14 @@ import java.net.URL;
 @EqualsAndHashCode
 public class ClasspathReference {
     private URL url;
-    private String artifact;
     private String groupId;
+    private String artifactId;
 
     /**
-     * @return a valid package identifier.
+     *
+     * @return a constructed namespace from this class path reference. No identifier is set.
      */
-    public String getDerivedNamespace() {
-        if (artifact == null || groupId == null) {
-            return null;
-        }
-
-        return artifact + "." + groupId;
+    public Namespace getNamespace() {
+        return new Namespace(groupId, null, artifactId);
     }
 }

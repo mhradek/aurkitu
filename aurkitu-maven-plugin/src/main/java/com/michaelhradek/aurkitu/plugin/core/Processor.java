@@ -8,6 +8,7 @@ import com.michaelhradek.aurkitu.plugin.core.output.Schema;
 import com.michaelhradek.aurkitu.plugin.core.output.TypeDeclaration;
 import com.michaelhradek.aurkitu.plugin.core.output.TypeDeclaration.Property;
 import com.michaelhradek.aurkitu.plugin.core.output.TypeDeclaration.Property.PropertyOptionKey;
+import com.michaelhradek.aurkitu.plugin.core.output.components.Namespace;
 import com.michaelhradek.aurkitu.plugin.core.parsing.AnnotationParser;
 import com.michaelhradek.aurkitu.plugin.core.parsing.ArtifactReference;
 import com.michaelhradek.aurkitu.plugin.core.parsing.ClasspathReference;
@@ -872,7 +873,7 @@ public class Processor {
                 mapTypeClass = String.class;
             }
 
-            String name = null;
+            String name;
             try {
                 if (!consolidatedSchemas) {
                     log.debug("Separated schemas requested; reviewing class");
@@ -948,7 +949,7 @@ public class Processor {
             String parametrizedTypeString = parseFieldSignatureForParametrizedTypeStringOnList(field);
             listTypeClass = urlClassLoader.loadClass(parametrizedTypeString);
         } catch (Exception e) {
-            log.warn("Unable to find and load class for List<?> parameter, using String instead (field name): ", field.getName());
+            log.warn("Unable to find and load class for List<?> parameter, using String instead (field name): " + field.getName());
             log.warn("Exception:", e);
             listTypeClass = String.class;
         }
@@ -998,8 +999,7 @@ public class Processor {
         }
 
         if (Utilities.isLowerCaseType(clazz)) {
-            log
-                    .debug("Array parameter is primative, wrapper, or String: " + field.getName());
+            log.debug("Array parameter is primitive, wrapper, or String: " + field.getName());
             name = name.toLowerCase();
         }
 
@@ -1083,7 +1083,7 @@ public class Processor {
      * Internal Processor class
      */
     public class ExternalClassDefinition {
-        public String targetNamespace;
+        public Namespace targetNamespace;
         public boolean locatedOutside;
     }
 }

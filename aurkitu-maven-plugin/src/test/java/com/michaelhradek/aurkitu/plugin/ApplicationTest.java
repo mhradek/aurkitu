@@ -86,7 +86,7 @@ public class ApplicationTest extends AbstractMojoTestCase {
             // Fill application with required values
             Field outputDirectoryField = application.getClass().getDeclaredField("outputDirectory");
             outputDirectoryField.setAccessible(true);
-            outputDirectoryField.set(application, new File("./unit-test"));
+            outputDirectoryField.set(application, new File("./target/unit-test"));
 
             writeMethod.invoke(application, processedSchemas);
 
@@ -125,6 +125,8 @@ public class ApplicationTest extends AbstractMojoTestCase {
             Method setupMethod = getPrivateApplicationMethod(application, "setup");
 
             Mockito.when(mockProject.getDependencyArtifacts()).thenReturn(new HashSet<>());
+            Mockito.when(mockProject.getGroupId()).thenReturn("test.group.id");
+            Mockito.when(mockProject.getArtifactId()).thenReturn("test.artifact.id");
             ArtifactReference reference = new ArtifactReference(mockProject, null, null, null, null);
 
             // Fill application with required values
