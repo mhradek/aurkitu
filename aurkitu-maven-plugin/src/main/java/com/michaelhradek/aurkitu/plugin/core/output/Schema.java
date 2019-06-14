@@ -131,10 +131,6 @@ public class Schema {
             return;
         }
 
-        if (input.length() < 1) {
-            return;
-        }
-
         fileExtension = input.toLowerCase();
     }
 

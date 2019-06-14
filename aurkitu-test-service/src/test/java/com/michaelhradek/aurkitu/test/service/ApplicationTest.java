@@ -30,11 +30,11 @@ public class ApplicationTest {
     private static final String SCHEMA_ENUM_USERSTATE = "enum UserState : byte { GUEST, ACTIVE, DISABLED, INACTIVE }";
     private static final String SCHEMA_ENUM_CALLTYPE = "enum CallType : byte { UNKNOWN, WINDOWS, MAC_OC, IOS, ANDROID }";
 
-    private static final String TABLE_PROPERTY_REQUEST_CALLTYPE_WITH_NAMESPACE = "callType:aurkitu_test_dependency.com.michaelhradek.CallType;";
+    private static final String TABLE_PROPERTY_REQUEST_CALLTYPE_WITH_NAMESPACE = "callType:com.michaelhradek.flatbuffers.aurkitu_test_dependency.CallType;";
     private static final String TABLE_PROPERTY_REQUEST_CALLTYPE_WITHOUT_NAMESPACE = "callType:CallType;";
 
-    private static final String TABLE_PROPERTY_WALLET_WITH_NAMESPACE = "wallet:aurkitu_test_dependency.com.michaelhradek.Wallet;";
-    private static final String TABLE_PROPERTY_LOOKUP_ERROR_WITH_NAMESPACE = "errors:[aurkitu_test_dependency.com.michaelhradek.LookupError];";
+    private static final String TABLE_PROPERTY_WALLET_WITH_NAMESPACE = "wallet:com.michaelhradek.flatbuffers.aurkitu_test_dependency.Wallet;";
+    private static final String TABLE_PROPERTY_LOOKUP_ERROR_WITH_NAMESPACE = "errors:[com.michaelhradek.flatbuffers.aurkitu_test_dependency.LookupError];";
     private static final String TABLE_PROPERTY_LOOKUP_ERROR_WITHOUT_NAMESPACE = "errors:[LookupError];";
 
     @Test

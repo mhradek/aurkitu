@@ -9,6 +9,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class ValidatorTest {
 
@@ -92,7 +93,7 @@ public class ValidatorTest {
     }
 
     @Test
-    public void testValidateSchemaCheckTables() throws MojoExecutionException {
+    public void testValidateCheckTables() throws MojoExecutionException {
         Processor processor = new Processor().withSourceAnnotation(FlatBufferTable.class)
                 .withSourceAnnotation(FlatBufferEnum.class).withSchema(new Schema());
 
@@ -146,5 +147,29 @@ public class ValidatorTest {
         validator.setCheckNamespace(false);
         validator.validateSchema();
         Assert.assertEquals(0, validator.getErrors().size());
+    }
+
+    @Test
+    public void testValidationFlags() {
+        Validator validator = new Validator();
+        Assert.assertTrue(validator.isCheckTables());
+        Assert.assertTrue(validator.isCheckEnums());
+        Assert.assertTrue(validator.isCheckNamespace());
+
+        validator.setCheckTables(false);
+        validator.setCheckEnums(false);
+        validator.setCheckNamespace(false);
+
+        Assert.assertFalse(validator.isCheckTables());
+        Assert.assertFalse(validator.isCheckEnums());
+        Assert.assertFalse(validator.isCheckNamespace());
+
+        Assert.assertTrue(validator.getErrors().isEmpty());
+        Validator.Error error = new Validator().new Error();
+        List<Validator.Error> errors = new ArrayList<>();
+        errors.add(error);
+        validator.setErrors(errors);
+        Assert.assertFalse(validator.getErrors().isEmpty());
+        Assert.assertEquals(1, validator.getErrors().size());
     }
 }

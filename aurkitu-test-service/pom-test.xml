@@ -12,6 +12,31 @@
         plugin as an integration test.
     </description>
 
+    <profiles>
+        <profile>
+            <id>Mac</id>
+            <activation>
+                <os>
+                    <family>mac</family>
+                </os>
+            </activation>
+            <properties>
+                <fbs.distribution>distribution-osx</fbs.distribution>
+            </properties>
+        </profile>
+        <profile>
+            <id>Linux</id>
+            <activation>
+                <os>
+                    <name>linux</name>
+                </os>
+            </activation>
+            <properties>
+                <fbs.distribution>distribution-linux</fbs.distribution>
+            </properties>
+        </profile>
+    </profiles>
+
     <parent>
         <groupId>com.michaelhradek</groupId>
         <artifactId>aurkitu-parent</artifactId>
@@ -39,6 +64,41 @@
 
     <build>
         <plugins>
+            <!-- FlatBuffer compiler; download and untar -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <!-- Required execution to grab the first argument in the flatbuffer build script (i.e. flatbuffers dependency jar path) -->
+                    <execution>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>properties</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>unpack</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>unpack</goal>
+                        </goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>com.github.davidmoten</groupId>
+                                    <artifactId>flatbuffers-compiler</artifactId>
+                                    <version>${flatbuffers.version}</version>
+                                    <type>tar.gz</type>
+                                    <classifier>${fbs.distribution}</classifier>
+                                    <overWrite>true</overWrite>
+                                    <outputDirectory>${project.build.directory}</outputDirectory>
+                                </artifactItem>
+                            </artifactItems>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Build the various schemas -->
             <plugin>
                 <groupId>com.michaelhradek</groupId>
                 <artifactId>aurkitu-maven-plugin</artifactId>
@@ -97,7 +157,88 @@
                     </execution>
                 </executions>
             </plugin>
+            <!-- Compile the schemas into CPP and Java...-->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>${exec-maven-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>compile-java-consolidated-schemas</id>
+                        <phase>install</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>${project.build.directory}/bin/flatc</executable>
+                            <arguments>
+                                <argument>--java</argument>
+                                <argument>--gen-mutable</argument>
+                                <argument>-o</argument>
+                                <argument>${project.build.directory}/aurkitu/output/java/consolidated</argument>
+                                <argument>${project.build.directory}/aurkitu/schemas/test-service-consolidated.fbs
+                                </argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>compile-java-separated-schemas</id>
+                        <phase>install</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>${project.build.directory}/bin/flatc</executable>
+                            <arguments>
+                                <argument>--java</argument>
+                                <argument>--gen-mutable</argument>
+                                <argument>-o</argument>
+                                <argument>${project.build.directory}/aurkitu/output/java/separated</argument>
+                                <argument>${project.build.directory}/aurkitu/schemas/test-service-seperated.fbs
+                                </argument>
+                                <argument>${project.build.directory}/aurkitu/schemas/aurkitu-test-dependency.fbs
+                                </argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>compile-cpp-consolidated-schemas</id>
+                        <phase>install</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>${project.build.directory}/bin/flatc</executable>
+                            <arguments>
+                                <argument>--cpp</argument>
+                                <argument>-o</argument>
+                                <argument>${project.build.directory}/aurkitu/output/cpp/consolidated</argument>
+                                <argument>${project.build.directory}/aurkitu/schemas/test-service-consolidated.fbs
+                                </argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>compile-cpp-separated-schemas</id>
+                        <phase>install</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>${project.build.directory}/bin/flatc</executable>
+                            <arguments>
+                                <argument>--cpp</argument>
+                                <argument>-o</argument>
+                                <argument>${project.build.directory}/aurkitu/output/cpp/separated</argument>
+                                <argument>${project.build.directory}/aurkitu/schemas/test-service-seperated.fbs
+                                </argument>
+                                <argument>${project.build.directory}/aurkitu/schemas/aurkitu-test-dependency.fbs
+                                </argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
-
 </project>

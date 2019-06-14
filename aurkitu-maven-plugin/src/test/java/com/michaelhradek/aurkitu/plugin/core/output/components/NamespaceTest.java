@@ -48,5 +48,10 @@ public class NamespaceTest {
 
     @Test
     public void testToString() {
+        Namespace namespace = new Namespace();
+        Assert.assertEquals("", namespace.toString());
+
+        namespace.setArtifactId(TEST_NAMESPACE_ARTIFACTID);
+        Assert.assertTrue(namespace.toString().endsWith("d"));
     }
 }

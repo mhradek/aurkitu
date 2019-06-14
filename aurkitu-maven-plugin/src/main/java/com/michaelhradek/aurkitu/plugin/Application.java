@@ -188,7 +188,7 @@ public class Application extends AbstractMojo {
                         dependencyNamespace.setIdentifier(Config.SCHEMA_NAMESPACE_IDENTIFIER_DEFAULT);
                     }
 
-                    dependencySchema.setName(classpathReference.getNamespace().getArtifactId());
+                    dependencySchema.setName(classpathReference.getArtifactId());
                     dependencySchema.setNamespace(dependencyNamespace);
                     dependencySchema.setClasspathReferenceList(new ArrayList<>(Arrays.asList(classpathReference)));
                     dependencySchema.setDependency(true);

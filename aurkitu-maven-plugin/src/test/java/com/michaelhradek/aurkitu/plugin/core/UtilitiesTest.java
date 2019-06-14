@@ -7,6 +7,7 @@ import com.michaelhradek.aurkitu.plugin.Application;
 import com.michaelhradek.aurkitu.plugin.core.output.Schema;
 import com.michaelhradek.aurkitu.plugin.core.parsing.ArtifactReference;
 import com.michaelhradek.aurkitu.plugin.core.parsing.ClasspathReference;
+import com.michaelhradek.aurkitu.plugin.core.parsing.ClasspathSearchType;
 import com.michaelhradek.aurkitu.plugin.test.SampleClassTable;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
@@ -21,6 +22,7 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
 import org.apache.maven.plugin.testing.MojoRule;
 import org.apache.maven.project.MavenProject;
+import org.eclipse.aether.resolution.ArtifactResolutionException;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -40,6 +42,7 @@ import java.util.UUID;
 public class UtilitiesTest extends AbstractMojoTestCase {
 
     private static String OUTPUT_DIRECTORY = "target/aurkitu/utilities/test";
+
     @Rule
     public MojoRule rule = new MojoRule() {
 
@@ -125,8 +128,41 @@ public class UtilitiesTest extends AbstractMojoTestCase {
     }
 
     @Test
-    public void testBuildProjectClasspathList() throws Exception {
-        // TODO
+    public void testBuildProjectClasspathList() throws IllegalAccessException, InvocationTargetException,
+            InstantiationException, MalformedURLException, NoSuchMethodException, NoSuchFieldException,
+            DependencyResolutionRequiredException, ArtifactResolutionException {
+
+        // Mock maven project
+        MavenProject project = Mockito.mock(MavenProject.class);
+
+        List<String> compileClasspathElements = new ArrayList<>();
+        compileClasspathElements.add("/Users/m.hradek/IdeaProjects/aurkitu/aurkitu-test-service/target/classes");
+
+        // get the required methods
+        Mockito.when(project.getCompileClasspathElements()).thenReturn(compileClasspathElements);
+
+        // set up the reference object
+        ArtifactReference reference = new ArtifactReference(project, null, null, null, null);
+
+        // execute
+        List<ClasspathReference> result = Utilities.buildProjectClasspathList(reference, ClasspathSearchType.PROJECT);
+
+        // verify
+        Assert.assertEquals(1, result.size());
+
+        // Get an instance of the private constructor Utilities class.
+        Constructor<Utilities> constructor = Utilities.class.getDeclaredConstructor();
+        constructor.setAccessible(true);
+        Utilities utilities = constructor.newInstance();
+
+        // clean up
+        Field classpathElementsCacheField = utilities.getClass().getDeclaredField("classpathElementsCache");
+        classpathElementsCacheField.setAccessible(true);
+        classpathElementsCacheField.set(utilities, null);
+
+        Field dependencyArtifactsCacheField = utilities.getClass().getDeclaredField("dependencyArtifactsCache");
+        dependencyArtifactsCacheField.setAccessible(true);
+        dependencyArtifactsCacheField.set(utilities, null);
     }
 
     @Test

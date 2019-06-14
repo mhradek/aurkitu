@@ -28,16 +28,16 @@ public class Namespace {
     }
 
     /**
-     * @param namespace takes a string and parse a namespace from it. We use : to separate the parts of a namespace
+     * @param input takes a string and parse a namespace from it. We use : to separate the parts of a namespace
      * @return a constructed namespace
      */
-    public static Namespace parse(String namespace) {
-        if (StringUtils.isEmpty(namespace)) {
+    public static Namespace parse(String input) {
+        if (StringUtils.isEmpty(input)) {
             return null;
         }
 
         // Dashes will cause build issues
-        namespace = namespace.replaceAll("-", "_");
+        String namespace = input.replaceAll("-", "_");
         if (!namespace.contains(":")) {
             return new Namespace(namespace.trim().toLowerCase(), null, null);
         }
@@ -60,46 +60,45 @@ public class Namespace {
      */
     public boolean isEmpty() {
         return StringUtils.isEmpty(groupId) && StringUtils.isEmpty(identifier) && StringUtils.isEmpty(artifactId);
-
     }
 
     /**
-     * @param groupId which is typically the beginning of a package name (e.g. [org.whitehouse].president)
+     * @param input which is typically the beginning of a package name (e.g. [org.whitehouse].president)
      */
-    public void setGroupId(String groupId) {
-        if (StringUtils.isEmpty(groupId)) {
+    public void setGroupId(String input) {
+        if (StringUtils.isEmpty(input)) {
             this.groupId = null;
             return;
         }
 
-        groupId = groupId.replaceAll("-", "_");
+        String groupId = input.replaceAll("-", "_");
         this.groupId = groupId.trim().toLowerCase();
     }
 
     /**
-     * @param identifier which is used to differentiate these generated classes and namespace from the originating code.
+     * @param input which is used to differentiate these generated classes and namespace from the originating code.
      *                   See {@link com.michaelhradek.aurkitu.plugin.Config#SCHEMA_NAMESPACE_IDENTIFIER_DEFAULT}
      */
-    public void setIdentifier(String identifier) {
-        if (StringUtils.isEmpty(identifier)) {
+    public void setIdentifier(String input) {
+        if (StringUtils.isEmpty(input)) {
             this.identifier = null;
             return;
         }
 
-        identifier = identifier.replaceAll("-", "_");
+        String identifier = input.replaceAll("-", "_");
         this.identifier = identifier.trim().toLowerCase();
     }
 
     /**
-     * @param artifactId which is typcially the actual target compilation's name (e.g. org.whitehouse.[president])
+     * @param input which is typcially the actual target compilation's name (e.g. org.whitehouse.[president])
      */
-    public void setArtifactId(String artifactId) {
-        if (StringUtils.isEmpty(artifactId)) {
+    public void setArtifactId(String input) {
+        if (StringUtils.isEmpty(input)) {
             this.artifactId = null;
             return;
         }
 
-        artifactId = artifactId.replaceAll("-", "_");
+        String artifactId = input.replaceAll("-", "_");
         this.artifactId = artifactId.trim().toLowerCase();
     }
 
