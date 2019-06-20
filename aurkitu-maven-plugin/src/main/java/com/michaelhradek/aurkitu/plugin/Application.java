@@ -225,7 +225,6 @@ public class Application extends AbstractMojo {
                         .withConsolidatedSchemas(consolidatedSchemas)
                         .withValidateSchemas(validateSchema);
 
-
         // Add schemas
         processor.addAllSchemas(candidateSchemas);
 

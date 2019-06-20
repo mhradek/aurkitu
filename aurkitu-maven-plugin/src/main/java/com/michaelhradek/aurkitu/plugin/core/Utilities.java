@@ -291,8 +291,8 @@ public class Utilities {
                 log.debug("  Testing against: " + dependency);
                 DependencyDetails dependencyDetails = extractDependencyDetails(dependency);
 
-                log.debug(String.format("  Unresolved groupId: %s, artifactId: %s",
-                        unresolvedArtifact.getGroupId(), unresolvedArtifact.getArtifactId()));
+                log.debug("  Unresolved groupId: {}, artifactId: {}",
+                        unresolvedArtifact.getGroupId(), unresolvedArtifact.getArtifactId());
 
                 // If only a groupId is specified...
                 if (dependencyDetails.specifiedArtifactId == null && dependencyDetails.specifiedGroupId.equalsIgnoreCase(unresolvedArtifact.getGroupId())) {
@@ -326,7 +326,7 @@ public class Utilities {
     public static String getCurrentProject(final ArtifactReference artifactReference) {
         final String projectName = String.join(":",
                 artifactReference.getMavenProject().getGroupId(), artifactReference.getMavenProject().getArtifactId());
-        log.debug("  Current project name: " + projectName);
+        log.debug("  Current project name: {}", projectName);
         return projectName;
     }
 
@@ -363,7 +363,7 @@ public class Utilities {
             specifiedArtifactId = null;
         }
 
-        log.debug(String.format("Dependency specified groupId: %s, artifactId: %s", specifiedGroupId, specifiedArtifactId));
+        log.debug("Dependency specified groupId: {}, artifactId: {}", specifiedGroupId, specifiedArtifactId);
 
         return new DependencyDetails(specifiedGroupId, specifiedArtifactId);
     }

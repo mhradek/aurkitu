@@ -142,7 +142,7 @@ public class Processor {
         for (int i = 0; i < listOfTypes.length; i++) {
             listOfTypes[i] = listOfTypes[i].replaceAll(";", "");
             listOfTypes[i] = listOfTypes[i].replaceFirst("[a-zA-Z]{1}", "");
-            log.debug(String.format("Derived class #%d: %s", i, listOfTypes[i]));
+            log.debug("Derived class #{}: {}", i, listOfTypes[i]);
         }
 
         return listOfTypes;
@@ -195,8 +195,8 @@ public class Processor {
         // Formatting the input so it is consistent
         Map<String, String> temp = new HashMap<>();
         for (Entry<String, String> item : namespaceOverrideMap.entrySet()) {
-            log.debug(String.format("Reviewing namespaceOverrideMap item key: %s, value %s",
-                    item.getKey(), item.getValue()));
+            log.debug("Reviewing namespaceOverrideMap item key: {}, value {}",
+                    item.getKey(), item.getValue());
 
             temp.put(item.getKey().endsWith(".") ? item.getKey() : item.getKey() + ".",
                     item.getValue().endsWith(".") ? item.getValue() : item.getValue() + ".");
@@ -340,7 +340,7 @@ public class Processor {
             }
         }
 
-        log.debug(String.format("   Got target [%d] classes for schema: %s", targetClasses.size(), schema.getName()));
+        log.debug("   Got target [{}] classes for schema: {}", targetClasses.size(), schema.getName());
         for (Class<?> targetClass : targetClasses) {
             log.debug("  Target class to use in schema: " + targetClass.getName());
         }
@@ -457,7 +457,7 @@ public class Processor {
             for (Field field : fields) {
                 log.debug("  Field: " + field.getName() + " type:" + field.getType().getSimpleName());
                 if (field.getAnnotation(FlatBufferEnumTypeField.class) != null) {
-                    log.debug("    Annotated field");
+                    log.debug("    Annotated field (aforementioned field)");
 
                     // Verify the declaration on the enum matches the declaration of the field
                     if (enumD.getType() == null) {
@@ -911,7 +911,14 @@ public class Processor {
 
         // Set in this type the various types for the K/Vs used in this map
         mapType.setProperties(properties);
-        schema.addTypeDeclaration(mapType);
+
+        try {
+            if (consolidatedSchemas || !getExternalClassDefinitionDetails(field.getDeclaringClass()).locatedOutside) {
+                schema.addTypeDeclaration(mapType);
+            }
+        } catch (MojoExecutionException e) {
+            log.debug("Unable to determine if declaring class is located outside - skipped adding type [{}] to schema [{}] type definition list", mapType.getName(), schema.getName());
+        }
 
         // Need a way to reference back to the new generated type
         property.options.put(PropertyOptionKey.MAP, mapTypeName);
@@ -1017,7 +1024,7 @@ public class Processor {
         ExternalClassDefinition externalClassDefinition = new ExternalClassDefinition();
 
         if (currentSchema.isDependency()) {
-            log.debug(String.format("This [%s] is a dependency. Therefor, skipping external class check for [%s]. This assumes that a base schema is the sum of its self and its dependencies.", currentSchema.getName(), clazz.getName()));
+            log.debug("This [{}] is a dependency. Therefor, skipping external class check for [{}]. This assumes that a base schema is the sum of its self and its dependencies.", currentSchema.getName(), clazz.getName());
             // Consider if we want to recursively add more schemas as we find them.
             return externalClassDefinition;
         }
