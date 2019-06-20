@@ -52,7 +52,10 @@ public class NamespaceTest {
         Assert.assertEquals("", namespace.toString());
 
         namespace.setArtifactId(TEST_NAMESPACE_ARTIFACTID);
-        Assert.assertTrue(namespace.toString().endsWith("d"));
+        Assert.assertEquals(TEST_NAMESPACE_ARTIFACTID, namespace.toString());
+
+        namespace.setIdentifier("iid");
+        Assert.assertEquals("iid." + TEST_NAMESPACE_ARTIFACTID, namespace.toString());
     }
 
     @Test
@@ -62,5 +65,9 @@ public class NamespaceTest {
 
         Assert.assertTrue(namespaceA.equals(namespaceB) && namespaceB.equals(namespaceA));
         Assert.assertTrue(namespaceA.hashCode() == namespaceB.hashCode());
+
+        namespaceB.setGroupId("groupIdB");
+        Assert.assertFalse(namespaceA.equals(namespaceB) && namespaceB.equals(namespaceA));
+        Assert.assertFalse(namespaceA.hashCode() == namespaceB.hashCode());
     }
 }

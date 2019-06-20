@@ -1,31 +1,42 @@
 package com.michaelhradek.aurkitu.plugin;
 
+import com.michaelhradek.aurkitu.plugin.core.Utilities;
 import com.michaelhradek.aurkitu.plugin.core.output.Schema;
+import com.michaelhradek.aurkitu.plugin.core.output.components.Namespace;
 import com.michaelhradek.aurkitu.plugin.core.parsing.ArtifactReference;
+import com.michaelhradek.aurkitu.plugin.core.parsing.ClasspathReference;
+import com.michaelhradek.aurkitu.plugin.core.parsing.ClasspathSearchType;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
 import org.apache.maven.project.MavenProject;
+import org.eclipse.aether.resolution.ArtifactResolutionException;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
-import org.mockito.runners.MockitoJUnitRunner;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
+import org.powermock.modules.junit4.PowerMockRunnerDelegate;
 
 import java.io.File;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.*;
 
 /**
  * @author m.hradek
  */
-@RunWith(MockitoJUnitRunner.class)
+@RunWith(PowerMockRunner.class)
+@PowerMockRunnerDelegate(JUnit4.class)
+@PrepareForTest({Utilities.class, Namespace.class})
 public class ApplicationTest extends AbstractMojoTestCase {
 
     private static final String DIR_UNIT_TEST = "./target/unit-test";
@@ -120,20 +131,20 @@ public class ApplicationTest extends AbstractMojoTestCase {
     }
 
     @Test
-    public void testSetup() throws DependencyResolutionRequiredException {
+    public void testSetup() throws DependencyResolutionRequiredException, MalformedURLException, ArtifactResolutionException {
         try {
             Application application = new Application();
 
             // Get the private method
             Method setupMethod = getPrivateApplicationMethod(application, "setup");
 
-            List<String> compileclasspathElements = new ArrayList<>();
-            compileclasspathElements.add("./aurkitu-test-service/target/classes");
+            List<String> compileClasspathElements = new ArrayList<>();
+            compileClasspathElements.add("./aurkitu-test-service/target/classes");
 
             Mockito.when(mockProject.getDependencyArtifacts()).thenReturn(new HashSet<>());
             Mockito.when(mockProject.getGroupId()).thenReturn("test.group.id");
             Mockito.when(mockProject.getArtifactId()).thenReturn("test.artifact.id");
-            Mockito.when(mockProject.getCompileClasspathElements()).thenReturn(compileclasspathElements);
+            Mockito.when(mockProject.getCompileClasspathElements()).thenReturn(compileClasspathElements);
             ArtifactReference reference = new ArtifactReference(mockProject, null, null, null, null);
 
             // Fill application with required values
@@ -144,8 +155,26 @@ public class ApplicationTest extends AbstractMojoTestCase {
             Field consolidatedSchemasField = application.getClass().getDeclaredField("consolidatedSchemas");
             consolidatedSchemasField.setAccessible(true);
             consolidatedSchemasField.set(application, false);
-
             setupMethod.invoke(application, reference);
+
+            PowerMockito.mockStatic(Utilities.class);
+            List<ClasspathReference> classpathReferenceList = new ArrayList<>();
+            ClasspathReference classpathReference = new ClasspathReference(new URL("jar:file://some/test/file.jar!/"), "some-test-group-id", "some-test-artifact-id");
+            classpathReferenceList.add(classpathReference);
+
+            Mockito.when(Utilities.buildProjectClasspathList(Mockito.any(ArtifactReference.class), Mockito.any(ClasspathSearchType.class))).thenReturn(classpathReferenceList);
+            setupMethod.invoke(application, reference);
+
+            PowerMockito.mockStatic(Namespace.class);
+            Mockito.when(Namespace.parse(Mockito.anyString())).thenReturn(null);
+            setupMethod.invoke(application, reference);
+
+            Mockito.when(Namespace.parse(Mockito.anyString())).thenReturn(new Namespace("", "", ""));
+            setupMethod.invoke(application, reference);
+
+            Mockito.when(Namespace.parse(Mockito.anyString())).thenReturn(new Namespace("", "SOME_IDENTIFIER", ""));
+            setupMethod.invoke(application, reference);
+
         } catch (NoSuchFieldException | IllegalAccessException | InvocationTargetException e) {
             Assert.fail("Unable to setup schemas via Application::setup " + e.getMessage());
         }
@@ -165,6 +194,44 @@ public class ApplicationTest extends AbstractMojoTestCase {
             outputDirectoryField.set(application, new File(DIR_UNIT_TEST));
 
             logMethod.invoke(application);
+
+            Field namespaceOverrideMapField = application.getClass().getDeclaredField("namespaceOverrideMap");
+            namespaceOverrideMapField.setAccessible(true);
+            namespaceOverrideMapField.set(application, null);
+
+            logMethod.invoke(application);
+
+            Map<String, String> namespaceOverrideMap = new HashMap<>();
+            namespaceOverrideMap.put("someMapKey", "someMapValue");
+
+            namespaceOverrideMapField.set(application, namespaceOverrideMap);
+
+            logMethod.invoke(application);
+
+            Field schemaIncludesField = application.getClass().getDeclaredField("schemaIncludes");
+            schemaIncludesField.setAccessible(true);
+            schemaIncludesField.set(application, null);
+
+            logMethod.invoke(application);
+
+            Set<String> schemaIncludes = new HashSet<>();
+            schemaIncludes.add("testSchemaIncludes");
+            schemaIncludesField.set(application, schemaIncludes);
+
+            logMethod.invoke(application);
+
+            Field specifiedDependenciesField = application.getClass().getDeclaredField("specifiedDependencies");
+            specifiedDependenciesField.setAccessible(true);
+            specifiedDependenciesField.set(application, null);
+
+            logMethod.invoke(application);
+
+            List<String> specifiedDependencies = new ArrayList<>();
+            specifiedDependencies.add("testSpecifiedDependencies");
+            specifiedDependenciesField.set(application, specifiedDependencies);
+
+            logMethod.invoke(application);
+
         } catch (NoSuchFieldException | IllegalAccessException | InvocationTargetException e) {
             Assert.fail("Unable to run the initiate setting log via Application::log " + e.getMessage());
         }
@@ -201,6 +268,12 @@ public class ApplicationTest extends AbstractMojoTestCase {
             useSchemaCachingField.set(application, true);
 
             executeMethod.invoke(application);
+
+            PowerMockito.mockStatic(Utilities.class);
+            Mockito.when(Utilities.areSchemasPresent(Mockito.anyListOf(Schema.class), Mockito.anyObject())).thenReturn(true);
+
+            executeMethod.invoke(application);
+
         } catch (NoSuchFieldException | IllegalAccessException | InvocationTargetException e) {
             Assert.fail("Unable to execute plugin via Application::execute " + e.getMessage());
         }

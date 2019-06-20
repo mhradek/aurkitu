@@ -70,6 +70,8 @@
         <jetbrains.annotations.version>17.0.0</jetbrains.annotations.version>
         <maven.compiler.version>3.7.0</maven.compiler.version>
         <exec-maven-plugin.version>1.6.0</exec-maven-plugin.version>
+        <powermock.version>2.0.2</powermock.version>
+        <powermock-api.version>1.7.4</powermock-api.version>
     </properties>
 
     <dependencies>

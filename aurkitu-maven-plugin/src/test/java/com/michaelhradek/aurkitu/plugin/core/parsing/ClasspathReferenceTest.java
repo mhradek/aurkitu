@@ -24,7 +24,6 @@ public class ClasspathReferenceTest {
         Assert.assertTrue(classpathReferenceTwo.equals(classpathReference));
         Assert.assertEquals(classpathReference.hashCode(), classpathReferenceTwo.hashCode());
 
-
         final URL TEST_URL = new URL("file:/some/url/to/some/jar");
 
         classpathReference = new ClasspathReference(TEST_URL, null, TEST_ARTIFACT);

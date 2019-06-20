@@ -2,10 +2,17 @@ package com.michaelhradek.aurkitu.plugin.core.output;
 
 import com.michaelhradek.aurkitu.plugin.Config;
 import com.michaelhradek.aurkitu.plugin.core.Processor;
+import com.michaelhradek.aurkitu.plugin.core.Validator;
+import com.michaelhradek.aurkitu.plugin.core.output.components.Namespace;
+import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.HashSet;
+
+import static org.hamcrest.core.IsNot.not;
 
 public class SchemaTest {
 
@@ -50,7 +57,7 @@ public class SchemaTest {
     }
 
     @Test
-    public void testToString() {
+    public void testToString() throws NoSuchFieldException, IllegalAccessException {
         final String INCLUDE_1 = "base-test-include-alpha";
         final String INCLUDE_2 = "test-include-beta;";
         final String ATTRIBUTE = "someAttribute";
@@ -130,6 +137,65 @@ public class SchemaTest {
 
             Assert.fail("Line not tested: [" + line + "]");
         }
+
+        // Check validation
+        schema.setIsValid(null);
+        String schemaToString = schema.toString();
+        Assert.assertThat(schemaToString, not(CoreMatchers.containsString("// Schema passed validation")));
+
+        schema.setIsValid(true);
+
+        Validator validator = new Validator().withSchema(schema);
+        validator.validateSchema();
+        schema.setValidator(validator);
+
+        schemaToString = schema.toString();
+        Assert.assertThat(schemaToString, CoreMatchers.containsString("// Schema passed validation"));
+
+        // Check namespace
+        final String namespaceLine = "namespace " + NAMESPACE + ";";
+        schema.setNamespace("");
+        schemaToString = schema.toString();
+        Assert.assertThat(schemaToString, not(CoreMatchers.containsString(namespaceLine)));
+
+        Namespace namespace = null;
+        schema.setNamespace(namespace);
+        schemaToString = schema.toString();
+        Assert.assertThat(schemaToString, not(CoreMatchers.containsString(namespaceLine)));
+
+        schema.setNamespace(NAMESPACE);
+        schemaToString = schema.toString();
+        Assert.assertThat(schemaToString, CoreMatchers.containsString(namespaceLine));
+
+        namespace = new Namespace();
+        Field namespaceGroupIdField = namespace.getClass().getDeclaredField("groupId");
+        namespaceGroupIdField.setAccessible(true);
+        namespaceGroupIdField.set(namespace, "");
+        schema.setNamespace(namespace);
+        schemaToString = schema.toString();
+        Assert.assertThat(schemaToString, not(CoreMatchers.containsString(namespaceLine)));
+
+        namespaceGroupIdField.set(namespace, "test-group-id");
+        schema.setNamespace(namespace);
+        schemaToString = schema.toString();
+        Assert.assertThat(schemaToString, CoreMatchers.containsString("test-group-id"));
+
+        // Check includes
+        final String includeLine = "include ";
+        Assert.assertThat(schemaToString, CoreMatchers.containsString(includeLine));
+
+        schema.setIncludes(null);
+        schemaToString = schema.toString();
+        Assert.assertThat(schemaToString, not(CoreMatchers.containsString(includeLine)));
+
+        schema.setIncludes(new HashSet<>());
+        schemaToString = schema.toString();
+        Assert.assertThat(schemaToString, not(CoreMatchers.containsString(includeLine)));
+
+        final String includeLineTwo = "include \"" + INCLUDE_1 + "." + Config.FILE_EXTENSION + "\";";
+        schema.addInclude(INCLUDE_1);
+        schemaToString = schema.toString();
+        Assert.assertThat(schemaToString, CoreMatchers.containsString(includeLineTwo));
     }
 
     @Test

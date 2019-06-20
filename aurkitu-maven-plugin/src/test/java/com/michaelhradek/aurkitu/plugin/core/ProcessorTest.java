@@ -759,7 +759,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
     }
 
     @Test
-    public void testGetExternalClassDefinitionDetails() throws MojoExecutionException {
+    public void testGetExternalClassDefinitionDetails() throws MojoExecutionException, IllegalAccessException, NoSuchFieldException {
         Processor processor = new Processor().withSourceAnnotation(FlatBufferTable.class)
                 .withSourceAnnotation(FlatBufferEnum.class).withSchema(new Schema());
         Assert.assertEquals(2, processor.getSourceAnnotations().size());
@@ -767,6 +767,21 @@ public class ProcessorTest extends AbstractMojoTestCase {
         processor.execute();
 
         Processor.ExternalClassDefinition externalClassDefinition = processor.getExternalClassDefinitionDetails(TestAnonymousClass.class);
+        Assert.assertFalse(externalClassDefinition.locatedOutside);
+        Assert.assertNull(externalClassDefinition.targetNamespace);
+
+        Field currentSchemaField = processor.getClass().getDeclaredField("currentSchema");
+        currentSchemaField.setAccessible(true);
+        Schema currentSchema = (Schema) currentSchemaField.get(processor);
+
+        //if(currentSchema == null) {
+        //  currentSchema = new Schema();
+        //}
+
+        currentSchema.setDependency(true);
+        currentSchemaField.set(processor, currentSchema);
+
+        externalClassDefinition = processor.getExternalClassDefinitionDetails(TestAnonymousClass.class);
         Assert.assertFalse(externalClassDefinition.locatedOutside);
         Assert.assertNull(externalClassDefinition.targetNamespace);
     }
