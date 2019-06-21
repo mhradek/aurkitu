@@ -136,7 +136,7 @@ public class UtilitiesTest extends AbstractMojoTestCase {
         MavenProject project = Mockito.mock(MavenProject.class);
 
         List<String> compileClasspathElements = new ArrayList<>();
-        compileClasspathElements.add("/Users/m.hradek/IdeaProjects/aurkitu/aurkitu-test-service/target/classes");
+        compileClasspathElements.add("./target/classes");
 
         // get the required methods
         Mockito.when(project.getCompileClasspathElements()).thenReturn(compileClasspathElements);
