@@ -1020,7 +1020,7 @@ public class Processor {
      * @return ExternalClassDefinition which is populated with the target schema namespace and if it is externally defined
      * @throws MojoExecutionException if something goes wrong
      */
-    public ExternalClassDefinition getExternalClassDefinitionDetails(Class<?> clazz) throws MojoExecutionException {
+    private ExternalClassDefinition getExternalClassDefinitionDetails(Class<?> clazz) throws MojoExecutionException {
         ExternalClassDefinition externalClassDefinition = new ExternalClassDefinition();
 
         if (currentSchema.isDependency()) {

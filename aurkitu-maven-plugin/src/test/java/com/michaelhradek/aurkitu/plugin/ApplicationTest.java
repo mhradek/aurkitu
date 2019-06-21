@@ -14,14 +14,12 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
-import org.powermock.modules.junit4.PowerMockRunnerDelegate;
 
 import java.io.File;
 import java.lang.reflect.Field;
@@ -35,7 +33,6 @@ import java.util.*;
  * @author m.hradek
  */
 @RunWith(PowerMockRunner.class)
-@PowerMockRunnerDelegate(JUnit4.class)
 @PrepareForTest({Utilities.class, Namespace.class})
 public class ApplicationTest extends AbstractMojoTestCase {
 
@@ -279,12 +276,6 @@ public class ApplicationTest extends AbstractMojoTestCase {
         }
     }
 
-    /**
-     * The commented block only works when the POM is set to run with some special settings. Will probably need to move this
-     * into an integration test block that runs special POM files/projects to validate the POM files.
-     *
-     * @throws Exception
-     */
     @Test
     public void testBasicRead() {
         File testPom = new File(getBasedir(), "src/test/resources/plugin-basic/pom.xml");

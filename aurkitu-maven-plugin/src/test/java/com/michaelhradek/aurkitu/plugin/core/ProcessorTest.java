@@ -28,11 +28,13 @@ import javassist.bytecode.annotation.Annotation;
 import javassist.bytecode.annotation.BooleanMemberValue;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
+import org.apache.maven.project.MavenProject;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.mockito.Mockito;
 
 import java.io.File;
 import java.lang.reflect.Field;
@@ -72,6 +74,26 @@ public class ProcessorTest extends AbstractMojoTestCase {
         ccFile.addAttribute(attribute);
 
         return targetClass.toClass();
+    }
+
+
+    @Test
+    public void testProcessClass() throws NoSuchFieldException, IllegalAccessException {
+        MavenProject mockMavenProject = Mockito.mock(MavenProject.class);
+        ArtifactReference reference = new ArtifactReference(mockMavenProject, null, null, null, null);
+
+        Field tableField = SampleClassTable.class.getDeclaredField("fullnameClass");
+
+        Schema schema = new Schema();
+        schema.setClasspathReferenceList(new ArrayList<>());
+
+        Processor processor = new Processor().withArtifactReference(reference).withConsolidatedSchemas(false).withSchema(schema);
+
+        Field currentSchemaField = processor.getClass().getDeclaredField("currentSchema");
+        currentSchemaField.setAccessible(true);
+        currentSchemaField.set(processor, schema);
+
+        Property property = processor.processClass(new Property(), tableField, false);
     }
 
     /**
@@ -759,14 +781,21 @@ public class ProcessorTest extends AbstractMojoTestCase {
     }
 
     @Test
-    public void testGetExternalClassDefinitionDetails() throws MojoExecutionException, IllegalAccessException, NoSuchFieldException {
+    public void testGetExternalClassDefinitionDetails() throws MojoExecutionException, IllegalAccessException,
+            NoSuchFieldException, NoSuchMethodException, InvocationTargetException {
+
         Processor processor = new Processor().withSourceAnnotation(FlatBufferTable.class)
                 .withSourceAnnotation(FlatBufferEnum.class).withSchema(new Schema());
         Assert.assertEquals(2, processor.getSourceAnnotations().size());
 
         processor.execute();
 
-        Processor.ExternalClassDefinition externalClassDefinition = processor.getExternalClassDefinitionDetails(TestAnonymousClass.class);
+        Method getExternalClassDefinitionDetailsMethod = processor.getClass().getDeclaredMethod("getExternalClassDefinitionDetails", Class.class);
+        getExternalClassDefinitionDetailsMethod.setAccessible(true);
+
+
+        Processor.ExternalClassDefinition externalClassDefinition =
+                (Processor.ExternalClassDefinition) getExternalClassDefinitionDetailsMethod.invoke(processor, TestAnonymousClass.class);
         Assert.assertFalse(externalClassDefinition.locatedOutside);
         Assert.assertNull(externalClassDefinition.targetNamespace);
 
@@ -781,7 +810,8 @@ public class ProcessorTest extends AbstractMojoTestCase {
         currentSchema.setDependency(true);
         currentSchemaField.set(processor, currentSchema);
 
-        externalClassDefinition = processor.getExternalClassDefinitionDetails(TestAnonymousClass.class);
+        externalClassDefinition =
+                (Processor.ExternalClassDefinition) getExternalClassDefinitionDetailsMethod.invoke(processor, TestAnonymousClass.class);
         Assert.assertFalse(externalClassDefinition.locatedOutside);
         Assert.assertNull(externalClassDefinition.targetNamespace);
     }
