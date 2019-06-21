@@ -2,13 +2,17 @@ package com.michaelhradek.aurkitu.plugin.core;
 
 import com.michaelhradek.aurkitu.plugin.core.output.Schema;
 import com.michaelhradek.aurkitu.plugin.core.output.TypeDeclaration.Property;
+import com.michaelhradek.aurkitu.plugin.core.output.components.Namespace;
 import com.michaelhradek.aurkitu.plugin.core.parsing.ArtifactReference;
 import com.michaelhradek.aurkitu.plugin.test.SampleClassTable;
 import org.apache.maven.project.MavenProject;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
-import org.mockito.runners.MockitoJUnitRunner;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -18,7 +22,7 @@ import java.util.Map;
 /**
  * @author m.hradek
  */
-@RunWith(MockitoJUnitRunner.class)
+@RunWith(PowerMockRunner.class)
 public class ProcessMethodTest {
 
     @Test
@@ -158,5 +162,38 @@ public class ProcessMethodTest {
         Mockito.when(mockReference.getMavenProject()).thenThrow(Exception.class);
         processor.withArtifactReference(mockReference);
         property = processor.processList(new Property(), arrayField, false);
+    }
+
+    @Test
+    @PrepareForTest({Processor.class, Processor.ExternalClassDefinition.class, MavenProject.class})
+    public void testProcessListWithExternalClassDefinition() throws Exception {
+        MavenProject mockMavenProject = PowerMockito.mock(MavenProject.class);
+        ArtifactReference reference = new ArtifactReference(mockMavenProject, null, null, null, null);
+
+        Field arrayField = SampleClassTable.class.getDeclaredField("tokens");
+
+        Schema schema = new Schema();
+        schema.setClasspathReferenceList(new ArrayList<>());
+
+        Field currentSchemaField = Processor.class.getDeclaredField("currentSchema");
+        currentSchemaField.setAccessible(true);
+
+        Processor processor = new Processor()
+                .withArtifactReference(reference)
+                .withConsolidatedSchemas(false)
+                .withSchema(schema);
+        currentSchemaField.set(processor, schema);
+
+        Processor spyProcessor = PowerMockito.spy(processor);
+
+        final Namespace namespace = new Namespace("sexy.new.namespace", null, "sexy-artifact");
+        Processor.ExternalClassDefinition mockExternalClassDefinition = PowerMockito.mock(Processor.ExternalClassDefinition.class);
+        mockExternalClassDefinition.locatedOutside = true;
+        mockExternalClassDefinition.targetNamespace = namespace;
+
+        PowerMockito.doReturn(mockExternalClassDefinition).when(spyProcessor, PowerMockito.method(Processor.class, "getExternalClassDefinitionDetails", Class.class)).withArguments(Mockito.any());
+        Property property = spyProcessor.processList(new Property(), arrayField, false);
+
+        Assert.assertEquals(namespace.toString() + ".String", property.options.get(Property.PropertyOptionKey.ARRAY));
     }
 }

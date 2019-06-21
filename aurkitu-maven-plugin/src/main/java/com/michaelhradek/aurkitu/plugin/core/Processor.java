@@ -14,6 +14,7 @@ import com.michaelhradek.aurkitu.plugin.core.parsing.ArtifactReference;
 import com.michaelhradek.aurkitu.plugin.core.parsing.ClasspathReference;
 import com.michaelhradek.aurkitu.plugin.core.parsing.ClasspathSearchType;
 import lombok.Getter;
+import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -968,6 +969,7 @@ public class Processor {
                 log.debug("Separated schemas requested; reviewing class");
                 ExternalClassDefinition externalClassDefinition = getExternalClassDefinitionDetails(listTypeClass);
                 if (externalClassDefinition.locatedOutside) {
+                    log.debug(" Located outside this schema; using other namespace");
                     name = externalClassDefinition.targetNamespace + "." + listTypeClass.getSimpleName();
                 }
             }
@@ -1030,7 +1032,9 @@ public class Processor {
         }
 
         log.debug("Determining if class was defined outside this schema");
-        final String currentClazzPackageName = clazz.getPackage().getName();
+        final String currentClazzPackageName = clazz
+                .getPackage()
+                .getName();
         log.debug("  Class namespace for review: " + currentClazzPackageName);
         boolean classLocatedOutside = false;
 
@@ -1089,6 +1093,7 @@ public class Processor {
      * <p>
      * Internal Processor class
      */
+    @ToString
     public class ExternalClassDefinition {
         public Namespace targetNamespace;
         public boolean locatedOutside;
