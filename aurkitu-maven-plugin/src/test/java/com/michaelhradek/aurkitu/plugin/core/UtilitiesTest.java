@@ -150,7 +150,7 @@ public class UtilitiesTest extends AbstractMojoTestCase {
         // verify
         // TODO Make this work on Travis CI
         // Assert.assertEquals(1, result.size());
-        System.out.println("FOUND NUMBER OF CLASSPATH REFERENCES: " + (result == null ? "null" : result.size()));
+        // System.out.println("FOUND NUMBER OF CLASSPATH REFERENCES: " + (result == null ? "null" : result.size()));
 
         // Get an instance of the private constructor Utilities class.
         Constructor<Utilities> constructor = Utilities.class.getDeclaredConstructor();
