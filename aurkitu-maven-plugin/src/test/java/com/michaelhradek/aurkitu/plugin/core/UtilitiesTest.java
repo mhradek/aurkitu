@@ -136,7 +136,7 @@ public class UtilitiesTest extends AbstractMojoTestCase {
         MavenProject project = Mockito.mock(MavenProject.class);
 
         List<String> compileClasspathElements = new ArrayList<>();
-        compileClasspathElements.add("./target/classes");
+        compileClasspathElements.add("./aurkitu-maven-plugin/target/classes");
 
         // get the required methods
         Mockito.when(project.getCompileClasspathElements()).thenReturn(compileClasspathElements);
@@ -150,6 +150,7 @@ public class UtilitiesTest extends AbstractMojoTestCase {
         // verify
         // TODO Make this work on Travis CI
         // Assert.assertEquals(1, result.size());
+        System.out.println("FOUND NUMBER OF CLASSPATH REFERENCES: " + (result == null ? "null" : result.size()));
 
         // Get an instance of the private constructor Utilities class.
         Constructor<Utilities> constructor = Utilities.class.getDeclaredConstructor();
