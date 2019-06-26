@@ -38,4 +38,4 @@ jobs:
           key: v1-dependencies-{{ checksum "pom.xml" }}
 
       # run tests!
-      - run: ./build-run.sh
+      - run: ./build-test.sh
