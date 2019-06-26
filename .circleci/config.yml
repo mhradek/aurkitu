@@ -38,4 +38,5 @@ jobs:
           key: v1-dependencies-{{ checksum "pom.xml" }}
 
       # run tests!
-      - run: ./build-test.sh
+      - run: mvn clean install -T 1C
+      - run: cd aurkitu-test-service/ && mvn -o clean install -f pom-test.xml
