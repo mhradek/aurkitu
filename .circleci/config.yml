@@ -30,13 +30,12 @@ jobs:
             # fallback to using the latest cache if no exact match is found
             - v1-dependencies-
 
-      - run: mvn dependency:resolve-plugins dependency:go-offline --projects aurkitu-annotations,aurkitu-maven-plugin
+      - run: mvn clean install
 
       - save_cache:
           paths:
             - ~/.m2
           key: v1-dependencies-{{ checksum "pom.xml" }}
 
-      # run tests!
-      - run: mvn clean -o install -T 1C
+      # run integration tests
       - run: cd aurkitu-test-service/ && mvn clean install -f pom-test.xml
