@@ -32,6 +32,7 @@ jobs:
 
       - run: mvn dependency:go-offline --projects aurkitu-annotations,aurkitu-maven-plugin
       - run: mvn dependency:get -Dartifact=org.apache.maven.plugins:maven-install-plugin:2.4
+      - run: mvn dependency:get -Dartifact=org.jacoco:jacoco-maven-plugin:0.8.4
 
       - save_cache:
           paths:
