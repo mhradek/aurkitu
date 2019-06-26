@@ -9,7 +9,7 @@ if [[ "$?" -ne 0 ]] ; then
 fi
 
 # Run the integration tests
-cd aurkitu-test-service/ && mvn clean install -f pom-test.xml -o
+cd aurkitu-test-service/ && mvn -o clean install -f pom-test.xml
 
 #echo "Compiling schemas to java"
 #target/bin/flatc --java --gen-mutable -o target/aurkitu/output/java target/aurkitu/schemas/*.fbs
