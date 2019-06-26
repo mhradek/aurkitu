@@ -38,5 +38,5 @@ jobs:
           key: v1-dependencies-{{ checksum "pom.xml" }}
 
       # run tests!
-      - run: mvn clean -o install -T 1C
+      - run: mvn clean -o install -T 1C --projects aurkitu-annotations,aurkitu-maven-plugin
       - run: cd aurkitu-test-service/ && mvn clean install -f pom-test.xml
