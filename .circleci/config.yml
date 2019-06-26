@@ -40,6 +40,13 @@ jobs:
       - run: mvn dependency:get -Dartifact=org.apache.maven:maven-monitor:2.0.6
       - run: mvn dependency:get -Dartifact=org.apache.maven.shared:maven-filtering:1.1
       - run: mvn dependency:get -Dartifact=org.codehaus.plexus:plexus-interpolation:1.13
+      - run: mvn dependency:get -Dartifact=org.codehaus.plexus:plexus-component-annotations:1.6
+      - run: mvn dependency:get -Dartifact=org.apache.maven.shared:maven-shared-utils:3.1.0
+      - run: mvn dependency:get -Dartifact=org.apache.maven.shared:maven-shared-incremental:1.1
+      - run: mvn dependency:get -Dartifact=org.codehaus.plexus:plexus-java:0.9.2
+      - run: mvn dependency:get -Dartifact=org.codehaus.plexus:plexus-compiler-api:2.8.2
+      - run: mvn dependency:get -Dartifact=org.codehaus.plexus:plexus-compiler-manager:2.8.2
+      - run: mvn dependency:get -Dartifact=org.codehaus.plexus:plexus-compiler-javac:2.8.2
 
       - save_cache:
           paths:
