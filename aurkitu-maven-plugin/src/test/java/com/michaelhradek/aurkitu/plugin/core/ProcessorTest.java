@@ -28,13 +28,11 @@ import javassist.bytecode.annotation.Annotation;
 import javassist.bytecode.annotation.BooleanMemberValue;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
-import org.apache.maven.project.MavenProject;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import org.mockito.Mockito;
 
 import java.io.File;
 import java.lang.reflect.Field;
@@ -74,26 +72,6 @@ public class ProcessorTest extends AbstractMojoTestCase {
         ccFile.addAttribute(attribute);
 
         return targetClass.toClass();
-    }
-
-
-    @Test
-    public void testProcessClass() throws NoSuchFieldException, IllegalAccessException {
-        MavenProject mockMavenProject = Mockito.mock(MavenProject.class);
-        ArtifactReference reference = new ArtifactReference(mockMavenProject, null, null, null, null);
-
-        Field tableField = SampleClassTable.class.getDeclaredField("fullnameClass");
-
-        Schema schema = new Schema();
-        schema.setClasspathReferenceList(new ArrayList<>());
-
-        Processor processor = new Processor().withArtifactReference(reference).withConsolidatedSchemas(false).withSchema(schema);
-
-        Field currentSchemaField = processor.getClass().getDeclaredField("currentSchema");
-        currentSchemaField.setAccessible(true);
-        currentSchemaField.set(processor, schema);
-
-        Property property = processor.processClass(new Property(), tableField, false);
     }
 
     /**
@@ -177,8 +155,8 @@ public class ProcessorTest extends AbstractMojoTestCase {
         schema.addInclude("AnotherFile.fbs");
 
         Assert.assertEquals(12, processor.getTargetClasses().size());
-        Assert.assertEquals(9, schema.getTypes().size());
-        Assert.assertEquals(8, schema.getEnums().size());
+        Assert.assertEquals(9, schema.getTypeDeclarations().size());
+        Assert.assertEquals(8, schema.getEnumDeclarations().size());
 
         Assert.assertEquals("SampleClassTable", schema.getRootType());
 
@@ -196,12 +174,12 @@ public class ProcessorTest extends AbstractMojoTestCase {
         Schema schema = processor.getProcessedSchemas().get(0);
 
         Assert.assertEquals(6, processor.getTargetClasses().size());
-        Assert.assertEquals(0, schema.getTypes().size());
-        Assert.assertEquals(6, schema.getEnums().size());
+        Assert.assertEquals(0, schema.getTypeDeclarations().size());
+        Assert.assertEquals(6, schema.getEnumDeclarations().size());
 
         Assert.assertEquals(null, schema.getRootType());
 
-        for (EnumDeclaration enumD : schema.getEnums()) {
+        for (EnumDeclaration enumD : schema.getEnumDeclarations()) {
             if (enumD.getName().equals(SampleEnumByte.class.getSimpleName())) {
                 Assert.assertEquals(EnumType.BYTE, enumD.getType());
                 Assert.assertNull(enumD.getComment());
@@ -245,12 +223,12 @@ public class ProcessorTest extends AbstractMojoTestCase {
         Schema schema = processor.getProcessedSchemas().get(0);
 
         Assert.assertEquals(6, processor.getTargetClasses().size());
-        Assert.assertEquals(9, schema.getTypes().size());
-        Assert.assertEquals(5, schema.getEnums().size());
+        Assert.assertEquals(9, schema.getTypeDeclarations().size());
+        Assert.assertEquals(5, schema.getEnumDeclarations().size());
 
         Assert.assertEquals("SampleClassTable", schema.getRootType());
 
-        for (TypeDeclaration type : schema.getTypes()) {
+        for (TypeDeclaration type : schema.getTypeDeclarations()) {
 
             if (type.getName().equals(SampleClassTable.class.getSimpleName())) {
                 Assert.assertEquals(16, type.getProperties().size());
@@ -395,9 +373,14 @@ public class ProcessorTest extends AbstractMojoTestCase {
      * @throws NoSuchFieldException if unable to locate field via getDeclaredField()
      */
     @Test
-    public void testGetPropertyForField() throws NoSuchFieldException, SecurityException {
-        Processor processor = new Processor();
+    public void testGetPropertyForField() throws NoSuchFieldException, SecurityException, IllegalAccessException {
+
         Schema schema = new Schema();
+        Processor processor = new Processor();
+
+        Field currentSchemaField = processor.getClass().getDeclaredField("currentSchema");
+        currentSchemaField.setAccessible(true);
+        currentSchemaField.set(processor, schema);
 
         // Test "Long"
         Field field = SampleClassTable.class.getDeclaredField("id");
@@ -508,7 +491,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
     public void testParseFieldSignatureForParametrizedTypeStringoOnList()
             throws NoSuchFieldException, IllegalAccessException, ClassNotFoundException {
         Schema schema = new Schema();
-        Field field = schema.getClass().getDeclaredField("enums");
+        Field field = schema.getClass().getDeclaredField("enumDeclarations");
 
         Assert.assertEquals(EnumDeclaration.class.getName(),
                 Processor.parseFieldSignatureForParametrizedTypeStringOnList(field));
@@ -547,7 +530,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
 
         processor.execute();
         Schema schema = processor.getProcessedSchemas().get(0);
-        for (TypeDeclaration type : schema.getTypes()) {
+        for (TypeDeclaration type : schema.getTypeDeclarations()) {
             if (type.getName().equals(SampleClassReferenced.class.getSimpleName())) {
 
                 Field field = SampleClassReferenced.class.getDeclaredField("samples");

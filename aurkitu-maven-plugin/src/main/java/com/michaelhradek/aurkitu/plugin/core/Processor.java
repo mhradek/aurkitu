@@ -12,7 +12,10 @@ import com.michaelhradek.aurkitu.plugin.core.output.components.Namespace;
 import com.michaelhradek.aurkitu.plugin.core.parsing.AnnotationParser;
 import com.michaelhradek.aurkitu.plugin.core.parsing.ArtifactReference;
 import com.michaelhradek.aurkitu.plugin.core.parsing.ClasspathReference;
-import com.michaelhradek.aurkitu.plugin.core.parsing.ClasspathSearchType;
+import com.michaelhradek.aurkitu.plugin.core.processing.ArrayProperties;
+import com.michaelhradek.aurkitu.plugin.core.processing.ClassProperties;
+import com.michaelhradek.aurkitu.plugin.core.processing.ListProperties;
+import com.michaelhradek.aurkitu.plugin.core.processing.MapProperties;
 import lombok.Getter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +28,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
-import java.lang.reflect.Type;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.*;
@@ -686,300 +688,21 @@ public class Processor {
 
         // EX: String[], SomeClass[]
         if (field.getType().isArray() && !field.getType().isAssignableFrom(List.class)) {
-            return processArray(property, field, useFullName);
+            return new ArrayProperties(this).process(property, field, useFullName);
         }
 
         // EX: List<String>, List<SomeClass>, and Sets<E>
         if (field.getType().isAssignableFrom(List.class) || field.getType().isAssignableFrom(Set.class)) {
-            return processList(property, field, useFullName);
+            return new ListProperties(this).process(property, field, useFullName);
         }
 
         // EX: Map<String, Object>
         if (field.getType().isAssignableFrom(Map.class)) {
-            return processMap(property, schema, field, useFullName);
+            return new MapProperties(this).process(property, field, useFullName);
         }
 
         // Anything else - enum, class, etc.
-        return processClass(property, field, useFullName);
-    }
-
-    /**
-     * @param property    The property to populate with additional data about a field
-     * @param field       The field to examine. In this case the field is a class
-     * @param useFullName Whether or not to use the full class name including the package or just the name
-     * @return The completed property struct
-     */
-    public Property processClass(Property property, Field field, boolean useFullName) {
-        String name = field.getName();
-        log.debug("Found unrecognized type; assuming FieldType.IDENT(IFIER) and running processClass(...): " + name);
-
-        property.name = name;
-        property.type = FieldType.IDENT;
-
-        Type fieldType = field.getGenericType();
-        String identName;
-
-        try {
-            Class<?> clazz;
-            if (artifactReference != null && artifactReference.getMavenProject() != null) {
-                clazz = getClassForClassName(artifactReference.getMavenProject(), currentSchema, fieldType.getTypeName());
-            } else {
-                clazz = Thread.currentThread().getContextClassLoader().loadClass(fieldType.getTypeName());
-            }
-
-            // Consolidated versus separated schema check
-            if (!consolidatedSchemas) {
-                log.debug("Separated schemas requested; reviewing class");
-                ExternalClassDefinition externalClassDefinition = getExternalClassDefinitionDetails(clazz);
-                if (externalClassDefinition.locatedOutside) {
-                    identName = externalClassDefinition.targetNamespace + "." + clazz.getSimpleName();
-                } else {
-                    identName = useFullName ? clazz.getName() : clazz.getSimpleName();
-                }
-            } else {
-                identName = useFullName ? clazz.getName() : clazz.getSimpleName();
-            }
-
-            if (useFullName) {
-                String simpleName = clazz.getName().substring(clazz.getName().lastIndexOf(".") + 1);
-                String packageName = clazz.getName().substring(0, clazz.getName().lastIndexOf(".") + 1);
-                if (namespaceOverrideMap != null && namespaceOverrideMap.containsKey(packageName)) {
-                    identName = namespaceOverrideMap.get(packageName) + simpleName;
-                    log.debug("Override located; using it: " + identName);
-                }
-            }
-        } catch (Exception e) {
-            if (!warnedTypeNames.contains(fieldType.getTypeName())) {
-                if (e instanceof ClassNotFoundException) {
-                    log.warn("Class not found for type name: " + fieldType.getTypeName());
-                } else {
-                    log.warn("Unable to get class for name: " + fieldType.getTypeName(), e);
-                }
-                warnedTypeNames.add(fieldType.getTypeName());
-            }
-
-            if (useFullName) {
-                identName = fieldType.getTypeName();
-                String simpleName = identName.substring(identName.lastIndexOf(".") + 1);
-                String packageName = identName.substring(0, identName.lastIndexOf(".") + 1);
-                if (namespaceOverrideMap != null && namespaceOverrideMap.containsKey(packageName)) {
-                    identName = namespaceOverrideMap.get(packageName) + simpleName;
-                }
-            } else {
-                identName = fieldType.getTypeName().substring(fieldType.getTypeName().lastIndexOf(".") + 1);
-
-                if (identName.contains("$")) {
-                    identName = identName.substring(identName.lastIndexOf("$"));
-                }
-
-                log.debug("Trimmed: " + fieldType.getTypeName() + " to " + identName);
-            }
-        }
-
-        property.options.put(Property.PropertyOptionKey.IDENT, identName);
-        return property;
-    }
-
-    /**
-     * @param property    The property to populate with additional data about a field
-     * @param field       The field to examine. In this case the field is an array
-     * @param useFullName Whether or not to use the full class name including the package or just the name
-     * @return The completed property struct
-     */
-    public Property processArray(Property property, Field field, boolean useFullName) {
-        log.debug("Found array (e.g. int[]) type. Setting FieldType.ARRAY and processing: " + field.getName());
-        property.name = field.getName();
-        property.type = FieldType.ARRAY;
-
-        // Determine type of the array
-        String name = field.getType().getComponentType().getSimpleName();
-        if (Utilities.isLowerCaseType(field.getType().getComponentType())) {
-            log.debug("Array parameter is primitive, wrapper, or String: " + field.getName());
-            name = name.toLowerCase();
-        } else {
-            // It may be a Class<?> which isn't a primitive (i.e. lowerCaseType)
-            if (useFullName) {
-                name = field.getType().getComponentType().getName();
-
-                String simpleName = field.getType().getComponentType().getName()
-                        .substring(field.getType().getComponentType().getName().lastIndexOf(".") + 1);
-                String packageName = field.getType().getComponentType().getName()
-                        .substring(0, field.getType().getComponentType().getName().lastIndexOf(".") + 1);
-                log.debug(String
-                        .format("Using full name; reviewing simpleName: %s and package: %s", simpleName, packageName));
-
-                if (namespaceOverrideMap != null && namespaceOverrideMap.containsKey(packageName)) {
-                    name = namespaceOverrideMap.get(packageName) + simpleName;
-                    log.debug("Override located; using it: " + name);
-                }
-            } else {
-                name = field.getType().getComponentType().getSimpleName();
-            }
-        }
-
-        // In the end Array[] and List<?> are represented the same way.
-        property.options.put(PropertyOptionKey.ARRAY, name);
-        return property;
-    }
-
-    /**
-     * @param property    The property to populate with additional data about a field
-     * @param schema      The schema currently being considered while reviewing this field
-     * @param field       The field to examine. In this case the field is a map
-     * @param useFullName Whether or not to use the full class name including the package or just the name
-     * @return The completed property struct
-     */
-    public Property processMap(Property property, Schema schema, Field field, boolean useFullName) {
-        log.debug("Found map type. Setting FieldType.MAP and processing: " + field.getName());
-        property.name = field.getName();
-        property.type = FieldType.MAP;
-
-        // Stuff the types into this list
-        List<Property> properties = new ArrayList<>();
-
-        // Get the type for the key and value
-        String[] parametrizedTypeStrings = new String[]{String.class.getName(), String.class.getName()};
-        try {
-            parametrizedTypeStrings = parseFieldSignatureForParametrizedTypeStringsOnMap(field);
-        } catch (Exception e) {
-            log.warn("Unable to determine classes for Map<?, ?> parameter types", e);
-        }
-
-        // Attempt to load each type (technically will run twice as in A and B in example Map<A, B>)
-        for (int i = 0; i < parametrizedTypeStrings.length; i++) {
-            Class<?> mapTypeClass;
-            Property mapTypeProperty = new Property();
-
-            try {
-                // Load all paths into custom classloader
-                ClassLoader urlClassLoader = Thread.currentThread().getContextClassLoader();
-                if (artifactReference != null && artifactReference.getMavenProject() != null) {
-                    urlClassLoader = URLClassLoader
-                            .newInstance(Utilities.arrayForClasspathReferenceList(
-                                    Utilities.buildProjectClasspathList(artifactReference, ClasspathSearchType.BOTH)), urlClassLoader);
-                }
-
-                // Parse Field signature
-                mapTypeClass = urlClassLoader.loadClass(parametrizedTypeStrings[i]);
-
-                if (mapTypeClass.getName().equals(Object.class.getName())) {
-                    log.warn(
-                            "Using Map<?, ?> where either `?` is `java.lang.Object` is not permitted; using `java.lang.String`");
-                    mapTypeClass = String.class;
-                }
-            } catch (Exception e) {
-                log
-                        .warn("Unable to find and load class for Map<?, ?> parameter, using <String, String> instead: ",
-                                e);
-                mapTypeClass = String.class;
-            }
-
-            String name;
-            try {
-                if (!consolidatedSchemas) {
-                    log.debug("Separated schemas requested; reviewing class");
-                    ExternalClassDefinition externalClassDefinition = getExternalClassDefinitionDetails(mapTypeClass);
-                    if (externalClassDefinition.locatedOutside) {
-                        name = externalClassDefinition.targetNamespace + "." + mapTypeClass.getSimpleName();
-                    } else {
-                        name = getName(mapTypeClass, field, useFullName);
-                    }
-                } else {
-                    name = getName(mapTypeClass, field, useFullName);
-                }
-            } catch (MojoExecutionException e) {
-                name = getName(mapTypeClass, field, useFullName);
-            }
-
-            // Stuffing...
-            if (i == 0) {
-                mapTypeProperty.name = "key";
-            } else {
-                mapTypeProperty.name = "value";
-            }
-
-            mapTypeProperty.type = FieldType.IDENT;
-            mapTypeProperty.options.put(PropertyOptionKey.IDENT, name);
-            properties.add(mapTypeProperty);
-        }
-
-        // Create a new type and add it to the list of types
-        TypeDeclaration mapType = new TypeDeclaration();
-        final String mapTypeName = TypeDeclaration.MapValueSet.class.getSimpleName() + "_"
-                + field.getDeclaringClass().getSimpleName() + "_" + field.getName();
-        mapType.setName(mapTypeName);
-        mapType.setComment("Auto-generated type for use with Map<?, ?>");
-
-        // Set in this type the various types for the K/Vs used in this map
-        mapType.setProperties(properties);
-
-        try {
-            if (consolidatedSchemas || !getExternalClassDefinitionDetails(field.getDeclaringClass()).locatedOutside) {
-                schema.addTypeDeclaration(mapType);
-            }
-        } catch (MojoExecutionException e) {
-            log.debug("Unable to determine if declaring class is located outside - skipped adding type [{}] to schema [{}] type definition list", mapType.getName(), schema.getName());
-        }
-
-        // Need a way to reference back to the new generated type
-        property.options.put(PropertyOptionKey.MAP, mapTypeName);
-        return property;
-    }
-
-    /**
-     * @param property    The property to populate with additional data about a field
-     * @param field       The field to examine. In this case the field is a list
-     * @param useFullName Whether or not to use the full class name including the package or just the name
-     * @return The completed property struct
-     */
-    public Property processList(Property property, Field field, boolean useFullName) {
-        log.debug("Found set or list type. Setting FieldType.ARRAY and processing: " + field.getName());
-        property.name = field.getName();
-        property.type = FieldType.ARRAY;
-
-        Class<?> listTypeClass;
-
-        try {
-            // Load all paths into custom classloader
-            ClassLoader urlClassLoader = Thread.currentThread().getContextClassLoader();
-            if (artifactReference != null && artifactReference.getMavenProject() != null) {
-
-                List<ClasspathReference> classpathReferenceList = Utilities.buildProjectClasspathList(artifactReference, ClasspathSearchType.BOTH);
-                URL[] targetUrlArray = new URL[classpathReferenceList.size()];
-                for (int i = 0; i < classpathReferenceList.size(); i++) {
-                    targetUrlArray[i] = classpathReferenceList.get(i).getUrl();
-                }
-
-                urlClassLoader = URLClassLoader.newInstance(targetUrlArray, urlClassLoader);
-            }
-
-            // Parse Field signature
-            String parametrizedTypeString = parseFieldSignatureForParametrizedTypeStringOnList(field);
-            listTypeClass = urlClassLoader.loadClass(parametrizedTypeString);
-        } catch (Exception e) {
-            log.warn("Unable to find and load class for List<?> parameter, using String instead (field name): " + field.getName());
-            log.warn("Exception:", e);
-            listTypeClass = String.class;
-        }
-
-        // Consolidated versus separated schema check
-        String name = getName(listTypeClass, field, useFullName);
-        try {
-            if (!consolidatedSchemas) {
-                log.debug("Separated schemas requested; reviewing class");
-                ExternalClassDefinition externalClassDefinition = getExternalClassDefinitionDetails(listTypeClass);
-                if (externalClassDefinition.locatedOutside) {
-                    log.debug(" Located outside this schema; using other namespace");
-                    name = externalClassDefinition.targetNamespace + "." + listTypeClass.getSimpleName();
-                }
-            }
-        } catch (Exception e) {
-            log.warn("Unable to get external class definition for unconsolidated schema", e);
-        }
-
-
-        property.options.put(PropertyOptionKey.ARRAY, name);
-        return property;
+        return new ClassProperties(this).process(property, field, useFullName);
     }
 
     /**
@@ -1022,7 +745,7 @@ public class Processor {
      * @return ExternalClassDefinition which is populated with the target schema namespace and if it is externally defined
      * @throws MojoExecutionException if something goes wrong
      */
-    private ExternalClassDefinition getExternalClassDefinitionDetails(Class<?> clazz) throws MojoExecutionException {
+    public ExternalClassDefinition getExternalClassDefinitionDetails(Class<?> clazz) throws MojoExecutionException {
         ExternalClassDefinition externalClassDefinition = new ExternalClassDefinition();
 
         if (currentSchema.isDependency()) {

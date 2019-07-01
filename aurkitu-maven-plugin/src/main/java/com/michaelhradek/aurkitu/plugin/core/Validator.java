@@ -55,7 +55,7 @@ public class Validator {
         }
 
         if (checkTables) {
-            for (TypeDeclaration type : schema.getTypes()) {
+            for (TypeDeclaration type : schema.getTypeDeclarations()) {
                 log.debug("Looking at type: " + type.getName());
                 for (Property property : type.getProperties()) {
                     log.debug("  Examining property: " + property.name);
@@ -109,7 +109,7 @@ public class Validator {
         }
 
         if (checkEnums) {
-            for (EnumDeclaration enumD : schema.getEnums()) {
+            for (EnumDeclaration enumD : schema.getEnumDeclarations()) {
                 log.debug("Looking at enum: " + enumD.getName());
 
                 if (enumD.getType() == null) {
@@ -156,14 +156,14 @@ public class Validator {
 
             // If it's a map and it's an upper case then it must be defined
             if (Character.isUpperCase(mapName.charAt(0))) {
-                for (TypeDeclaration type : schema.getTypes()) {
+                for (TypeDeclaration type : schema.getTypeDeclarations()) {
                     log.debug("    against type (map): " + type.getName());
                     if (type.getName().equalsIgnoreCase(mapName)) {
                         return true;
                     }
                 }
 
-                for (EnumDeclaration enumD : schema.getEnums()) {
+                for (EnumDeclaration enumD : schema.getEnumDeclarations()) {
                     log.debug("    against enum (map): " + enumD.getName());
                     if (enumD.getName().equalsIgnoreCase(mapName)) {
                         return true;
@@ -179,14 +179,14 @@ public class Validator {
 
             // If it's an array and it's an upper case then it must be defined
             if (Character.isUpperCase(listTypeName.charAt(0))) {
-                for (TypeDeclaration type : schema.getTypes()) {
+                for (TypeDeclaration type : schema.getTypeDeclarations()) {
                     log.debug("    against type (array): " + type.getName());
                     if (type.getName().equalsIgnoreCase(listTypeName)) {
                         return true;
                     }
                 }
 
-                for (EnumDeclaration enumD : schema.getEnums()) {
+                for (EnumDeclaration enumD : schema.getEnumDeclarations()) {
                     log.debug("    against enum (array): " + enumD.getName());
                     if (enumD.getName().equalsIgnoreCase(listTypeName)) {
                         return true;
@@ -213,14 +213,14 @@ public class Validator {
             }
 
             if (Character.isUpperCase(identTypeName.charAt(0))) {
-                for (TypeDeclaration type : schema.getTypes()) {
+                for (TypeDeclaration type : schema.getTypeDeclarations()) {
                     log.debug("    against type (ident): " + type.getName());
                     if (type.getName().equalsIgnoreCase(identTypeName)) {
                         return true;
                     }
                 }
 
-                for (EnumDeclaration enumD : schema.getEnums()) {
+                for (EnumDeclaration enumD : schema.getEnumDeclarations()) {
                     log.debug("    against enum (ident): " + enumD.getName());
                     if (enumD.getName().equalsIgnoreCase(identTypeName)) {
                         return true;
@@ -229,14 +229,14 @@ public class Validator {
             }
         }
 
-        for (TypeDeclaration type : schema.getTypes()) {
+        for (TypeDeclaration type : schema.getTypeDeclarations()) {
             log.debug("    against type: " + type.getName());
             if (type.getName().equalsIgnoreCase(input.name)) {
                 return true;
             }
         }
 
-        for (EnumDeclaration enumD : schema.getEnums()) {
+        for (EnumDeclaration enumD : schema.getEnumDeclarations()) {
             log.debug("    against enum: " + enumD.getName());
             if (enumD.getName().equalsIgnoreCase(input.name)) {
                 return true;

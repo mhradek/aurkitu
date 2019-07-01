@@ -120,7 +120,7 @@ public class ValidatorTest {
 
         Assert.assertEquals(0, validator.getErrors().size());
 
-        List<TypeDeclaration> types = schema.getTypes();
+        List<TypeDeclaration> types = schema.getTypeDeclarations();
         TypeDeclaration type = types.remove(0);
 
         TypeDeclaration.Property property = new TypeDeclaration.Property();
@@ -130,7 +130,7 @@ public class ValidatorTest {
         type.addProperty(property);
 
         types.add(type);
-        schema.setTypes(types);
+        schema.setTypeDeclarations(types);
 
         validator.withSchema(schema);
         validator.setCheckTables(true);

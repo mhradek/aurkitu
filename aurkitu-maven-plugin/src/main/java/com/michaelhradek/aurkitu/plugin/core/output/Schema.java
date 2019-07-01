@@ -25,8 +25,8 @@ public class Schema {
     private String fileExtension;
     private Namespace namespace;
     private String rootType;
-    private List<EnumDeclaration> enums;
-    private List<TypeDeclaration> types;
+    private List<EnumDeclaration> enumDeclarations;
+    private List<TypeDeclaration> typeDeclarations;
     private Set<String> includes;
     private List<String> attributes;
     private List<Constant<Integer>> integerConstants;
@@ -43,8 +43,8 @@ public class Schema {
     private List<ClasspathReference> classpathReferenceList;
 
     public Schema() {
-        enums = new ArrayList<>();
-        types = new ArrayList<>();
+        enumDeclarations = new ArrayList<>();
+        typeDeclarations = new ArrayList<>();
         includes = new HashSet<>();
         attributes = new ArrayList<>();
         integerConstants = new ArrayList<>();
@@ -64,8 +64,8 @@ public class Schema {
      * @param input Add an enum declaration to the schema
      */
     public void addEnumDeclaration(EnumDeclaration input) {
-        if (!enums.contains(input)) {
-            enums.add(input);
+        if (!enumDeclarations.contains(input)) {
+            enumDeclarations.add(input);
         }
     }
 
@@ -73,8 +73,8 @@ public class Schema {
      * @param input Add a type (i.e. class) declaration to the schema
      */
     public void addTypeDeclaration(TypeDeclaration input) {
-        if (!types.contains(input)) {
-            types.add(input);
+        if (!typeDeclarations.contains(input)) {
+            typeDeclarations.add(input);
         }
     }
 
@@ -222,11 +222,11 @@ public class Schema {
             builder.append(System.lineSeparator());
         }
 
-        for (EnumDeclaration enumD : enums) {
+        for (EnumDeclaration enumD : enumDeclarations) {
             builder.append(enumD.toString());
         }
 
-        for (TypeDeclaration typeD : types) {
+        for (TypeDeclaration typeD : typeDeclarations) {
             builder.append(typeD.toString());
         }
 

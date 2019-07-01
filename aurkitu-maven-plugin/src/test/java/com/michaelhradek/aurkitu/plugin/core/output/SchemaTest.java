@@ -233,16 +233,16 @@ public class SchemaTest {
         TypeDeclaration declarationAlpha = new TypeDeclaration();
         declarationAlpha.setName("alpha");
         schema.addTypeDeclaration(declarationAlpha);
-        Assert.assertEquals(1, schema.getTypes().size());
+        Assert.assertEquals(1, schema.getTypeDeclarations().size());
 
         TypeDeclaration declarationBeta = new TypeDeclaration();
         declarationBeta.setName("alpha"); // Testing collision
         schema.addTypeDeclaration(declarationBeta);
-        Assert.assertEquals(1, schema.getTypes().size());
+        Assert.assertEquals(1, schema.getTypeDeclarations().size());
 
         declarationBeta.setName("beta"); // Testing collision
         schema.addTypeDeclaration(declarationBeta);
-        Assert.assertEquals(2, schema.getTypes().size());
+        Assert.assertEquals(2, schema.getTypeDeclarations().size());
     }
 
     @Test
