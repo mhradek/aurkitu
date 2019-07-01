@@ -108,18 +108,6 @@ public class MapProperties implements PropertyExtractor {
 
         try {
             if (processor.isConsolidatedSchemas() || !processor.getExternalClassDefinitionDetails(field.getDeclaringClass()).locatedOutside) {
-                if (processor == null) {
-                    System.out.println("NULL NULL NULL NULL NULL PROCESSOR");
-                }
-
-                if (processor.getCurrentSchema() == null) {
-                    System.out.println("NULL NULL NULL NULL NULL CURRENT SCHEMA");
-                }
-
-                if (processor.getCurrentSchema().getTypeDeclarations() == null) {
-                    System.out.println("NULL NULL NULL NULL NULL TYPES");
-                }
-
                 processor.getCurrentSchema().addTypeDeclaration(mapType);
             }
         } catch (MojoExecutionException e) {

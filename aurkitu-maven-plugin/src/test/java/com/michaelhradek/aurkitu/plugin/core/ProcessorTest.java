@@ -160,6 +160,8 @@ public class ProcessorTest extends AbstractMojoTestCase {
 
         Assert.assertEquals("SampleClassTable", schema.getRootType());
 
+        Assert.assertNotNull(processor.getValidator());
+
         if (Config.DEBUG) {
             System.out.println(schema.toString());
         }
@@ -662,6 +664,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
     public void testWithValidateSchemas() {
         Processor processor = new Processor();
         Assert.assertFalse(processor.isValidateSchemas());
+        Assert.assertNull(processor.getValidator());
 
         Processor processorCopy = processor.withValidateSchemas(null);
         Assert.assertFalse(processor.isValidateSchemas());
@@ -797,6 +800,8 @@ public class ProcessorTest extends AbstractMojoTestCase {
                 (Processor.ExternalClassDefinition) getExternalClassDefinitionDetailsMethod.invoke(processor, TestAnonymousClass.class);
         Assert.assertFalse(externalClassDefinition.locatedOutside);
         Assert.assertNull(externalClassDefinition.targetNamespace);
+
+        Assert.assertNotNull(externalClassDefinition.toString());
     }
 
     @Test

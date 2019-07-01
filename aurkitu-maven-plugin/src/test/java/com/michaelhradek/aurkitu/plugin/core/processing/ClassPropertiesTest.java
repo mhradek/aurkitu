@@ -3,17 +3,23 @@ package com.michaelhradek.aurkitu.plugin.core.processing;
 import com.michaelhradek.aurkitu.plugin.core.Processor;
 import com.michaelhradek.aurkitu.plugin.core.output.Schema;
 import com.michaelhradek.aurkitu.plugin.core.output.TypeDeclaration;
+import com.michaelhradek.aurkitu.plugin.core.output.components.Namespace;
 import com.michaelhradek.aurkitu.plugin.core.parsing.ArtifactReference;
 import com.michaelhradek.aurkitu.plugin.test.SampleClassTable;
 import org.apache.maven.project.MavenProject;
+import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.Mockito;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
+@RunWith(PowerMockRunner.class)
 public class ClassPropertiesTest {
 
     @Test
@@ -65,7 +71,7 @@ public class ClassPropertiesTest {
     }
 
     @Test
-    public void testProcessClassOld() throws NoSuchFieldException, IllegalAccessException {
+    public void testProcess() throws Exception {
         MavenProject mockMavenProject = Mockito.mock(MavenProject.class);
         ArtifactReference reference = new ArtifactReference(mockMavenProject, null, null, null, null);
 
@@ -81,5 +87,26 @@ public class ClassPropertiesTest {
         currentSchemaField.set(processor, schema);
 
         TypeDeclaration.Property property = new ClassProperties(processor).process(new TypeDeclaration.Property(), tableField, false);
+
+        Processor spyProcessor = PowerMockito.spy(processor);
+
+        final Namespace namespace = new Namespace("sexy.new.namespace", null, "sexy-artifact");
+        Processor.ExternalClassDefinition mockExternalClassDefinition = PowerMockito.mock(Processor.ExternalClassDefinition.class);
+        mockExternalClassDefinition.locatedOutside = true;
+        mockExternalClassDefinition.targetNamespace = namespace;
+
+        Assert.assertEquals("SampleClassReferenced", property.options.get(TypeDeclaration.Property.PropertyOptionKey.IDENT));
+
+        PowerMockito.doReturn(mockExternalClassDefinition).when(spyProcessor, PowerMockito.method(Processor.class, "getExternalClassDefinitionDetails", Class.class)).withArguments(Mockito.any());
+        property = new ClassProperties(spyProcessor).process(new TypeDeclaration.Property(), tableField, false);
+
+        Assert.assertEquals(namespace.toString() + ".SampleClassReferenced", property.options.get(TypeDeclaration.Property.PropertyOptionKey.IDENT));
+
+        Processor mockProcessor = PowerMockito.mock(Processor.class);
+
+        PowerMockito.when(mockProcessor, PowerMockito.method(Processor.class, "getExternalClassDefinitionDetails", Class.class)).withArguments(Mockito.any()).thenAnswer(invocation -> {
+            throw new ClassNotFoundException();
+        });
+        property = new ClassProperties(mockProcessor).process(new TypeDeclaration.Property(), tableField, false);
     }
 }
