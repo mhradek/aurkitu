@@ -47,4 +47,11 @@ public class SampleClassTable {
     public List<SampleEnumNull> enumList;
     public Map<SampleEnumNull, String> enumStringMap;
     public Map<SampleEnumNull, SampleClassTableInnerEnumInt> enumInnerEnumMap;
+
+    protected Integer integerField;
+    protected Short shortField;
+    protected Boolean booleanField;
+    protected Byte byteField;
+    protected Float floatField;
+    protected double doubleField;
 }

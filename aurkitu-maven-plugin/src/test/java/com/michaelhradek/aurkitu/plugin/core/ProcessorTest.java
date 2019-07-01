@@ -233,7 +233,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
         for (TypeDeclaration type : schema.getTypeDeclarations()) {
 
             if (type.getName().equals(SampleClassTable.class.getSimpleName())) {
-                Assert.assertEquals(19, type.getProperties().size());
+                Assert.assertEquals(25, type.getProperties().size());
 
                 Assert.assertNotNull(type.getComment());
 
@@ -404,6 +404,12 @@ public class ProcessorTest extends AbstractMojoTestCase {
         Assert.assertEquals("level", prop.name);
         Assert.assertEquals(FieldType.SHORT, prop.type);
         Assert.assertEquals(false, prop.options.isEmpty());
+
+        field = SampleClassTable.class.getDeclaredField("shortField");
+        prop = processor.getPropertyForField(schema, field);
+        Assert.assertEquals("shortField", prop.name);
+        Assert.assertEquals(FieldType.SHORT, prop.type);
+        Assert.assertEquals(true, prop.options.isEmpty());
 
         // Test "int"
         field = SampleClassTable.class.getDeclaredField("currency");
