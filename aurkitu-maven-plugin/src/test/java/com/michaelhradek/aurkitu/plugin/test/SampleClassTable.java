@@ -43,4 +43,8 @@ public class SampleClassTable {
     protected String ignore;
     @FlatBufferFieldOptions(fieldType = FieldType.IDENT, useFullName = true)
     SampleClassReferenced fullnameClass;
+
+    public List<SampleEnumNull> enumList;
+    public Map<SampleEnumNull, String> enumStringMap;
+    public Map<SampleEnumNull, SampleClassTableInnerEnumInt> enumInnerEnumMap;
 }

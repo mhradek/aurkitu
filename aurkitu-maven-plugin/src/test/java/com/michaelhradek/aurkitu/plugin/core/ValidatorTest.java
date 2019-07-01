@@ -138,7 +138,7 @@ public class ValidatorTest {
         List<Validator.Error> errors = validator.getErrors();
 
         Assert.assertNotNull(errors);
-        Assert.assertEquals(13, errors.size());
+        Assert.assertEquals(14, errors.size());
 
         boolean foundError = false;
         for (Validator.Error error : errors) {
