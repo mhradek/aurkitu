@@ -4,6 +4,7 @@ import com.michaelhradek.aurkitu.annotations.FlatBufferEnum;
 import com.michaelhradek.aurkitu.annotations.FlatBufferTable;
 import com.michaelhradek.aurkitu.annotations.types.FieldType;
 import com.michaelhradek.aurkitu.plugin.Config;
+import com.michaelhradek.aurkitu.plugin.core.output.EnumDeclaration;
 import com.michaelhradek.aurkitu.plugin.core.output.Schema;
 import com.michaelhradek.aurkitu.plugin.core.output.TypeDeclaration;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -227,5 +228,49 @@ public class ValidatorTest {
         Assert.assertNotNull(error);
         Assert.assertEquals(Validator.ErrorType.MISSING_OR_INVALID_TYPE, error.getType());
         Assert.assertEquals(property.name, error.getLocation());
+
+        // Test other cases
+        EnumDeclaration enumDeclaration = new EnumDeclaration();
+        enumDeclaration.setName("test-enum-declaration");
+        Schema schema = new Schema();
+        schema.addEnumDeclaration(enumDeclaration);
+
+        TypeDeclaration.Property propertyTest = new TypeDeclaration.Property();
+        propertyTest.type = FieldType.MAP;
+        propertyTest.name = "test-map-property";
+        propertyTest.options.put(TypeDeclaration.Property.PropertyOptionKey.MAP, "test-map-option-name");
+
+        validator.setSchema(schema);
+
+        exists = (Boolean) definitionExistsMethod.invoke(validator, propertyTest);
+        Assert.assertFalse(exists);
+
+        EnumDeclaration enumDeclarationTwo = new EnumDeclaration();
+        enumDeclarationTwo.setName("Test-enum-declaration-two");
+        schema.addEnumDeclaration(enumDeclarationTwo);
+
+        TypeDeclaration.Property propertyTestTwo = new TypeDeclaration.Property();
+        propertyTestTwo.type = FieldType.MAP;
+        propertyTestTwo.name = "test-map-property-two";
+        propertyTestTwo.options.put(TypeDeclaration.Property.PropertyOptionKey.MAP, "test-map-option-name-two");
+
+        validator.setSchema(schema);
+
+        exists = (Boolean) definitionExistsMethod.invoke(validator, propertyTestTwo);
+        Assert.assertFalse(exists);
+
+        EnumDeclaration enumDeclarationThree = new EnumDeclaration();
+        enumDeclarationThree.setName("Test-enum-declaration-three");
+        schema.addEnumDeclaration(enumDeclarationThree);
+
+        TypeDeclaration.Property propertyTestThree = new TypeDeclaration.Property();
+        propertyTestThree.type = FieldType.MAP;
+        propertyTestThree.name = "test-map-property-three";
+        propertyTestThree.options.put(TypeDeclaration.Property.PropertyOptionKey.MAP, "Test-enum-declaration-three");
+
+        validator.setSchema(schema);
+
+        exists = (Boolean) definitionExistsMethod.invoke(validator, propertyTestThree);
+        Assert.assertTrue(exists);
     }
 }

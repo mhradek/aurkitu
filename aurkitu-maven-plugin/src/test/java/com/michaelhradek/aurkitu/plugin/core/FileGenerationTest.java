@@ -7,11 +7,12 @@ import com.michaelhradek.aurkitu.plugin.core.output.Schema;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,6 +20,7 @@ import java.util.List;
 /**
  * @author m.hradek
  */
+@RunWith(PowerMockRunner.class)
 public class FileGenerationTest {
 
     private static final String OUTPUT_DIRECTORY_VALID = "target/aurkitu/test";
@@ -83,5 +85,20 @@ public class FileGenerationTest {
 
         String[] data = lines.toArray(new String[]{});
         Assert.assertEquals(Config.SCHEMA_INTRO_COMMENT, data[0]);
+    }
+
+    @Test
+    @PrepareForTest({FileWriter.class})
+    public void testExceptionHandling() throws Exception {
+        File outputDirectory = new File(OUTPUT_DIRECTORY_VALID);
+        Schema schema = new Schema();
+
+        FileWriter fileWriter = PowerMockito.mock(FileWriter.class);
+        PowerMockito.when(fileWriter, PowerMockito.method(FileWriter.class, "write", String.class)).withArguments(schema.toString()).thenAnswer(invocation -> {
+            throw new IOException();
+        });
+
+        FileGeneration fg = new FileGeneration(outputDirectory);
+        fg.writeSchema(schema);
     }
 }
