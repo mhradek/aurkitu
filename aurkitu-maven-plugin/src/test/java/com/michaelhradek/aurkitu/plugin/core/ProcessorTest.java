@@ -266,6 +266,10 @@ public class ProcessorTest extends AbstractMojoTestCase {
                         Assert.assertEquals(TypeDeclaration.MapValueSet.class.getSimpleName() + "_" +
                                 SampleClassTable.class.getSimpleName() + "_" + property.name, property.options.get(PropertyOptionKey.MAP));
                     }
+
+                    if (SampleClassTable.IGNORED_STATIC_FIELD.equals(property.name)) {
+                        Assert.fail("Unexpected field included in definition: " + SampleClassTable.IGNORED_STATIC_FIELD);
+                    }
                 }
 
                 if (Config.DEBUG) {

@@ -28,6 +28,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.*;
@@ -561,14 +562,20 @@ public class Processor {
             }
         }
 
-        // TODO: If we aren't separated schemas then check to see if the fields are a class which lives im a base.
+        // TODO: If we aren't separated schemas then check to see if the fields are a class which lives in a base.
         //  This will be challenging for things like a List or Map of base types
         List<Field> fields = getDeclaredAndInheritedPrivateFields(clazz);
         for (Field field : fields) {
             log.debug("Number of annotations found: " + field.getDeclaredAnnotations().length);
 
             if (field.getAnnotation(FlatBufferIgnore.class) != null) {
-                log.debug("Ignoring property: " + field.getName());
+                log.debug("Ignoring property marked FlatBufferIgnore: " + field.getName());
+                continue;
+            }
+
+            // Skip static fields in classes
+            if (Modifier.isStatic(field.getModifiers())) {
+                log.debug("Ignoring property marked static: " + field.getName());
                 continue;
             }
 

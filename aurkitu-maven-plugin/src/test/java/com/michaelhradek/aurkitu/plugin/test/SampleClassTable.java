@@ -19,6 +19,8 @@ import java.util.Set;
 @FlatBufferTable(rootType = true)
 public class SampleClassTable {
 
+    public static String IGNORED_STATIC_FIELD = "ignoredStaticField";
+
     public Map<String, Object> dataMap;
     public Set<URL> regionLocations;
     protected Long id;
