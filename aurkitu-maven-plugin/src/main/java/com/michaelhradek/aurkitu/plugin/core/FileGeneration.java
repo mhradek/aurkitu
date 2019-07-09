@@ -25,6 +25,10 @@ public class FileGeneration {
 
     public void writeSchema(Schema schema) throws IOException {
 
+        if (outputDirectory == null) {
+            throw new IOException("Output directory must not be null");
+        }
+
         if (!outputDirectory.exists()) {
             log.debug("File does not exist; creating directories");
             outputDirectory.mkdirs();

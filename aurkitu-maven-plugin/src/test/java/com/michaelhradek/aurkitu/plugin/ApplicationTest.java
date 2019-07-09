@@ -22,6 +22,7 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -101,8 +102,18 @@ public class ApplicationTest extends AbstractMojoTestCase {
 
             writeMethod.invoke(application, processedSchemas);
 
-        } catch (NoSuchFieldException | IllegalAccessException | InvocationTargetException e) {
+            outputDirectoryField.set(application, null);
+            writeMethod.invoke(application, processedSchemas);
+
+        } catch (NoSuchFieldException | IllegalAccessException e) {
             Assert.fail("Unable to write files via Application::write " + e.getMessage());
+        } catch (InvocationTargetException ite) {
+            if (ite.getCause() instanceof IOException) {
+                // Good, we expected this...
+                return;
+            }
+
+            Assert.fail("An unknown InvocationTargetException occurred");
         }
     }
 
