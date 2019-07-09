@@ -218,7 +218,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
 
     @Test
     public void testBuildTypeDeclarationPass() throws MojoExecutionException {
-        Processor processor = new Processor().withSourceAnnotation(FlatBufferTable.class).withSchema(new Schema());
+        Processor processor = new Processor().withSourceAnnotation(FlatBufferTable.class).withSchema(new Schema()).withIgnoreStaticMembers(true);
         Assert.assertEquals(1, processor.getSourceAnnotations().size());
 
         processor.execute();
@@ -683,6 +683,20 @@ public class ProcessorTest extends AbstractMojoTestCase {
         processorCopy = processor.withValidateSchemas(true);
         Assert.assertTrue(processor.isValidateSchemas());
         Assert.assertTrue(processorCopy.isValidateSchemas());
+    }
+
+    @Test
+    public void testWithIfnoreStaticMembers() {
+        Processor processor = new Processor();
+        Assert.assertFalse(processor.isIgnoreStaticMembers());
+
+        Processor processorCopy = processor.withIgnoreStaticMembers(null);
+        Assert.assertFalse(processor.isIgnoreStaticMembers());
+        Assert.assertFalse(processorCopy.isIgnoreStaticMembers());
+
+        processorCopy = processor.withIgnoreStaticMembers(true);
+        Assert.assertTrue(processor.isIgnoreStaticMembers());
+        Assert.assertTrue(processorCopy.isIgnoreStaticMembers());
     }
 
     @Test

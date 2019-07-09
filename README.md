@@ -91,6 +91,7 @@ Followed by the following to the `plugins` of your `build` specifications within
 *   __schemaIncludes__: allows for configuration of schema includes (e.g. `<include>"../../../../target/maven-shared-archive-resources/flatbuffers/other.fbs"</include>`)
 *   __specifiedDependencies__: allows for configuration of targeted dependency searching for specific dependencies for annotations. If this is specified, a artifact resolution will be kept to a minimum greatly increasing build speed. You can specify any number of packages. If you specify the `groupId` only then the entirety of the group will be included in artifact resolution (e.g. `<dependency>com.company.group</dependency>`) . To specify a specific artifact use `groupId:artifactId` (e.g. `<dependency>com.company.group:artifact</dependency>`)
 *   __consolidatedSchemas__: if true, create one schema. If false, create one schema for the project and then one schema _per dependecy_. (default: `true`) This is useful in situations where the dependencies are used across projects where namespaces are useful.
+*   __ignoreStaticMembers__: if true, ignore class member variables which are static. (default: `true`)
 #### planned
 *   __buildDependencySchemas__: if true, build, validate, and write all the dependency schema. If false, it will still need to build them to verify the target schema but won't validate and write them out. (default: `true`)
   

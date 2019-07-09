@@ -83,6 +83,9 @@ public class Application extends AbstractMojo {
     @Parameter(property = Application.MOJO_NAME + ".consolidated-schemas", defaultValue = "true")
     private Boolean consolidatedSchemas;
 
+    @Parameter(property = Application.MOJO_NAME + ".ignore-static-members", defaultValue = "true")
+    private Boolean ignoreStaticMembers;
+
     // Needs thought
     // @Parameter(property = Application.MOJO_NAME + ".build-base-schemas", defaultValue = "true")
     // private Boolean buildDependencySchemas;
@@ -140,6 +143,7 @@ public class Application extends AbstractMojo {
         log.info(" schemaIncludes: " + (schemaIncludes == null ? "null" : schemaIncludes.toString()));
         log.info(" specifiedDependencies: " + (specifiedDependencies == null ? "null" : specifiedDependencies.toString()));
         log.info(" consolidatedSchemas: " + consolidatedSchemas);
+        log.info(" ignoreStaticMembers: " + ignoreStaticMembers);
     }
 
     /**
@@ -223,7 +227,8 @@ public class Application extends AbstractMojo {
                         .withNamespaceOverrideMap(namespaceOverrideMap)
                         .withSpecifiedDependencies(specifiedDependencies)
                         .withConsolidatedSchemas(consolidatedSchemas)
-                        .withValidateSchemas(validateSchema);
+                        .withValidateSchemas(validateSchema)
+                        .withIgnoreStaticMembers(ignoreStaticMembers);
 
         // Add schemas
         processor.addAllSchemas(candidateSchemas);

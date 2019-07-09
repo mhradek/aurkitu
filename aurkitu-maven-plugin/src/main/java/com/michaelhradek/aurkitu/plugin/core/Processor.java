@@ -54,6 +54,7 @@ public class Processor {
     private List<Schema> processedSchemas;
     private boolean validateSchemas = false;
     private Validator validator;
+    private boolean ignoreStaticMembers;
 
     // Internal member
     private Schema currentSchema;
@@ -233,6 +234,19 @@ public class Processor {
         }
 
         this.consolidatedSchemas = consolidatedSchemas;
+        return this;
+    }
+
+    /**
+     * @param ignoreStaticMembers boolean if we should ignore static member variables
+     * @return an instance of the Processor object
+     */
+    public Processor withIgnoreStaticMembers(Boolean ignoreStaticMembers) {
+        if (ignoreStaticMembers == null) {
+            return this;
+        }
+
+        this.ignoreStaticMembers = ignoreStaticMembers;
         return this;
     }
 
@@ -574,7 +588,7 @@ public class Processor {
             }
 
             // Skip static fields in classes
-            if (Modifier.isStatic(field.getModifiers())) {
+            if (ignoreStaticMembers && Modifier.isStatic(field.getModifiers())) {
                 log.debug("Ignoring property marked static: " + field.getName());
                 continue;
             }
