@@ -9,4 +9,5 @@ public class Wallet {
     String userId;
     long balance;
     long lastUpdate;
+
 }

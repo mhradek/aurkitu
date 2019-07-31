@@ -44,6 +44,47 @@ public class Validator {
     }
 
     /**
+     * We initially tested this by looking at case and path. This is explicit
+     * <p>
+     * See: https://google.github.io/flatbuffers/md__schemas.html
+     *
+     * @param input the name for a table property
+     * @return whether ot not the given type name is a flatbuffer type
+     */
+    private static boolean isFlatbufferTypeByName(String input) {
+        if ("string".equals(input)) {
+            return true;
+        }
+
+        if ("int".equals(input)) {
+            return true;
+        }
+
+        if ("long".equals(input)) {
+            return true;
+        }
+
+        if ("short".equals(input)) {
+            return true;
+        }
+
+        if ("byte".equals(input)) {
+            return true;
+        }
+
+        if ("float".equals(input)) {
+            return true;
+        }
+
+        if ("double".equals(input)) {
+            return true;
+        }
+
+        return "bool".equals(input);
+
+    }
+
+    /**
      *
      */
     public void validateSchema() {
@@ -62,7 +103,7 @@ public class Validator {
                     log.debug("  with type: " + property.type);
                     if (property.type != FieldType.IDENT && property.type != FieldType.ARRAY
                             && property.type != FieldType.MAP
-                            && Utilities.isLowerCaseType(property.type.targetClass)) {
+                            && Utilities.isPrimitiveOrWrapperType(property.type.targetClass)) {
                         log.debug("    Property is lower case type: " + property.name);
                         continue;
                     }
@@ -142,6 +183,24 @@ public class Validator {
     }
 
     /**
+     * @return Any error comments generated during Schema validation
+     */
+    public String getErrorComments() {
+        if (errors.isEmpty()) {
+            return "// Schema passed validation";
+        }
+
+        StringBuilder builder = new StringBuilder("// Schema failed validation (i.e. flatc will likely fail): ");
+        builder.append(System.lineSeparator());
+        for (Error error : errors) {
+            builder.append(error.toString());
+        }
+        builder.append(System.lineSeparator());
+
+        return builder.toString();
+    }
+
+    /**
      * @param input the Property to validate as having a definition within the Schema's list of known TypeDeclaration and EnumDeclaration.
      * @return boolean true or false
      */
@@ -193,6 +252,12 @@ public class Validator {
                     }
                 }
             }
+
+            // If it's a lower case type then we assume primitive (or primitive derived from a wrapper type)
+            if (isFlatbufferTypeByName(listTypeName)) {
+                log.debug("      isFlatbufferTypeByName");
+                return true;
+            }
         }
 
         if (input.type.equals(FieldType.IDENT)) {
@@ -227,6 +292,11 @@ public class Validator {
                     }
                 }
             }
+
+            if (isFlatbufferTypeByName(identTypeName)) {
+                log.debug("      isFlatbufferTypeByName");
+                return true;
+            }
         }
 
         for (TypeDeclaration type : schema.getTypeDeclarations()) {
@@ -244,24 +314,6 @@ public class Validator {
         }
 
         return false;
-    }
-
-    /**
-     * @return Any error comments generated during Schema validation
-     */
-    public String getErrorComments() {
-        if (errors.isEmpty()) {
-            return "// Schema passed validation";
-        }
-
-        StringBuilder builder = new StringBuilder("// Schema failed validation (i.e. flatc will likely fail): ");
-        builder.append(System.lineSeparator());
-        for (Error error : errors) {
-            builder.append(error.toString());
-        }
-        builder.append(System.lineSeparator());
-
-        return builder.toString();
     }
 
     enum ErrorType {

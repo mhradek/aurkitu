@@ -67,10 +67,6 @@ public class ValidatorTest {
         Assert.assertTrue(errorComments.contains("// Schema failed validation (i.e. flatc will likely fail): \n"));
         Assert.assertTrue(errorComments.contains("// Issue : TYPE_DEFINITION_NOT_DEFINED, Location: SampleClassReferenced, Name: samples\n"));
         Assert.assertTrue(errorComments.contains("// Issue : TYPE_DEFINITION_NOT_DEFINED, Location: SampleClassTableWithUndefined, Name: awesomeUndefinedClass\n"));
-        Assert.assertTrue(errorComments.contains("// Issue : TYPE_DEFINITION_NOT_DEFINED, Location: MapValueSet_SampleClassTable_dataMap, Name: key\n"));
-        Assert.assertTrue(errorComments.contains("// Issue : TYPE_DEFINITION_NOT_DEFINED, Location: MapValueSet_SampleClassTable_dataMap, Name: value\n"));
-        Assert.assertTrue(errorComments.contains("// Issue : TYPE_DEFINITION_NOT_DEFINED, Location: SampleClassTable, Name: tokens\n"));
-        Assert.assertTrue(errorComments.contains("// Issue : TYPE_DEFINITION_NOT_DEFINED, Location: SampleClassTable, Name: options\n"));
         Assert.assertTrue(errorComments.contains("// Issue : TYPE_DEFINITION_NOT_DEFINED, Location: SampleClassTable, Name: anomalousSamples\n"));
         Assert.assertTrue(errorComments.contains("// Issue : INVALID_PATH, Location: SampleClassTable, Name: definedInnerEnumArray, Comment: Array type name contains '$'; using '@FlatBufferOptions(useFullName = true)' on inner not recommended: com.michaelhradek.aurkitu.plugin.test.SampleClassReferenced$SampleClassTableInnerEnumInt\n"));
         Assert.assertTrue(errorComments.contains("// Issue : TYPE_DEFINITION_NOT_DEFINED, Location: SampleClassTable, Name: definedInnerEnumArray\n"));
@@ -139,7 +135,7 @@ public class ValidatorTest {
         List<Validator.Error> errors = validator.getErrors();
 
         Assert.assertNotNull(errors);
-        Assert.assertEquals(14, errors.size());
+        Assert.assertEquals(9, errors.size());
 
         boolean foundError = false;
         for (Validator.Error error : errors) {
@@ -272,5 +268,63 @@ public class ValidatorTest {
 
         exists = (Boolean) definitionExistsMethod.invoke(validator, propertyTestThree);
         Assert.assertTrue(exists);
+    }
+
+    @Test
+    public void testDefinitionExistsPrimitiveArrays() throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+        Validator validator = new Validator();
+        Schema schema = new Schema();
+        validator.setSchema(schema);
+
+        Method definitionExistsMethod = validator.getClass().getDeclaredMethod("definitionExists", TypeDeclaration.Property.class);
+        definitionExistsMethod.setAccessible(true);
+
+        TypeDeclaration.Property property = new TypeDeclaration.Property();
+        property.type = FieldType.ARRAY;
+        property.name = "test-array-property-primitive";
+        property.options.put(TypeDeclaration.Property.PropertyOptionKey.ARRAY, "string");
+
+        Boolean exists = (Boolean) definitionExistsMethod.invoke(validator, property);
+        Assert.assertTrue(exists);
+
+        property.options.put(TypeDeclaration.Property.PropertyOptionKey.ARRAY, "String");
+
+        exists = (Boolean) definitionExistsMethod.invoke(validator, property);
+        Assert.assertFalse(exists);
+
+        property.options.put(TypeDeclaration.Property.PropertyOptionKey.ARRAY, "com.some.package.String");
+
+        exists = (Boolean) definitionExistsMethod.invoke(validator, property);
+        Assert.assertFalse(exists);
+
+        property.options.put(TypeDeclaration.Property.PropertyOptionKey.ARRAY, "com.some.package.string");
+
+        exists = (Boolean) definitionExistsMethod.invoke(validator, property);
+        Assert.assertFalse(exists);
+    }
+
+
+    @Test
+    public void test_isFlatbufferTypeByName() throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+        Validator validator = new Validator();
+
+        // Get the private method that we are testing
+        Method method = validator.getClass().getDeclaredMethod("isFlatbufferTypeByName", String.class);
+        method.setAccessible(true);
+
+        Assert.assertTrue((Boolean) method.invoke(validator, "byte"));
+        Assert.assertTrue((Boolean) method.invoke(validator, "int"));
+        Assert.assertTrue((Boolean) method.invoke(validator, "short"));
+        Assert.assertTrue((Boolean) method.invoke(validator, "long"));
+        Assert.assertTrue((Boolean) method.invoke(validator, "string"));
+        Assert.assertTrue((Boolean) method.invoke(validator, "float"));
+        Assert.assertTrue((Boolean) method.invoke(validator, "double"));
+        Assert.assertTrue((Boolean) method.invoke(validator, "bool"));
+
+        Assert.assertFalse((Boolean) method.invoke(validator, "com.package.string"));
+        Assert.assertFalse((Boolean) method.invoke(validator, "com.package.some.String"));
+        Assert.assertFalse((Boolean) method.invoke(validator, "Boolean"));
+        Assert.assertFalse((Boolean) method.invoke(validator, "Bool"));
+        Assert.assertFalse((Boolean) method.invoke(validator, "String"));
     }
 }

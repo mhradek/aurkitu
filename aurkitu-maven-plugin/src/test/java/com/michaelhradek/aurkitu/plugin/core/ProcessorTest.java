@@ -18,6 +18,7 @@ import com.michaelhradek.aurkitu.plugin.stubs.AurkituTestMavenProjectStub;
 import com.michaelhradek.aurkitu.plugin.stubs.AurkituTestSettingsStub;
 import com.michaelhradek.aurkitu.plugin.test.*;
 import com.michaelhradek.aurkitu.plugin.test.SampleClassReferenced.SampleClassTableInnerEnumInt;
+import com.michaelhradek.aurkitu.plugin.test.other.Printable;
 import com.michaelhradek.aurkitu.plugin.test.other.SampleAnonymousEnum;
 import com.michaelhradek.aurkitu.plugin.test.other.SampleClassNamespaceMap;
 import javassist.*;
@@ -635,6 +636,20 @@ public class ProcessorTest extends AbstractMojoTestCase {
 
         result = (Boolean) privateIsEnumWorkAround.invoke(processor, TestInterface.class);
         Assert.assertFalse(result);
+
+        result = (Boolean) privateIsEnumWorkAround.invoke(processor, Colours.BLUE.getClass());
+        Assert.assertTrue(result);
+
+        result = (Boolean) privateIsEnumWorkAround.invoke(processor, new Printable() {
+
+            @Override
+            public boolean isPrintable() {
+                return false;
+            }
+        }.getClass());
+
+        Assert.assertFalse(result);
+
     }
 
     @Test
@@ -813,10 +828,6 @@ public class ProcessorTest extends AbstractMojoTestCase {
         currentSchemaField.setAccessible(true);
         Schema currentSchema = (Schema) currentSchemaField.get(processor);
 
-        //if(currentSchema == null) {
-        //  currentSchema = new Schema();
-        //}
-
         currentSchema.setDependency(true);
         currentSchemaField.set(processor, currentSchema);
 
@@ -829,7 +840,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
     }
 
     @Test
-    public void testCurrentSchema() throws NoSuchFieldException, MojoExecutionException {
+    public void testCurrentSchema() throws MojoExecutionException {
         Processor processor = new Processor();
         Assert.assertNull(processor.getCurrentSchema());
 
@@ -889,6 +900,25 @@ public class ProcessorTest extends AbstractMojoTestCase {
             Assert.fail("Expected IllegalArgumentException when multiple roots type declarations are made");
         } catch (InvocationTargetException e) {
             Assert.assertEquals("Only one rootType declaration is allowed", e.getCause().getMessage());
+        }
+    }
+
+    enum Colours implements Printable {
+        RED("FF0000", 1),
+        BLUE("0000FF", 2),
+        GREEN("00FF00", 3);
+
+        String hexCode;
+        int sequence;
+
+        Colours(String hexCode, int sequence) {
+            this.hexCode = hexCode;
+            this.sequence = sequence;
+        }
+
+        @Override
+        public boolean isPrintable() {
+            return false;
         }
     }
 

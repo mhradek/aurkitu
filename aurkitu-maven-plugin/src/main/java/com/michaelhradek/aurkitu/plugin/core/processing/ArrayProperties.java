@@ -23,10 +23,10 @@ public class ArrayProperties implements PropertyExtractor {
         property.type = FieldType.ARRAY;
 
         // Determine type of the array
-        String name = field.getType().getComponentType().getSimpleName();
-        if (Utilities.isLowerCaseType(field.getType().getComponentType())) {
+        String name;
+        if (Utilities.isPrimitiveOrWrapperType(field.getType().getComponentType())) {
             log.debug("Array parameter is primitive, wrapper, or String: " + field.getName());
-            name = name.toLowerCase();
+            name = Utilities.getPrimitiveNameForWrapperType(field.getType().getComponentType());
         } else {
             // It may be a Class<?> which isn't a primitive (i.e. lowerCaseType)
             if (useFullName) {

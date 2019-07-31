@@ -425,7 +425,7 @@ public class Processor {
      * @param enumClass Class to test if it is an Enum
      * @return boolean
      */
-    public boolean isEnumWorkaround(Class<?> enumClass) {
+    private boolean isEnumWorkaround(Class<?> enumClass) {
         Class<?> temp = enumClass;
         if (temp.isAnonymousClass()) {
             temp = temp.getSuperclass();
@@ -751,9 +751,9 @@ public class Processor {
             }
         }
 
-        if (Utilities.isLowerCaseType(clazz)) {
+        if (Utilities.isPrimitiveOrWrapperType(clazz)) {
             log.debug("Array parameter is primitive, wrapper, or String: " + field.getName());
-            name = name.toLowerCase();
+            name = Utilities.getPrimitiveNameForWrapperType(clazz);
         }
 
         return name;

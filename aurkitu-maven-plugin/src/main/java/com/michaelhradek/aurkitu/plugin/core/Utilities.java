@@ -50,15 +50,41 @@ public class Utilities {
     }
 
     /**
-     * @param type The class which needs to be tested if it is a primative. Also, double and Double are both
-     *             considered primative within this context.
-     * @return boolean
+     * @param type The class which needs to be tested if it is a primitive. Also, double and Double are both
+     *             considered primitive within this context.
+     * @return boolean if the type is a primitive or corresponding wrapper
      */
-    public static boolean isLowerCaseType(Class<?> type) {
+    public static boolean isPrimitiveOrWrapperType(Class<?> type) {
         return (type.isPrimitive() && type != void.class) || type == Double.class || type == Float.class
                 || type == Long.class || type == Integer.class || type == Short.class
                 || type == Character.class || type == Byte.class || type == Boolean.class
                 || type == String.class;
+    }
+
+    /**
+     * @param type The class which needs to be tested if it is a primitive. Also, double and Double are both
+     *             considered primitive within this context.
+     * @return the lower case primitive version of a wrapper type
+     */
+    public static String getPrimitiveNameForWrapperType(Class<?> type) {
+        if (!isPrimitiveOrWrapperType(type)) {
+            throw new IllegalArgumentException("Expecting a primitive or wrapper type");
+        }
+
+        if (type == Character.class || type == char.class) {
+            return "string";
+        }
+
+        if (type == Boolean.class || type == boolean.class) {
+            return "bool";
+        }
+
+        if (type == Integer.class) {
+            return "int";
+        }
+
+        // We may want to use the above if statement format and avoid chance
+        return type.getSimpleName().toLowerCase();
     }
 
     /**

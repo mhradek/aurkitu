@@ -65,48 +65,78 @@ public class UtilitiesTest extends AbstractMojoTestCase {
     }
 
     @Test()
-    public void testPrivateConstructor() throws NoSuchMethodException {
+    public void test_PrivateConstructor() throws NoSuchMethodException {
         final Constructor<Utilities> constructor = Utilities.class.getDeclaredConstructor();
         Assert.assertTrue(Modifier.isPrivate(constructor.getModifiers()));
     }
 
     @Test
-    public void testIsLowerCaseType() {
+    public void test_isPrimitiveOrWrapperType() {
 
         Double primDouble = 123D;
-        Assert.assertTrue(Utilities.isLowerCaseType(primDouble.getClass()));
+        Assert.assertTrue(Utilities.isPrimitiveOrWrapperType(primDouble.getClass()));
 
         Float primFloat = 123F;
-        Assert.assertTrue(Utilities.isLowerCaseType(primFloat.getClass()));
+        Assert.assertTrue(Utilities.isPrimitiveOrWrapperType(primFloat.getClass()));
 
         Long primLong = 123L;
-        Assert.assertTrue(Utilities.isLowerCaseType(primLong.getClass()));
+        Assert.assertTrue(Utilities.isPrimitiveOrWrapperType(primLong.getClass()));
 
         Integer primInteger = 123;
-        Assert.assertTrue(Utilities.isLowerCaseType(primInteger.getClass()));
+        Assert.assertTrue(Utilities.isPrimitiveOrWrapperType(primInteger.getClass()));
 
         Short primShort = 12;
-        Assert.assertTrue(Utilities.isLowerCaseType(primShort.getClass()));
+        Assert.assertTrue(Utilities.isPrimitiveOrWrapperType(primShort.getClass()));
 
         Character primCharacter = 'd';
-        Assert.assertTrue(Utilities.isLowerCaseType(primCharacter.getClass()));
+        Assert.assertTrue(Utilities.isPrimitiveOrWrapperType(primCharacter.getClass()));
 
         Byte primByte = 8;
-        Assert.assertTrue(Utilities.isLowerCaseType(primByte.getClass()));
+        Assert.assertTrue(Utilities.isPrimitiveOrWrapperType(primByte.getClass()));
 
         Boolean primBoolean = true;
-        Assert.assertTrue(Utilities.isLowerCaseType(primBoolean.getClass()));
+        Assert.assertTrue(Utilities.isPrimitiveOrWrapperType(primBoolean.getClass()));
 
         String primString = "Test string";
-        Assert.assertTrue(Utilities.isLowerCaseType(primString.getClass()));
+        Assert.assertTrue(Utilities.isPrimitiveOrWrapperType(primString.getClass()));
 
         Schema schema = new Schema();
-        Assert.assertFalse(Utilities.isLowerCaseType(schema.getClass()));
+        Assert.assertFalse(Utilities.isPrimitiveOrWrapperType(schema.getClass()));
 
-        Assert.assertFalse(Utilities.isLowerCaseType(Application.class));
+        Assert.assertFalse(Utilities.isPrimitiveOrWrapperType(Application.class));
 
-        Assert.assertFalse(Utilities.isLowerCaseType(void.class));
-        Assert.assertFalse(Utilities.isLowerCaseType(Void.class));
+        Assert.assertFalse(Utilities.isPrimitiveOrWrapperType(void.class));
+        Assert.assertFalse(Utilities.isPrimitiveOrWrapperType(Void.class));
+    }
+
+    @Test
+    public void test_getPrimitiveNameForWrapperType() {
+        try {
+            Utilities.getPrimitiveNameForWrapperType(Schema.class);
+            Assert.fail("Expecting an IllegalArgumentException for a non-primitive class ");
+        } catch (Exception e) {
+            Assert.assertTrue((e instanceof IllegalArgumentException));
+        }
+
+        Assert.assertEquals("int", Utilities.getPrimitiveNameForWrapperType(Integer.class));
+        Assert.assertEquals("int", Utilities.getPrimitiveNameForWrapperType(int.class));
+        Assert.assertEquals("string", Utilities.getPrimitiveNameForWrapperType(String.class));
+
+        Assert.assertEquals("string", Utilities.getPrimitiveNameForWrapperType(Character.class));
+        Assert.assertEquals("string", Utilities.getPrimitiveNameForWrapperType(char.class));
+
+        Assert.assertEquals("double", Utilities.getPrimitiveNameForWrapperType(Double.class));
+        Assert.assertEquals("double", Utilities.getPrimitiveNameForWrapperType(double.class));
+        Assert.assertEquals("float", Utilities.getPrimitiveNameForWrapperType(Float.class));
+        Assert.assertEquals("float", Utilities.getPrimitiveNameForWrapperType(float.class));
+        Assert.assertEquals("bool", Utilities.getPrimitiveNameForWrapperType(Boolean.class));
+        Assert.assertEquals("bool", Utilities.getPrimitiveNameForWrapperType(boolean.class));
+        Assert.assertEquals("short", Utilities.getPrimitiveNameForWrapperType(Short.class));
+        Assert.assertEquals("short", Utilities.getPrimitiveNameForWrapperType(short.class));
+        Assert.assertEquals("long", Utilities.getPrimitiveNameForWrapperType(Long.class));
+        Assert.assertEquals("long", Utilities.getPrimitiveNameForWrapperType(long.class));
+        Assert.assertEquals("byte", Utilities.getPrimitiveNameForWrapperType(Byte.class));
+        Assert.assertEquals("byte", Utilities.getPrimitiveNameForWrapperType(byte.class));
     }
 
     @Test
