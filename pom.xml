@@ -4,7 +4,7 @@
 
     <groupId>com.michaelhradek</groupId>
     <artifactId>aurkitu-parent</artifactId>
-    <version>0.0.6.6</version>
+    <version>0.0.7</version>
     <packaging>pom</packaging>
 
     <name>Aurkitu Parent</name>
@@ -45,7 +45,7 @@
     </issueManagement>
 
     <properties>
-        <aurkitu.version>0.0.6.6</aurkitu.version>
+        <aurkitu.version>0.0.7</aurkitu.version>
         <scm.url>scm:git:https://github.com/mhradek/aurkitu.git</scm.url>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <coveralls-maven-plugin.version>4.3.0</coveralls-maven-plugin.version>
@@ -59,7 +59,8 @@
         <lombok.version>1.16.22</lombok.version>
         <surefire.version>2.12.4</surefire.version>
         <logback.version>1.1.2</logback.version>
-        <reflections.version>0.9.11</reflections.version>
+        <!-- Brought in reflections from a recent 9.12-SNAPSHOT. The primary changes here are to reduce the amount of uncontrolled logging within Reflections. -->
+        <reflections.version>0.9.12-custom</reflections.version>
         <maven.javadoc.version>3.0.1</maven.javadoc.version>
         <maven.source.version>3.0.1</maven.source.version>
         <plexus.version>3.1.0</plexus.version>
@@ -94,6 +95,7 @@
         <module>aurkitu-test-base</module>
         <module>aurkitu-test-dependency</module>
         <module>aurkitu-test-service</module>
+        <module>aurkitu-reflections</module>
     </modules>
 
 </project>
