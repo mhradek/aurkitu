@@ -11,11 +11,51 @@
     <parent>
         <groupId>com.michaelhradek</groupId>
         <artifactId>aurkitu-parent</artifactId>
-        <version>0.0.7</version>
+        <version>0.0.7.1</version>
         <relativePath>..</relativePath>
     </parent>
 
     <dependencies>
+        <!-- Required by reflections library -->
+        <dependency>
+            <groupId>org.javassist</groupId>
+            <artifactId>javassist</artifactId>
+            <version>${javassist.version}</version>
+            <optional>false
+            </optional> <!-- case: when not actually scanning with javassist or if using {@link Reflections.collect()} -->
+        </dependency>
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>servlet-api</artifactId>
+            <version>${javax.servlet.version}</version>
+            <scope>provided</scope>
+            <optional>true</optional> <!-- case: when no servlet environment -->
+        </dependency>
+        <dependency>
+            <groupId>dom4j</groupId>
+            <artifactId>dom4j</artifactId>
+            <version>${dom4j.version}</version>
+            <optional>true</optional> <!-- case: when no xml de/serialization -->
+        </dependency>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>${guava.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>${gson.version}</version>
+            <optional>true</optional> <!-- case: when no json de/serialization -->
+        </dependency>
+        <dependency>
+            <groupId>com.google.code.findbugs</groupId>
+            <artifactId>jsr305</artifactId>
+            <version>${jsr305.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Plugin dependencies -->
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
@@ -30,11 +70,6 @@
             <groupId>com.michaelhradek</groupId>
             <artifactId>aurkitu-annotations</artifactId>
             <version>${aurkitu.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.reflections</groupId>
-            <artifactId>reflections</artifactId>
-            <version>${reflections.version}</version>
         </dependency>
         <dependency>
             <groupId>org.codehaus.plexus</groupId>
@@ -121,6 +156,9 @@
                         <goals>
                             <goal>jar</goal>
                         </goals>
+                        <configuration>
+                            <excludePackageNames>${project.groupId}.aurkitu.reflections:*</excludePackageNames>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
@@ -147,6 +185,7 @@
                     <excludes>
                         <exclude>**/*Config.*</exclude>
                         <exclude>**/*HelpMojo.*</exclude>
+                        <exclude>**/aurkitu/reflections/**/*</exclude>
                     </excludes>
                 </configuration>
                 <executions>
@@ -218,8 +257,8 @@
                     <compilerArgument>-Xlint:all</compilerArgument>
                     <showWarnings>true</showWarnings>
                     <showDeprecation>true</showDeprecation>
-                    <source>1.8</source>
-                    <target>1.8</target>
+                    <source>${jdk.version}</source>
+                    <target>${jdk.version}</target>
                 </configuration>
             </plugin>
         </plugins>

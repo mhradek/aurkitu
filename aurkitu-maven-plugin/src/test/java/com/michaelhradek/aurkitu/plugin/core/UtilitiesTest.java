@@ -9,6 +9,7 @@ import com.michaelhradek.aurkitu.plugin.core.parsing.ArtifactReference;
 import com.michaelhradek.aurkitu.plugin.core.parsing.ClasspathReference;
 import com.michaelhradek.aurkitu.plugin.core.parsing.ClasspathSearchType;
 import com.michaelhradek.aurkitu.plugin.test.SampleClassTable;
+import com.michaelhradek.aurkitu.reflections.Reflections;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.artifact.handler.ArtifactHandler;
@@ -27,7 +28,6 @@ import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.Mockito;
-import org.reflections.Reflections;
 
 import java.io.File;
 import java.lang.reflect.*;
@@ -64,7 +64,7 @@ public class UtilitiesTest extends AbstractMojoTestCase {
         super.setUp();
     }
 
-    @Test()
+    @Test
     public void test_PrivateConstructor() throws NoSuchMethodException {
         final Constructor<Utilities> constructor = Utilities.class.getDeclaredConstructor();
         Assert.assertTrue(Modifier.isPrivate(constructor.getModifiers()));

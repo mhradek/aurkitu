@@ -11,7 +11,7 @@
     <parent>
         <groupId>com.michaelhradek</groupId>
         <artifactId>aurkitu-parent</artifactId>
-        <version>0.0.7</version>
+        <version>0.0.7.1</version>
         <relativePath>..</relativePath>
     </parent>
 
@@ -100,8 +100,8 @@
                     <compilerArgument>-Xlint:all</compilerArgument>
                     <showWarnings>true</showWarnings>
                     <showDeprecation>true</showDeprecation>
-                    <source>1.8</source>
-                    <target>1.8</target>
+                    <source>${jdk.version}</source>
+                    <target>${jdk.version}</target>
                 </configuration>
             </plugin>
         </plugins>

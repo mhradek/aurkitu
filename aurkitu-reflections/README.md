@@ -14,9 +14,9 @@ Using Reflections you can query your metadata such as:
 Add Reflections to your project. for maven projects just add this dependency:
 ```xml
 <dependency>
-    <groupId>org.reflections</groupId>
+    <groupId>com.michaelhradek.aurkitu</groupId>
     <artifactId>reflections</artifactId>
-    <version>0.9.11</version>
+    <version>0.9.12-AURKITU</version>
 </dependency>
 ```
 
@@ -107,7 +107,7 @@ ReflectionsUtils contains some convenient Java reflection helper methods for get
 for example:
 
 ```java
-import static org.reflections.ReflectionUtils.*;
+import static ReflectionUtils.*;
 
 Set<Method> getters = getAllMethods(someClass,
   withModifier(Modifier.PUBLIC), withPrefix("get"), withParametersCount(0));

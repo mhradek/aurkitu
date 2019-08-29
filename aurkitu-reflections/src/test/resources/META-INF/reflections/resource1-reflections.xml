@@ -3,13 +3,13 @@
 <Reflections>
     <MethodAnnotationsScanner>
         <entry>
-            <key>org.reflections.TestModel$AM1</key>
+            <key>com.michaelhradek.aurkitu.reflections.TestModel$AM1</key>
             <values>
-                <value>org.reflections.TestModel$C4.&lt;init&gt;(java.lang.String)</value>
-                <value>org.reflections.TestModel$C4.m3()</value>
-                <value>org.reflections.TestModel$C4.m1(int[][], java.lang.String[][])</value>
-                <value>org.reflections.TestModel$C4.m1(int, java.lang.String[])</value>
-                <value>org.reflections.TestModel$C4.m1()</value>
+                <value>com.michaelhradek.aurkitu.reflections.TestModel$C4.&lt;init&gt;(java.lang.String)</value>
+                <value>com.michaelhradek.aurkitu.reflections.TestModel$C4.m3()</value>
+                <value>com.michaelhradek.aurkitu.reflections.TestModel$C4.m1(int[][], java.lang.String[][])</value>
+                <value>com.michaelhradek.aurkitu.reflections.TestModel$C4.m1(int, java.lang.String[])</value>
+                <value>com.michaelhradek.aurkitu.reflections.TestModel$C4.m1()</value>
             </values>
         </entry>
     </MethodAnnotationsScanner>

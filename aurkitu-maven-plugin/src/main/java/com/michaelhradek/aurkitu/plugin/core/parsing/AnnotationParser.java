@@ -1,12 +1,12 @@
 package com.michaelhradek.aurkitu.plugin.core.parsing;
 
 import com.michaelhradek.aurkitu.plugin.core.Utilities;
+import com.michaelhradek.aurkitu.reflections.Reflections;
+import com.michaelhradek.aurkitu.reflections.util.ClasspathHelper;
+import com.michaelhradek.aurkitu.reflections.util.ConfigurationBuilder;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.plugin.MojoExecutionException;
-import org.reflections.Reflections;
-import org.reflections.util.ClasspathHelper;
-import org.reflections.util.ConfigurationBuilder;
 
 import java.lang.annotation.Annotation;
 import java.util.List;

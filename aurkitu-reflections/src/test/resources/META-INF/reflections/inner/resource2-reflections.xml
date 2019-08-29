@@ -3,10 +3,10 @@
 <Reflections>
     <FieldAnnotationsScanner>
         <entry>
-            <key>org.reflections.TestModel$AF1</key>
+            <key>com.michaelhradek.aurkitu.reflections.TestModel$AF1</key>
             <values>
-                <value>org.reflections.TestModel$C4.f1</value>
-                <value>org.reflections.TestModel$C4.f2</value>
+                <value>com.michaelhradek.aurkitu.reflections.TestModel$C4.f1</value>
+                <value>com.michaelhradek.aurkitu.reflections.TestModel$C4.f2</value>
             </values>
         </entry>
     </FieldAnnotationsScanner>
