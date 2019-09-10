@@ -22,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;
+import org.codehaus.plexus.util.StringUtils;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -654,7 +655,7 @@ public class Processor {
         }
 
         // Apply the default value if it was set
-        if (defaultValue != null && !defaultValue.isEmpty()) {
+        if (!StringUtils.isEmpty(defaultValue)) {
             log.debug("Found a default value to assign to field: " + defaultValue);
             property.options.put(PropertyOptionKey.DEFAULT_VALUE, defaultValue);
         }

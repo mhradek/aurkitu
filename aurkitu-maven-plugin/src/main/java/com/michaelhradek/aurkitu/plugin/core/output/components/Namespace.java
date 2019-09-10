@@ -28,6 +28,19 @@ public class Namespace {
     }
 
     /**
+     *
+     * @param namespace the namespace to examine
+     * @return if the namespace is empty including null; {@link #isEmpty()}
+     */
+    public static boolean isEmpty(Namespace namespace) {
+        if(namespace == null) {
+            return true;
+        }
+
+        return namespace.isEmpty();
+    }
+
+    /**
      * @param input takes a string and parse a namespace from it. We use : to separate the parts of a namespace
      * @return a constructed namespace
      */

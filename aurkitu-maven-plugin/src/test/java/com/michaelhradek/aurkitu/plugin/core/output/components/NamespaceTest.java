@@ -70,4 +70,17 @@ public class NamespaceTest {
         Assert.assertFalse(namespaceA.equals(namespaceB) && namespaceB.equals(namespaceA));
         Assert.assertFalse(namespaceA.hashCode() == namespaceB.hashCode());
     }
+
+    @Test
+    public void testStaticIsEmpty() {
+        Namespace namespace = null;
+        Assert.assertTrue(Namespace.isEmpty(namespace));
+
+        namespace = new Namespace();
+        Assert.assertTrue(Namespace.isEmpty(namespace));
+
+        // Most of this testing is done in `isEmpty()`
+        namespace.setArtifactId("test.artifact.id");
+        Assert.assertFalse(Namespace.isEmpty(namespace));
+    }
 }

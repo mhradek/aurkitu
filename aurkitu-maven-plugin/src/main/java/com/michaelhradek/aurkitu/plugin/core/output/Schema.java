@@ -217,7 +217,7 @@ public class Schema {
             builder.append(System.lineSeparator());
         }
 
-        if (namespace != null && !namespace.isEmpty()) {
+        if (!Namespace.isEmpty(namespace)) {
             builder.append("namespace ");
             final String outputNamespace = namespace.toString();
             builder.append(outputNamespace);
