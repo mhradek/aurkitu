@@ -56,4 +56,6 @@ public class SampleClassTable {
     protected Byte byteField;
     protected Float floatField;
     protected double doubleField;
+
+    protected SampleClassReferenced.InnerClass innerClassField;
 }

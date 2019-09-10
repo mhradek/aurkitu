@@ -234,7 +234,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
         for (TypeDeclaration type : schema.getTypeDeclarations()) {
 
             if (type.getName().equals(SampleClassTable.class.getSimpleName())) {
-                Assert.assertEquals(25, type.getProperties().size());
+                Assert.assertEquals(26, type.getProperties().size());
 
                 Assert.assertNotNull(type.getComment());
 
