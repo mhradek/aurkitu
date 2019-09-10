@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# Clean up local Maven repo
+rm -rf ~/.m2/repository/com/michaelhradek/
+
 # Build and test convenience script
 mvn clean install -T 1C
 
