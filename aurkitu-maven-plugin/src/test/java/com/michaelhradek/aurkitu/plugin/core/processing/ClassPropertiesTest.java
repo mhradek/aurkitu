@@ -105,13 +105,14 @@ public class ClassPropertiesTest {
 
         Processor mockProcessor = PowerMockito.mock(Processor.class);
 
+        // Test exception block
         PowerMockito.when(mockProcessor, PowerMockito.method(Processor.class, "getExternalClassDefinitionDetails", Class.class)).withArguments(Mockito.any()).thenAnswer(invocation -> {
             throw new ClassNotFoundException();
         });
         property = new ClassProperties(mockProcessor).process(new TypeDeclaration.Property(), tableField, false);
 
+        // Test inner class handling within exception block
         tableField = SampleClassTable.class.getDeclaredField("innerClassField");
         property = new ClassProperties(mockProcessor).process(new TypeDeclaration.Property(), tableField, false);
-
     }
 }
