@@ -40,7 +40,7 @@ Add the following to your dependencies within your `pom.xml`:
 <dependency>
     <groupId>com.michaelhradek</groupId>
     <artifactId>aurkitu-annotations</artifactId>
-    <version>0.0.7.1</version>
+    <version>0.0.7.2</version>
 </dependency>
 ```
 ### Maven Plugin
@@ -49,7 +49,7 @@ Followed by the following to the `plugins` of your `build` specifications within
 <plugin>
     <groupId>com.michaelhradek</groupId>
     <artifactId>aurkitu-maven-plugin</artifactId>
-    <version>0.0.7.1</version>
+    <version>0.0.7.2</version>
     <configuration>
         <schemaName>user</schemaName>
         <schemaNamespace>com.company.package.subpackage.flatbuffers</schemaNamespace>
