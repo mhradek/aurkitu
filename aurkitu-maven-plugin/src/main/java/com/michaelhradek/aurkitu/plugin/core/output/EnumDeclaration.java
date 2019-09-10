@@ -2,7 +2,6 @@ package com.michaelhradek.aurkitu.plugin.core.output;
 
 import com.michaelhradek.aurkitu.annotations.FlatBufferEnum.EnumStructureType;
 import com.michaelhradek.aurkitu.annotations.types.EnumType;
-import com.michaelhradek.aurkitu.plugin.core.Comparators;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
