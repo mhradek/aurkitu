@@ -1,12 +1,14 @@
 package com.michaelhradek.aurkitu.plugin.core.output;
 
 import com.michaelhradek.aurkitu.plugin.Config;
+import com.michaelhradek.aurkitu.plugin.core.Comparators;
 import com.michaelhradek.aurkitu.plugin.core.Validator;
 import com.michaelhradek.aurkitu.plugin.core.output.components.Namespace;
 import com.michaelhradek.aurkitu.plugin.core.parsing.ClasspathReference;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.*;
@@ -159,7 +161,7 @@ public class Schema {
         }
         builder.append(System.lineSeparator());
 
-        if (includes != null && includes.size() > 0) {
+        if (!CollectionUtils.isEmpty(includes)) {
             for (String include : includes) {
                 builder.append("include \"");
                 builder.append(include);
@@ -174,7 +176,8 @@ public class Schema {
             builder.append(System.lineSeparator());
         }
 
-        if (attributes != null && attributes.size() > 0) {
+        if (!CollectionUtils.isEmpty(attributes)) {
+            attributes.sort(Comparators.STRING_LIST);
             for (String attribute : attributes) {
                 builder.append("attribute \"");
                 builder.append(attribute);
@@ -186,7 +189,8 @@ public class Schema {
             builder.append(System.lineSeparator());
         }
 
-        if (integerConstants.size() > 0) {
+        if (!CollectionUtils.isEmpty(integerConstants)) {
+            integerConstants.sort(Comparators.CONSTANT_DECLARATION);
             for (Constant<Integer> constant : integerConstants) {
                 builder.append("int ");
                 builder.append(constant.name);
@@ -199,7 +203,8 @@ public class Schema {
             builder.append(System.lineSeparator());
         }
 
-        if (floatConstants.size() > 0) {
+        if (!CollectionUtils.isEmpty(floatConstants)) {
+            floatConstants.sort(Comparators.CONSTANT_DECLARATION);
             for (Constant<Float> constant : floatConstants) {
                 builder.append("float ");
                 builder.append(constant.name);
@@ -222,10 +227,12 @@ public class Schema {
             builder.append(System.lineSeparator());
         }
 
+        enumDeclarations.sort(Comparators.ENUM_DECLARATION);
         for (EnumDeclaration enumD : enumDeclarations) {
             builder.append(enumD.toString());
         }
 
+        typeDeclarations.sort(Comparators.TYPE_DECLARATION);
         for (TypeDeclaration typeD : typeDeclarations) {
             builder.append(typeD.toString());
         }

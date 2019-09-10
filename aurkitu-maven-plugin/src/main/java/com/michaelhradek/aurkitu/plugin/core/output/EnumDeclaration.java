@@ -5,6 +5,7 @@ import com.michaelhradek.aurkitu.annotations.types.EnumType;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,7 +44,7 @@ public class EnumDeclaration {
     @Override
     public String toString() {
         StringBuilder builder = new StringBuilder();
-        if (comment != null && !comment.isEmpty()) {
+        if (!StringUtils.isEmpty(comment)) {
             builder.append("// ");
             builder.append(comment);
             builder.append(System.lineSeparator());

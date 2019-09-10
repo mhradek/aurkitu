@@ -16,6 +16,7 @@
     </parent>
 
     <dependencies>
+
         <!-- Required by reflections library -->
         <dependency>
             <groupId>org.javassist</groupId>
@@ -56,6 +57,12 @@
         </dependency>
 
         <!-- Plugin dependencies -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-collections4</artifactId>
+            <version>4.0</version>
+        </dependency>
+
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>

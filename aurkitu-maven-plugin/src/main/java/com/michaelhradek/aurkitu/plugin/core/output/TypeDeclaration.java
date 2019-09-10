@@ -6,6 +6,8 @@ import com.michaelhradek.aurkitu.plugin.core.output.TypeDeclaration.Property.Pro
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -46,7 +48,7 @@ public class TypeDeclaration {
     @Override
     public String toString() {
         StringBuilder builder = new StringBuilder();
-        if (comment != null && !comment.isEmpty()) {
+        if (!StringUtils.isEmpty(comment)) {
             builder.append("// ");
             builder.append(comment);
             builder.append(System.lineSeparator());
@@ -58,7 +60,7 @@ public class TypeDeclaration {
         builder.append(" {");
         builder.append(System.lineSeparator());
 
-        if (!properties.isEmpty()) {
+        if (!CollectionUtils.isEmpty(properties)) {
             for (Property property : properties) {
                 builder.append("  ");
                 builder.append(property.name);
