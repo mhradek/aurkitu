@@ -262,7 +262,7 @@ root_type SampleClassTable;
 ```
 
 ## sample validation output
-If `validateSchema` is set a comment similar to the following example block will be appended to the schema
+If `validateSchema` is set a comment similar to the following example block will be appended to the schema. The comments will be added to the end of the generated schema file which should assist in the resolution of issues which may likely cause `flatc` to fail.
 ```IDL
 // Schema failed validation (i.e. flatc will likely fail): 
 // Issue : TYPE_DEFINITION_NOT_DEFINED, Location: SampleClassTable, Name: anomalousSamples
@@ -271,7 +271,6 @@ If `validateSchema` is set a comment similar to the following example block will
 // Issue : MISCONFIGURED_DEFINITION, Location: Option, Name: null
 // Issue : MISCONFIGURED_DEFINITION, Location: SampleClassTableInnerEnumInt, Name: null
 ```      
-With schema validation enabled, comments will be added to the end of the generated schema file which should assist in the resolution of issues which may likely cause `flatc` to fail.
 
 ## compile to flatbuffers
 The `flatc` executable can be downloaded or compiled from the Flatbuffer project site. For example:
