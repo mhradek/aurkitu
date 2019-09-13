@@ -79,7 +79,7 @@ Followed by the following to the `plugins` of your `build` specifications within
 ```
 ### option definitions
 #### required
-*   __schemaName__: sets the name of the generated schema which is then used for the output filename (e.g. `<schemaName>.<flatcFilename>` or `myschema.fbs`)
+*   __schemaName__: sets the name of the generated schema which is then used for the output filename (e.g. `<schemaName>.<flatcExtention>` or, for example, `myschema.fbs`)
 #### optional
 *   __schemaNamespace__: sets the namespace of schema. All objects in this schema will have this namespace (default: `generated.flatbuffers`). The options are `group_id:identifier:artifact_id`. To omit, follow pattern `::artifact_id`.
 *   __flatcExtention__: sets the output file extension (default `fbs`)
