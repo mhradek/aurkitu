@@ -4,7 +4,7 @@
 
     <groupId>com.michaelhradek</groupId>
     <artifactId>aurkitu-parent</artifactId>
-    <version>0.0.7.2</version>
+    <version>0.0.7.3</version>
     <packaging>pom</packaging>
 
     <name>Aurkitu Parent</name>
@@ -45,7 +45,7 @@
     </issueManagement>
 
     <properties>
-        <aurkitu.version>0.0.7.2</aurkitu.version>
+        <aurkitu.version>0.0.7.3</aurkitu.version>
         <scm.url>scm:git:https://github.com/mhradek/aurkitu.git</scm.url>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <coveralls-maven-plugin.version>4.3.0</coveralls-maven-plugin.version>

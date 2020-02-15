@@ -38,31 +38,33 @@ public class MapProperties implements PropertyExtractor {
             log.warn("Unable to determine classes for Map<?, ?> parameter types", e);
         }
 
-        // Attempt to load each type (technically will run twice as in A and B in example Map<A, B>)
+        // Attempt to load each type (usually will run twice as in A and B in example Map<A, B>)
         for (int i = 0; i < parametrizedTypeStrings.length; i++) {
             Class<?> mapTypeClass;
             TypeDeclaration.Property mapTypeProperty = new TypeDeclaration.Property();
 
             try {
-                // Load all paths into custom classloader
-                ClassLoader urlClassLoader = Thread.currentThread().getContextClassLoader();
-                if (processor.getArtifactReference() != null && processor.getArtifactReference().getMavenProject() != null) {
-                    urlClassLoader = URLClassLoader
-                            .newInstance(Utilities.arrayForClasspathReferenceList(
-                                    Utilities.buildProjectClasspathList(processor.getArtifactReference(), ClasspathSearchType.BOTH)), urlClassLoader);
-                }
-
                 // Parse Field signature
-                mapTypeClass = urlClassLoader.loadClass(parametrizedTypeStrings[i]);
+                // mapTypeClass = urlClassLoader.loadClass(parametrizedTypeStrings[i]);
 
-                if (mapTypeClass.getName().equals(Object.class.getName())) {
+                if (parametrizedTypeStrings[i].equals(Object.class.getName())) {
                     log.warn(
                             "Using Map<?, ?> where either `?` is `java.lang.Object` is not permitted; using `java.lang.String`");
                     mapTypeClass = String.class;
+                } else {
+                    // Load all paths into custom classloader
+                    ClassLoader urlClassLoader = Thread.currentThread().getContextClassLoader();
+                    if (processor.getArtifactReference() != null && processor.getArtifactReference().getMavenProject() != null) {
+                        urlClassLoader = URLClassLoader
+                                .newInstance(Utilities.arrayForClasspathReferenceList(
+                                        Utilities.buildProjectClasspathList(processor.getArtifactReference(), ClasspathSearchType.BOTH)), urlClassLoader);
+                    }
+
+                    mapTypeClass = urlClassLoader.loadClass(parametrizedTypeStrings[i]);
                 }
             } catch (Exception e) {
                 log
-                        .warn("Unable to find and load class for Map<?, ?> parameter, using <String, String> instead: ",
+                        .warn("Unable to find and load class [" + parametrizedTypeStrings[i] + "] for Map<?, ?> parameter, using <String, String> instead: ",
                                 e);
                 mapTypeClass = String.class;
             }
@@ -86,14 +88,27 @@ public class MapProperties implements PropertyExtractor {
 
             // Stuffing...
             if (i == 0) {
-                mapTypeProperty.name = "key";
+                mapTypeProperty.name = "key"; // String
             } else {
                 mapTypeProperty.name = "value";
             }
 
             mapTypeProperty.type = FieldType.IDENT;
             mapTypeProperty.options.put(TypeDeclaration.Property.PropertyOptionKey.IDENT, name);
-            properties.add(mapTypeProperty);
+
+            // We can only hav 2. If there's more than 2 then we're dealing with complex types inside the map
+            if(i > 1) {
+                TypeDeclaration.Property tempProperty = properties.get(1);
+
+                // Handle lists
+                if(tempProperty.options.get(TypeDeclaration.Property.PropertyOptionKey.IDENT).equalsIgnoreCase("list") && i == 2) {
+                    tempProperty.type = FieldType.ARRAY;
+                    tempProperty.options.put(TypeDeclaration.Property.PropertyOptionKey.ARRAY, name);
+                    properties.set(1, tempProperty);
+                }
+            } else {
+                properties.add(mapTypeProperty);
+            }
         }
 
         // Create a new type and add it to the list of types

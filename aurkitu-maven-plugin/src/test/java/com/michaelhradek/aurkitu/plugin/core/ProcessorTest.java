@@ -156,7 +156,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
         schema.addInclude("AnotherFile.fbs");
 
         Assert.assertEquals(12, processor.getTargetClasses().size());
-        Assert.assertEquals(11, schema.getTypeDeclarations().size());
+        Assert.assertEquals(13, schema.getTypeDeclarations().size());
         Assert.assertEquals(8, schema.getEnumDeclarations().size());
 
         Assert.assertEquals("SampleClassTable", schema.getRootType());
@@ -226,7 +226,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
         Schema schema = processor.getProcessedSchemas().get(0);
 
         Assert.assertEquals(6, processor.getTargetClasses().size());
-        Assert.assertEquals(11, schema.getTypeDeclarations().size());
+        Assert.assertEquals(13, schema.getTypeDeclarations().size());
         Assert.assertEquals(5, schema.getEnumDeclarations().size());
 
         Assert.assertEquals("SampleClassTable", schema.getRootType());
@@ -234,7 +234,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
         for (TypeDeclaration type : schema.getTypeDeclarations()) {
 
             if (type.getName().equals(SampleClassTable.class.getSimpleName())) {
-                Assert.assertEquals(26, type.getProperties().size());
+                Assert.assertEquals(30, type.getProperties().size());
 
                 Assert.assertNotNull(type.getComment());
 
@@ -530,6 +530,24 @@ public class ProcessorTest extends AbstractMojoTestCase {
         String[] expected = new String[2];
         expected[0] = "java.lang.String";
         expected[1] = "java.lang.Object";
+
+        Assert.assertArrayEquals(expected, Processor.parseFieldSignatureForParametrizedTypeStringsOnMap(field));
+
+        field = testClass.getDeclaredField("stringListStringMap");
+
+        expected = new String[3];
+        expected[0] = "java.lang.String";
+        expected[1] = "java.util.List";
+        expected[2] = "java.lang.String";
+
+        Assert.assertArrayEquals(expected, Processor.parseFieldSignatureForParametrizedTypeStringsOnMap(field));
+
+        field = testClass.getDeclaredField("doubleListIntegerMap");
+
+        expected = new String[3];
+        expected[0] = "java.lang.Double";
+        expected[1] = "java.util.List";
+        expected[2] = "java.lang.Integer";
 
         Assert.assertArrayEquals(expected, Processor.parseFieldSignatureForParametrizedTypeStringsOnMap(field));
     }

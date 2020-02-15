@@ -49,6 +49,8 @@ public class SampleClassTable {
     public List<SampleEnumNull> enumList;
     public Map<SampleEnumNull, String> enumStringMap;
     public Map<SampleEnumNull, SampleClassTableInnerEnumInt> enumInnerEnumMap;
+    public Map<String, List<String>> stringListStringMap;
+    public Map<Double, List<Integer>> doubleListIntegerMap;
 
     protected Integer integerField;
     protected Short shortField;
@@ -56,6 +58,12 @@ public class SampleClassTable {
     protected Byte byteField;
     protected Float floatField;
     protected double doubleField;
+
+    @FlatBufferFieldOptions(fieldType = FieldType.UBYTE)
+    public byte optionsFieldWithFieldTypeOverrideUbyte;
+
+    @FlatBufferFieldOptions(fieldType = FieldType.ULONG)
+    public String[] optionsFieldWithFieldTypeOverrideUlong;
 
     protected SampleClassReferenced.InnerClass innerClassField;
 }
