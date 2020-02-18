@@ -136,12 +136,18 @@ public class Processor {
      * @param input The Map with a set of type declarations
      * @return a list of String which parses {"java.lang.String", "java.lang.Object"} from the following:
      * Ljava/util/Map&lt;Ljava/lang/String;Ljava/lang/Object;&gt;;
+     * Ljava/util/Map&lt;Ljava/lang/String;Ljava/util/List&lt;Ljava/lang/String;&gt;;&gt;;
      * @throws NoSuchFieldException   if the Field does not exist in the class
      * @throws IllegalAccessException if the Field is inaccessible
      */
     public static String[] parseFieldSignatureForParametrizedTypeStringsOnMap(Field input)
             throws NoSuchFieldException, IllegalAccessException {
         String typeSignature = getFieldTypeSignature(input);
+
+        // Inner signature; usually when value is a complex type. Yes, we are hoping for something not extravagent here
+        if(typeSignature.contains("<")) {
+            typeSignature = typeSignature.replace("<", ";");
+        }
 
         typeSignature = typeSignature.replaceAll("/", ".");
         String[] listOfTypes = typeSignature.split(";");
@@ -166,6 +172,7 @@ public class Processor {
         String signature = (String) privateField.get(input);
         log.debug("Examining signature: " + signature);
 
+        // Strip the outer brackets
         return signature.substring(signature.indexOf("<") + 1, signature.indexOf(">"));
     }
 
@@ -637,11 +644,13 @@ public class Processor {
         Annotation annotation = field.getAnnotation(FlatBufferFieldOptions.class);
         boolean useFullName = false;
         String defaultValue = null;
+        FieldType fieldTypeOverride = null;
 
         // Process overrides for the field
         if (annotation != null) {
             useFullName = ((FlatBufferFieldOptions) annotation).useFullName();
             defaultValue = ((FlatBufferFieldOptions) annotation).defaultValue();
+            fieldTypeOverride = ((FlatBufferFieldOptions) annotation).fieldType();
         }
 
         // Apply a comment if the annotation exists
@@ -662,49 +671,49 @@ public class Processor {
 
         if (field.getType().isAssignableFrom(int.class) || field.getType().isAssignableFrom(Integer.class)) {
             property.name = field.getName();
-            property.type = FieldType.INT;
+            property.type = fieldTypeOverride == null ? FieldType.INT : fieldTypeOverride;
             return property;
         }
 
         if (field.getType().isAssignableFrom(String.class)) {
             property.name = field.getName();
-            property.type = FieldType.STRING;
+            property.type = fieldTypeOverride == null ? FieldType.STRING : fieldTypeOverride;
             return property;
         }
 
         if (field.getType().isAssignableFrom(long.class) || field.getType().isAssignableFrom(Long.class)) {
             property.name = field.getName();
-            property.type = FieldType.LONG;
+            property.type = fieldTypeOverride == null ? FieldType.LONG : fieldTypeOverride;
             return property;
         }
 
         if (field.getType().isAssignableFrom(short.class) || field.getType().isAssignableFrom(Short.class)) {
             property.name = field.getName();
-            property.type = FieldType.SHORT;
+            property.type = fieldTypeOverride == null ? FieldType.SHORT : fieldTypeOverride;
             return property;
         }
 
         if (field.getType().isAssignableFrom(boolean.class) || field.getType().isAssignableFrom(Boolean.class)) {
             property.name = field.getName();
-            property.type = FieldType.BOOL;
+            property.type = fieldTypeOverride == null ? FieldType.BOOL : fieldTypeOverride;
             return property;
         }
 
         if (field.getType().isAssignableFrom(byte.class) || field.getType().isAssignableFrom(Byte.class)) {
             property.name = field.getName();
-            property.type = FieldType.BYTE;
+            property.type = fieldTypeOverride == null ? FieldType.BYTE : fieldTypeOverride;
             return property;
         }
 
         if (field.getType().isAssignableFrom(float.class) || field.getType().isAssignableFrom(Float.class)) {
             property.name = field.getName();
-            property.type = FieldType.FLOAT;
+            property.type = fieldTypeOverride == null ? FieldType.FLOAT : fieldTypeOverride;
             return property;
         }
 
         if (field.getType().isAssignableFrom(double.class) || field.getType().isAssignableFrom(Double.class)) {
             property.name = field.getName();
-            property.type = FieldType.DOUBLE;
+            property.type = fieldTypeOverride == null ? FieldType.DOUBLE : fieldTypeOverride;
             return property;
         }
 
