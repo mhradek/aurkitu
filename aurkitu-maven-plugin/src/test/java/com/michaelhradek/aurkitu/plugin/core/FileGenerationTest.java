@@ -4,6 +4,7 @@ import com.michaelhradek.aurkitu.annotations.FlatBufferEnum;
 import com.michaelhradek.aurkitu.annotations.FlatBufferTable;
 import com.michaelhradek.aurkitu.plugin.Config;
 import com.michaelhradek.aurkitu.plugin.core.output.Schema;
+import org.apache.commons.io.FileUtils;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.junit.Assert;
 import org.junit.Test;
@@ -44,6 +45,8 @@ public class FileGenerationTest {
         schema.setGenerateVersion(true);
 
         File outputDirectory = new File(OUTPUT_DIRECTORY_VALID);
+        FileUtils.deleteDirectory(outputDirectory);
+
         Assert.assertFalse(outputDirectory.exists());
         Assert.assertFalse(outputDirectory.isDirectory());
 
