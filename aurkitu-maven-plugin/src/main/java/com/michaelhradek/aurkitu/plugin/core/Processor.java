@@ -16,6 +16,8 @@ import com.michaelhradek.aurkitu.plugin.core.processing.ArrayProperties;
 import com.michaelhradek.aurkitu.plugin.core.processing.ClassProperties;
 import com.michaelhradek.aurkitu.plugin.core.processing.ListProperties;
 import com.michaelhradek.aurkitu.plugin.core.processing.MapProperties;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import lombok.Getter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
@@ -114,66 +116,36 @@ public class Processor {
     }
 
     /**
-     * @param input The List with a type declaration
-     * @return a String which parses: com.company.team.service.model.Person from the following:
-     * Ljava/util/List&lt;Lcom/company/team/service/model/Person;&gt;;
-     * @throws NoSuchFieldException   if the Field does not exist in the class
-     * @throws IllegalAccessException if the Field is inaccessible
+     * Get a list of the names of all type classes from a field which is a parameterized type.
+     * If the type classes themselves are also parameterized types, only the first sub-type class
+     * from those type classes will be included.
+     *
+     * @param field The field of a ParameterizedType for which we want the actual type class names
+     * @return A list of the names of all actual type classes in the ParameterizedType
+     * @throws IllegalArgumentException if the type of field is not a ParameterizedType
      */
-    public static String parseFieldSignatureForParametrizedTypeStringOnList(Field input)
-            throws NoSuchFieldException, IllegalAccessException {
-        String typeSignature = getFieldTypeSignature(input);
-
-        typeSignature = typeSignature.replaceFirst("[a-zA-Z]{1}", "");
-        typeSignature = typeSignature.replaceAll("/", ".");
-        typeSignature = typeSignature.replaceAll(";", "");
-        log.debug("Derived class: " + typeSignature);
-
-        return typeSignature;
-    }
-
-    /**
-     * @param input The Map with a set of type declarations
-     * @return a list of String which parses {"java.lang.String", "java.lang.Object"} from the following:
-     * Ljava/util/Map&lt;Ljava/lang/String;Ljava/lang/Object;&gt;;
-     * Ljava/util/Map&lt;Ljava/lang/String;Ljava/util/List&lt;Ljava/lang/String;&gt;;&gt;;
-     * @throws NoSuchFieldException   if the Field does not exist in the class
-     * @throws IllegalAccessException if the Field is inaccessible
-     */
-    public static String[] parseFieldSignatureForParametrizedTypeStringsOnMap(Field input)
-            throws NoSuchFieldException, IllegalAccessException {
-        String typeSignature = getFieldTypeSignature(input);
-
-        // Inner signature; usually when value is a complex type. Yes, we are hoping for something not extravagent here
-        if(typeSignature.contains("<")) {
-            typeSignature = typeSignature.replace("<", ";");
+    public static String[] getTypeClassNamesFromParameterizedType(Field field) {
+        Type type = field.getGenericType();
+        if (!(type instanceof ParameterizedType)) {
+            throw new IllegalArgumentException(
+                "field " + field.getType() + " is not a parameterized type");
         }
 
-        typeSignature = typeSignature.replaceAll("/", ".");
-        String[] listOfTypes = typeSignature.split(";");
-        for (int i = 0; i < listOfTypes.length; i++) {
-            listOfTypes[i] = listOfTypes[i].replaceAll(";", "");
-            listOfTypes[i] = listOfTypes[i].replaceFirst("[a-zA-Z]{1}", "");
-            log.debug("Derived class #{}: {}", i, listOfTypes[i]);
+        Type[] typeClasses = ((ParameterizedType) type).getActualTypeArguments();
+        List<String> typeNames = new ArrayList<>();
+        for (Type actualTypeArgument : typeClasses) {
+            if (actualTypeArgument instanceof ParameterizedType) {
+                // we only descend one level and only grab the first type class from there.
+                // (we aren't set up to use any more than that currently...)
+                ParameterizedType parameterizedTypeClass = (ParameterizedType) actualTypeArgument;
+                typeNames.add(parameterizedTypeClass.getRawType().getTypeName());
+                typeNames.add(parameterizedTypeClass.getActualTypeArguments()[0].getTypeName());
+            } else {
+                typeNames.add(actualTypeArgument.getTypeName());
+            }
         }
 
-        return listOfTypes;
-    }
-
-    /**
-     * @param input The field for which we want the signature String.
-     * @return The field type signature which is a private field in classes called "signature"
-     * @throws NoSuchFieldException   if the field doesn't exist
-     * @throws IllegalAccessException if access to the field is unavailable
-     */
-    public static String getFieldTypeSignature(Field input) throws NoSuchFieldException, IllegalAccessException {
-        Field privateField = input.getClass().getDeclaredField("signature");
-        privateField.setAccessible(true);
-        String signature = (String) privateField.get(input);
-        log.debug("Examining signature: " + signature);
-
-        // Strip the outer brackets
-        return signature.substring(signature.indexOf("<") + 1, signature.indexOf(">"));
+        return typeNames.toArray(new String[0]);
     }
 
     /**

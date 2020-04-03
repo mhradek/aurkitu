@@ -31,23 +31,21 @@ public class MapProperties implements PropertyExtractor {
         List<TypeDeclaration.Property> properties = new ArrayList<>();
 
         // Get the type for the key and value
-        String[] parametrizedTypeStrings = new String[]{String.class.getName(), String.class.getName()};
+        String[] typeClassNames = new String[]{String.class.getName(), String.class.getName()};
         try {
-            parametrizedTypeStrings = Processor.parseFieldSignatureForParametrizedTypeStringsOnMap(field);
+            typeClassNames = Processor.getTypeClassNamesFromParameterizedType(field);
         } catch (Exception e) {
             log.warn("Unable to determine classes for Map<?, ?> parameter types", e);
         }
 
         // Attempt to load each type (usually will run twice as in A and B in example Map<A, B>)
-        for (int i = 0; i < parametrizedTypeStrings.length; i++) {
+        for (int i = 0; i < typeClassNames.length; i++) {
             Class<?> mapTypeClass;
             TypeDeclaration.Property mapTypeProperty = new TypeDeclaration.Property();
 
             try {
-                // Parse Field signature
-                // mapTypeClass = urlClassLoader.loadClass(parametrizedTypeStrings[i]);
-
-                if (parametrizedTypeStrings[i].equals(Object.class.getName())) {
+                // load the type class
+                if (typeClassNames[i].equals(Object.class.getName())) {
                     log.warn(
                             "Using Map<?, ?> where either `?` is `java.lang.Object` is not permitted; using `java.lang.String`");
                     mapTypeClass = String.class;
@@ -60,11 +58,11 @@ public class MapProperties implements PropertyExtractor {
                                         Utilities.buildProjectClasspathList(processor.getArtifactReference(), ClasspathSearchType.BOTH)), urlClassLoader);
                     }
 
-                    mapTypeClass = urlClassLoader.loadClass(parametrizedTypeStrings[i]);
+                    mapTypeClass = urlClassLoader.loadClass(typeClassNames[i]);
                 }
             } catch (Exception e) {
                 log
-                        .warn("Unable to find and load class [" + parametrizedTypeStrings[i] + "] for Map<?, ?> parameter, using <String, String> instead: ",
+                        .warn("Unable to find and load class [" + typeClassNames[i] + "] for Map<?, ?> parameter, using <String, String> instead: ",
                                 e);
                 mapTypeClass = String.class;
             }
