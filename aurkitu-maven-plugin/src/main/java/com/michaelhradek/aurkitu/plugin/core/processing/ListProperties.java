@@ -43,9 +43,14 @@ public class ListProperties implements PropertyExtractor {
                 urlClassLoader = URLClassLoader.newInstance(targetUrlArray, urlClassLoader);
             }
 
-            // Parse Field signature
-            String parametrizedTypeString = Processor.parseFieldSignatureForParametrizedTypeStringOnList(field);
-            listTypeClass = urlClassLoader.loadClass(parametrizedTypeString);
+            // Get type class name
+            String[] typeClassNames = Processor.getTypeClassNamesFromParameterizedType(field);
+            if (typeClassNames.length > 1) {
+                log.warn("Field " + field.getName()
+                    + " has more than one type class; only first one supported. Type classes: "
+                    + String.join(",", typeClassNames));
+            }
+            listTypeClass = urlClassLoader.loadClass(typeClassNames[0]);
         } catch (Exception e) {
             log.warn("Unable to find and load class for List<?> parameter, using String instead (field name): " + field.getName());
             log.warn("Exception:", e);

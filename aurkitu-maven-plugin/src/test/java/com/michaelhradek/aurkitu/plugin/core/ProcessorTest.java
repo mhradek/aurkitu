@@ -501,37 +501,26 @@ public class ProcessorTest extends AbstractMojoTestCase {
     }
 
     @Test
-    public void testParseFieldSignatureForParametrizedTypeStringoOnList()
-            throws NoSuchFieldException, IllegalAccessException, ClassNotFoundException {
+    public void testGetTypeClassNamesFromParameterizedType()
+        throws NoSuchFieldException, ClassNotFoundException {
         Schema schema = new Schema();
         Field field = schema.getClass().getDeclaredField("enumDeclarations");
 
         Assert.assertEquals(EnumDeclaration.class.getName(),
-                Processor.parseFieldSignatureForParametrizedTypeStringOnList(field));
+            Processor.getTypeClassNamesFromParameterizedType(field)[0]);
 
         Class<?> testClass = Class.forName(SampleClassTable.class.getName());
         field = testClass.getDeclaredField("tokens");
-        Assert
-                .assertEquals(String.class.getName(), Processor.parseFieldSignatureForParametrizedTypeStringOnList(field));
+        Assert.assertEquals(String.class.getName(),
+                Processor.getTypeClassNamesFromParameterizedType(field)[0]);
 
-        testClass = Class.forName(SampleClassReferenced.class.getName());
-        field = testClass.getDeclaredField("baggage");
-        Assert.assertEquals(SampleClassTable.class.getName(),
-                Processor.parseFieldSignatureForParametrizedTypeStringOnList(field));
-    }
-
-    @Test
-    public void testParseFieldSignatureForParametrizedTypeStringsOnMap()
-            throws NoSuchFieldException, IllegalAccessException, ClassNotFoundException {
-
-        Class<?> testClass = Class.forName(SampleClassTable.class.getName());
-        Field field = testClass.getDeclaredField("dataMap");
+        field = testClass.getDeclaredField("dataMap");
 
         String[] expected = new String[2];
         expected[0] = "java.lang.String";
         expected[1] = "java.lang.Object";
 
-        Assert.assertArrayEquals(expected, Processor.parseFieldSignatureForParametrizedTypeStringsOnMap(field));
+        Assert.assertArrayEquals(expected, Processor.getTypeClassNamesFromParameterizedType(field));
 
         field = testClass.getDeclaredField("stringListStringMap");
 
@@ -540,7 +529,7 @@ public class ProcessorTest extends AbstractMojoTestCase {
         expected[1] = "java.util.List";
         expected[2] = "java.lang.String";
 
-        Assert.assertArrayEquals(expected, Processor.parseFieldSignatureForParametrizedTypeStringsOnMap(field));
+        Assert.assertArrayEquals(expected, Processor.getTypeClassNamesFromParameterizedType(field));
 
         field = testClass.getDeclaredField("doubleListIntegerMap");
 
@@ -549,7 +538,19 @@ public class ProcessorTest extends AbstractMojoTestCase {
         expected[1] = "java.util.List";
         expected[2] = "java.lang.Integer";
 
-        Assert.assertArrayEquals(expected, Processor.parseFieldSignatureForParametrizedTypeStringsOnMap(field));
+        Assert.assertArrayEquals(expected, Processor.getTypeClassNamesFromParameterizedType(field));
+
+        field = testClass.getDeclaredField("name");
+        try {
+            Processor.getTypeClassNamesFromParameterizedType(field);
+            fail("Expected IllegalArgumentException to be thrown for a non-parameterized type");
+        } catch (IllegalArgumentException ignored) {}
+
+        testClass = Class.forName(SampleClassReferenced.class.getName());
+        field = testClass.getDeclaredField("baggage");
+        Assert.assertEquals(SampleClassTable.class.getName(),
+            Processor.getTypeClassNamesFromParameterizedType(field)[0]);
+
     }
 
     @Test
