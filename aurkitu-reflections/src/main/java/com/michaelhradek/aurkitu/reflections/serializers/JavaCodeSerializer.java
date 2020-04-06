@@ -79,7 +79,9 @@ public class JavaCodeSerializer implements Serializer {
         }
 
         //prepare file
-        String filename = name.replace('.', '/').concat(".java");
+        int srcIndex = name.indexOf("/src/"); // leave periods at beginning of path alone
+        String filename = name.substring(0, srcIndex) +
+            name.substring(srcIndex).replace('.', '/').concat(".java");
         File file = prepareFile(filename);
 
         //get package and class names
@@ -111,7 +113,7 @@ public class JavaCodeSerializer implements Serializer {
             Files.write(sb.toString(), new File(filename), Charset.defaultCharset());
 
         } catch (IOException e) {
-            throw new RuntimeException();
+            throw new RuntimeException(e);
         }
 
         return file;
