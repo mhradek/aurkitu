@@ -44,6 +44,11 @@
         <relativePath>..</relativePath>
     </parent>
 
+    <properties>
+        <!-- This is only used here in this test. We are using this package to download and run a compiler to validate our schemas. -->
+        <flatbuffers.version>1.10.0.2</flatbuffers.version>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>com.michaelhradek</groupId>
@@ -59,6 +64,11 @@
             <groupId>com.michaelhradek</groupId>
             <artifactId>aurkitu-annotations</artifactId>
             <version>${aurkitu.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.davidmoten</groupId>
+            <artifactId>flatbuffers-java</artifactId>
+            <version>${flatbuffers.version}</version>
         </dependency>
     </dependencies>
 
