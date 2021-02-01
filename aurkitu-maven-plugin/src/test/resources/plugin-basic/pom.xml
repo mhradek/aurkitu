@@ -49,7 +49,7 @@
             <plugin>
                 <groupId>com.michaelhradek</groupId>
                 <artifactId>aurkitu-maven-plugin</artifactId>
-                <version>0.0.7.4</version>
+                <version>0.0.7.5</version>
                 <configuration>
                     <schemaName>test-schema</schemaName>
                     <outputDirectory>target/test-dir</outputDirectory>
