@@ -165,13 +165,18 @@ public class Utilities {
 
             for (String element : classpathElementsCache) {
                 log.debug("Looking at compile classpath element (via MavenProject): " + element);
-                log.debug("  Adding: " + element);
-                final ClasspathReference classpathReference = new ClasspathReference(
-                        new File(element).toURI().toURL(),
+                final File file = new File(element);
+                if (file.exists()) {
+                    log.debug("  Adding: " + element);
+                    final ClasspathReference classpathReference = new ClasspathReference(
+                        file.toURI().toURL(),
                         mavenProject.getGroupId(),
                         mavenProject.getArtifactId()
-                );
-                classpathReferenceList.add(classpathReference);
+                    );
+                    classpathReferenceList.add(classpathReference);
+                } else {
+                    log.debug("Skipping: " + element);
+                }
             }
         }
 
