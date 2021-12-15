@@ -203,7 +203,7 @@ public class VfsTest {
             public Vfs.Dir createDir(final URL url) {return new HttpDir(url);}
         });
 
-        testVfsDir(new URL("http://mirrors.ibiblio.org/pub/mirrors/maven2/org/slf4j/slf4j-api/1.5.6/slf4j-api-1.5.6.jar"));
+        testVfsDir(new URL("https://repo1.maven.org/maven2/org/slf4j/slf4j-api/1.5.6/slf4j-api-1.5.6.jar"));
     }
 
     //this is just for the test...
