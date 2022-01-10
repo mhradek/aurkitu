@@ -1,5 +1,7 @@
 ## Java runtime metadata analysis, in the spirit of [Scannotations](http://bill.burkecentral.com/2008/01/14/scanning-java-annotations-at-runtime/)
 
+### This is a fork of the original project. There were some logging behaviors in the source which were making using it in a production build environment painful.
+
 Reflections scans your classpath, indexes the metadata, allows you to query it on runtime and may save and collect that information for many modules within your project.
 
 Using Reflections you can query your metadata such as:
