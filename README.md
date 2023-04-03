@@ -2,7 +2,7 @@
 
 [![Latest release](https://img.shields.io/github/release/mhradek/aurkitu.svg)](https://github.com/mhradek/aurkitu/releases/latest)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/42b23d745afc4ef1b1102807752e8a38)](https://www.codacy.com/gh/mhradek/aurkitu/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=mhradek/aurkitu&amp;utm_campaign=Badge_Grade)
-[![Build Status](https://github.com/mhradek/aurkitu/actions/workflows/main.yml/badge.svg)
+[![Build Status](https://github.com/mhradek/aurkitu/actions/workflows/main.yml/badge.svg)](https://github.com/mhradek/aurkitu/actions)
 [![codecov](https://codecov.io/gh/mhradek/aurkitu/branch/master/graph/badge.svg)](https://codecov.io/gh/mhradek/aurkitu)
 [![Coverage Status](https://coveralls.io/repos/github/mhradek/aurkitu/badge.svg?branch=master)](https://coveralls.io/github/mhradek/aurkitu?branch=master)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.michaelhradek/aurkitu-maven-plugin/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.michaelhradek/aurkitu-maven-plugin)
