@@ -61,6 +61,8 @@
 
     <properties>
         <additionalparam>-Xdoclint:none</additionalparam>
+        <!-- Turns out that this library also had issues with the latest JDK. Not needed but handy to speed up build -->
+        <maven.test.skip>false</maven.test.skip> 
     </properties>
 
     <dependencies>
