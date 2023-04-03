@@ -295,7 +295,8 @@ Java 1.8
 ```aurkitu % java -version
 openjdk version "1.8.0_292"
 OpenJDK Runtime Environment (AdoptOpenJDK)(build 1.8.0_292-b10)
-OpenJDK 64-Bit Server VM (AdoptOpenJDK)(build 25.292-b10, mixed mode)```
+OpenJDK 64-Bit Server VM (AdoptOpenJDK)(build 25.292-b10, mixed mode)
+```
 
 Maven 3.6.3
 ```aurkitu % mvn -version
@@ -303,4 +304,5 @@ Apache Maven 3.6.3 (cecedd343002696d0abb50b32b541b8a6ba2883f)
 Maven home: /Library/apache-maven-3.6.3
 Java version: 1.8.0_292, vendor: AdoptOpenJDK, runtime: /Library/Java/JavaVirtualMachines/adoptopenjdk-8.jdk/Contents/Home/jre
 Default locale: en_CZ, platform encoding: UTF-8
-OS name: "mac os x", version: "10.16", arch: "x86_64", family: "mac"```
+OS name: "mac os x", version: "10.16", arch: "x86_64", family: "mac"
+```
