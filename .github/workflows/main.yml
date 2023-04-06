@@ -18,3 +18,8 @@ jobs:
           java-version: 1.8 
       - name: Build with script
         run: ./build-test.sh
+      - name: Publish coverage report
+        run: |
+          cd aurkitu-maven-plugin && mvn jacoco:report org.eluder.coveralls:coveralls-maven-plugin:report
+          cd ../aurkitu-annotations && mvn jacoco:report org.eluder.coveralls:coveralls-maven-plugin:report
+          cd ../ && pip install --user codecov && codecov
