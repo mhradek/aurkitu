@@ -24,7 +24,7 @@ jobs:
       - name: Publish to coveralls.io
         uses: coverallsapp/github-action@v2
         with:
-            base-path: src/main/java 
+            base-path: aurkitu-maven-plugin/src/main/java
             file: aurkitu-maven-plugin/target/jacoco-ut/jacoco.xml
 #           parallel: true  
 #          
