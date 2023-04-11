@@ -21,11 +21,11 @@ jobs:
       - name: Build with script
         run: ./build-test.sh
         
-      - name: Publish to coveralls.io
-        uses: coverallsapp/github-action@master
-        with:
-            base-path: aurkitu-maven-plugin/src/main/java
-            file: aurkitu-maven-plugin/target/jacoco-ut/jacoco.xml
+#      - name: Publish to coveralls.io
+#        uses: coverallsapp/github-action@v2
+#        with:
+#            base-path: aurkitu-maven-plugin/src/main/java
+#            file: aurkitu-maven-plugin/target/jacoco-ut/jacoco.xml
 #           parallel: true  
 #          
 #      - name: Publish coverage report
