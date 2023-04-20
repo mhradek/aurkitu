@@ -9,7 +9,7 @@ import com.michaelhradek.aurkitu.plugin.core.output.TypeDeclaration.Property.Pro
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.experimental.Wither;
+import lombok.With;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
@@ -22,7 +22,7 @@ import java.util.List;
 @Slf4j
 @Getter
 @Setter
-@Wither
+@With
 @AllArgsConstructor
 public class Validator {
 
