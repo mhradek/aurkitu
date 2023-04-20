@@ -485,7 +485,7 @@ public class Processor {
         for (Object constant : constants) {
             log.debug("Adding value to Enum: " + constant.toString());
 
-            if (setValues) {
+            if (setValues && valueField != null) {
                 valueField.setAccessible(true);
                 try {
                     final String temp = constant.toString() + " = ";
