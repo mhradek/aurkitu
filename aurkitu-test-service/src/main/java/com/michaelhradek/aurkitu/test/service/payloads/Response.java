@@ -7,7 +7,6 @@ import com.michaelhradek.aurkitu.test.dependency.LookupError;
 import com.michaelhradek.aurkitu.test.dependency.Wallet;
 import lombok.Data;
 
-import java.io.CharArrayReader;
 import java.util.List;
 import java.util.Map;
 

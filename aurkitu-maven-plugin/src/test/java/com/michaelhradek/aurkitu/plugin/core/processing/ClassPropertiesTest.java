@@ -5,7 +5,6 @@ import com.michaelhradek.aurkitu.plugin.core.output.Schema;
 import com.michaelhradek.aurkitu.plugin.core.output.TypeDeclaration;
 import com.michaelhradek.aurkitu.plugin.core.output.components.Namespace;
 import com.michaelhradek.aurkitu.plugin.core.parsing.ArtifactReference;
-import com.michaelhradek.aurkitu.plugin.test.SampleClassReferenced;
 import com.michaelhradek.aurkitu.plugin.test.SampleClassTable;
 import org.apache.maven.project.MavenProject;
 import org.junit.Assert;

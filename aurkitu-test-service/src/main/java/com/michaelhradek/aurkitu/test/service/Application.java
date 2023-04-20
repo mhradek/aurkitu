@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 
+@SuppressWarnings("unused")
 class Application {
 
     public static void main(String args[]) {

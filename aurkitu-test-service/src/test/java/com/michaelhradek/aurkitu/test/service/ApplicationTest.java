@@ -1,7 +1,7 @@
 package com.michaelhradek.aurkitu.test.service;
 
 import org.hamcrest.CoreMatchers;
-import org.junit.Assert;
+import org.hamcrest.MatcherAssert;
 import org.junit.Test;
 
 import java.io.BufferedReader;
@@ -50,21 +50,22 @@ public class ApplicationTest {
             builder.append(lineContents);
             builder.append(System.lineSeparator());
         }
+        br.close();
 
         // These definitions exist in the test schema file. Ordering is random hence the contains way of testing
         final String schemaFileContents = builder.toString();
-        Assert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_NAMESPACE));
-        Assert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_ENUM_USERSTATE));
-        Assert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_ENUM_CALLTYPE));
-        Assert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_TABLE_REQUEST));
-        Assert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_TABLE_RESPONSE));
-        Assert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_TABLE_WALLET));
-        Assert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_TABLE_LOOKUP_ERROR));
-        Assert.assertThat(schemaFileContents, not(CoreMatchers.containsString(TABLE_PROPERTY_WALLET_WITH_NAMESPACE)));
-        Assert.assertThat(schemaFileContents, not(CoreMatchers.containsString(TABLE_PROPERTY_LOOKUP_ERROR_WITH_NAMESPACE)));
-        Assert.assertThat(schemaFileContents, not(CoreMatchers.containsString(TABLE_PROPERTY_REQUEST_CALLTYPE_WITH_NAMESPACE)));
-        Assert.assertThat(schemaFileContents, CoreMatchers.containsString(TABLE_PROPERTY_LOOKUP_ERROR_WITHOUT_NAMESPACE));
-        Assert.assertThat(schemaFileContents, CoreMatchers.containsString(TABLE_PROPERTY_REQUEST_CALLTYPE_WITHOUT_NAMESPACE));
+        MatcherAssert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_NAMESPACE));
+        MatcherAssert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_ENUM_USERSTATE));
+        MatcherAssert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_ENUM_CALLTYPE));
+        MatcherAssert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_TABLE_REQUEST));
+        MatcherAssert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_TABLE_RESPONSE));
+        MatcherAssert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_TABLE_WALLET));
+        MatcherAssert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_TABLE_LOOKUP_ERROR));
+        MatcherAssert.assertThat(schemaFileContents, not(CoreMatchers.containsString(TABLE_PROPERTY_WALLET_WITH_NAMESPACE)));
+        MatcherAssert.assertThat(schemaFileContents, not(CoreMatchers.containsString(TABLE_PROPERTY_LOOKUP_ERROR_WITH_NAMESPACE)));
+        MatcherAssert.assertThat(schemaFileContents, not(CoreMatchers.containsString(TABLE_PROPERTY_REQUEST_CALLTYPE_WITH_NAMESPACE)));
+        MatcherAssert.assertThat(schemaFileContents, CoreMatchers.containsString(TABLE_PROPERTY_LOOKUP_ERROR_WITHOUT_NAMESPACE));
+        MatcherAssert.assertThat(schemaFileContents, CoreMatchers.containsString(TABLE_PROPERTY_REQUEST_CALLTYPE_WITHOUT_NAMESPACE));
     }
 
     @Test
@@ -79,20 +80,21 @@ public class ApplicationTest {
             builder.append(lineContents);
             builder.append(System.lineSeparator());
         }
+        br.close();
 
         // These definitions exist in the test schema file. Ordering is random hence the contains way of testing
         final String schemaFileContents = builder.toString();
-        Assert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_NAMESPACE));
-        Assert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_ENUM_USERSTATE));
-        Assert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_TABLE_REQUEST));
-        Assert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_TABLE_RESPONSE));
-        Assert.assertThat(schemaFileContents, not(CoreMatchers.containsString(SCHEMA_TABLE_WALLET)));
-        Assert.assertThat(schemaFileContents, not(CoreMatchers.containsString(SCHEMA_TABLE_LOOKUP_ERROR)));
-        Assert.assertThat(schemaFileContents, not(CoreMatchers.containsString(TABLE_PROPERTY_REQUEST_CALLTYPE_WITHOUT_NAMESPACE)));
-        Assert.assertThat(schemaFileContents, not(CoreMatchers.containsString(SCHEMA_ENUM_CALLTYPE)));
-        Assert.assertThat(schemaFileContents, CoreMatchers.containsString(TABLE_PROPERTY_WALLET_WITH_NAMESPACE));
-        Assert.assertThat(schemaFileContents, CoreMatchers.containsString(TABLE_PROPERTY_LOOKUP_ERROR_WITH_NAMESPACE));
-        Assert.assertThat(schemaFileContents, CoreMatchers.containsString(TABLE_PROPERTY_REQUEST_CALLTYPE_WITH_NAMESPACE));
+        MatcherAssert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_NAMESPACE));
+        MatcherAssert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_ENUM_USERSTATE));
+        MatcherAssert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_TABLE_REQUEST));
+        MatcherAssert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_TABLE_RESPONSE));
+        MatcherAssert.assertThat(schemaFileContents, not(CoreMatchers.containsString(SCHEMA_TABLE_WALLET)));
+        MatcherAssert.assertThat(schemaFileContents, not(CoreMatchers.containsString(SCHEMA_TABLE_LOOKUP_ERROR)));
+        MatcherAssert.assertThat(schemaFileContents, not(CoreMatchers.containsString(TABLE_PROPERTY_REQUEST_CALLTYPE_WITHOUT_NAMESPACE)));
+        MatcherAssert.assertThat(schemaFileContents, not(CoreMatchers.containsString(SCHEMA_ENUM_CALLTYPE)));
+        MatcherAssert.assertThat(schemaFileContents, CoreMatchers.containsString(TABLE_PROPERTY_WALLET_WITH_NAMESPACE));
+        MatcherAssert.assertThat(schemaFileContents, CoreMatchers.containsString(TABLE_PROPERTY_LOOKUP_ERROR_WITH_NAMESPACE));
+        MatcherAssert.assertThat(schemaFileContents, CoreMatchers.containsString(TABLE_PROPERTY_REQUEST_CALLTYPE_WITH_NAMESPACE));
     }
 
     @Test
@@ -107,16 +109,17 @@ public class ApplicationTest {
             builder.append(lineContents);
             builder.append(System.lineSeparator());
         }
+        br.close();
 
         // These definitions exist in the test schema file. Ordering is random hence the contains way of testing
         final String schemaFileContents = builder.toString();
-        Assert.assertThat(schemaFileContents, not(CoreMatchers.containsString(SCHEMA_NAMESPACE)));
-        Assert.assertThat(schemaFileContents, not(CoreMatchers.containsString(SCHEMA_ENUM_USERSTATE)));
-        Assert.assertThat(schemaFileContents, not(CoreMatchers.containsString(SCHEMA_TABLE_REQUEST)));
-        Assert.assertThat(schemaFileContents, not(CoreMatchers.containsString(SCHEMA_TABLE_RESPONSE)));
-        Assert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_TABLE_WALLET));
-        Assert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_TABLE_LOOKUP_ERROR));
-        Assert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_ENUM_CALLTYPE));
+        MatcherAssert.assertThat(schemaFileContents, not(CoreMatchers.containsString(SCHEMA_NAMESPACE)));
+        MatcherAssert.assertThat(schemaFileContents, not(CoreMatchers.containsString(SCHEMA_ENUM_USERSTATE)));
+        MatcherAssert.assertThat(schemaFileContents, not(CoreMatchers.containsString(SCHEMA_TABLE_REQUEST)));
+        MatcherAssert.assertThat(schemaFileContents, not(CoreMatchers.containsString(SCHEMA_TABLE_RESPONSE)));
+        MatcherAssert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_TABLE_WALLET));
+        MatcherAssert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_TABLE_LOOKUP_ERROR));
+        MatcherAssert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_ENUM_CALLTYPE));
     }
 
     @Test
@@ -131,20 +134,21 @@ public class ApplicationTest {
             builder.append(lineContents);
             builder.append(System.lineSeparator());
         }
+        br.close();
 
         // These definitions exist in the test schema file. Ordering is random hence the contains way of testing
         final String schemaFileContents = builder.toString();
-        Assert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_NAMESPACE));
-        Assert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_ENUM_USERSTATE));
-        Assert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_ENUM_CALLTYPE));
-        Assert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_TABLE_REQUEST));
-        Assert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_TABLE_RESPONSE));
-        Assert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_TABLE_WALLET));
-        Assert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_TABLE_LOOKUP_ERROR));
-        Assert.assertThat(schemaFileContents, not(CoreMatchers.containsString(TABLE_PROPERTY_WALLET_WITH_NAMESPACE)));
-        Assert.assertThat(schemaFileContents, not(CoreMatchers.containsString(TABLE_PROPERTY_LOOKUP_ERROR_WITH_NAMESPACE)));
-        Assert.assertThat(schemaFileContents, not(CoreMatchers.containsString(TABLE_PROPERTY_REQUEST_CALLTYPE_WITH_NAMESPACE)));
-        Assert.assertThat(schemaFileContents, CoreMatchers.containsString(TABLE_PROPERTY_LOOKUP_ERROR_WITHOUT_NAMESPACE));
-        Assert.assertThat(schemaFileContents, CoreMatchers.containsString(TABLE_PROPERTY_REQUEST_CALLTYPE_WITHOUT_NAMESPACE));
+        MatcherAssert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_NAMESPACE));
+        MatcherAssert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_ENUM_USERSTATE));
+        MatcherAssert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_ENUM_CALLTYPE));
+        MatcherAssert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_TABLE_REQUEST));
+        MatcherAssert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_TABLE_RESPONSE));
+        MatcherAssert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_TABLE_WALLET));
+        MatcherAssert.assertThat(schemaFileContents, CoreMatchers.containsString(SCHEMA_TABLE_LOOKUP_ERROR));
+        MatcherAssert.assertThat(schemaFileContents, not(CoreMatchers.containsString(TABLE_PROPERTY_WALLET_WITH_NAMESPACE)));
+        MatcherAssert.assertThat(schemaFileContents, not(CoreMatchers.containsString(TABLE_PROPERTY_LOOKUP_ERROR_WITH_NAMESPACE)));
+        MatcherAssert.assertThat(schemaFileContents, not(CoreMatchers.containsString(TABLE_PROPERTY_REQUEST_CALLTYPE_WITH_NAMESPACE)));
+        MatcherAssert.assertThat(schemaFileContents, CoreMatchers.containsString(TABLE_PROPERTY_LOOKUP_ERROR_WITHOUT_NAMESPACE));
+        MatcherAssert.assertThat(schemaFileContents, CoreMatchers.containsString(TABLE_PROPERTY_REQUEST_CALLTYPE_WITHOUT_NAMESPACE));
     }
 }

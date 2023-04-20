@@ -5,6 +5,7 @@ import com.michaelhradek.aurkitu.plugin.core.Processor;
 import com.michaelhradek.aurkitu.plugin.core.Validator;
 import com.michaelhradek.aurkitu.plugin.core.output.components.Namespace;
 import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -141,7 +142,7 @@ public class SchemaTest {
         // Check validation
         schema.setIsValid(null);
         String schemaToString = schema.toString();
-        Assert.assertThat(schemaToString, not(CoreMatchers.containsString("// Schema passed validation")));
+        MatcherAssert.assertThat(schemaToString, not(CoreMatchers.containsString("// Schema passed validation")));
 
         schema.setIsValid(true);
 
@@ -150,22 +151,22 @@ public class SchemaTest {
         schema.setValidator(validator);
 
         schemaToString = schema.toString();
-        Assert.assertThat(schemaToString, CoreMatchers.containsString("// Schema passed validation"));
+        MatcherAssert.assertThat(schemaToString, CoreMatchers.containsString("// Schema passed validation"));
 
         // Check namespace
         final String namespaceLine = "namespace " + NAMESPACE + ";";
         schema.setNamespace("");
         schemaToString = schema.toString();
-        Assert.assertThat(schemaToString, not(CoreMatchers.containsString(namespaceLine)));
+        MatcherAssert.assertThat(schemaToString, not(CoreMatchers.containsString(namespaceLine)));
 
         Namespace namespace = null;
         schema.setNamespace(namespace);
         schemaToString = schema.toString();
-        Assert.assertThat(schemaToString, not(CoreMatchers.containsString(namespaceLine)));
+        MatcherAssert.assertThat(schemaToString, not(CoreMatchers.containsString(namespaceLine)));
 
         schema.setNamespace(NAMESPACE);
         schemaToString = schema.toString();
-        Assert.assertThat(schemaToString, CoreMatchers.containsString(namespaceLine));
+        MatcherAssert.assertThat(schemaToString, CoreMatchers.containsString(namespaceLine));
 
         namespace = new Namespace();
         Field namespaceGroupIdField = namespace.getClass().getDeclaredField("groupId");
@@ -173,29 +174,29 @@ public class SchemaTest {
         namespaceGroupIdField.set(namespace, "");
         schema.setNamespace(namespace);
         schemaToString = schema.toString();
-        Assert.assertThat(schemaToString, not(CoreMatchers.containsString(namespaceLine)));
+        MatcherAssert.assertThat(schemaToString, not(CoreMatchers.containsString(namespaceLine)));
 
         namespaceGroupIdField.set(namespace, "test-group-id");
         schema.setNamespace(namespace);
         schemaToString = schema.toString();
-        Assert.assertThat(schemaToString, CoreMatchers.containsString("test-group-id"));
+        MatcherAssert.assertThat(schemaToString, CoreMatchers.containsString("test-group-id"));
 
         // Check includes
         final String includeLine = "include ";
-        Assert.assertThat(schemaToString, CoreMatchers.containsString(includeLine));
+        MatcherAssert.assertThat(schemaToString, CoreMatchers.containsString(includeLine));
 
         schema.setIncludes(null);
         schemaToString = schema.toString();
-        Assert.assertThat(schemaToString, not(CoreMatchers.containsString(includeLine)));
+        MatcherAssert.assertThat(schemaToString, not(CoreMatchers.containsString(includeLine)));
 
         schema.setIncludes(new HashSet<>());
         schemaToString = schema.toString();
-        Assert.assertThat(schemaToString, not(CoreMatchers.containsString(includeLine)));
+        MatcherAssert.assertThat(schemaToString, not(CoreMatchers.containsString(includeLine)));
 
         final String includeLineTwo = "include \"" + INCLUDE_1 + "." + Config.FILE_EXTENSION + "\";";
         schema.addInclude(INCLUDE_1);
         schemaToString = schema.toString();
-        Assert.assertThat(schemaToString, CoreMatchers.containsString(includeLineTwo));
+        MatcherAssert.assertThat(schemaToString, CoreMatchers.containsString(includeLineTwo));
     }
 
     @Test
