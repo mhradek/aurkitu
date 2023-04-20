@@ -46,6 +46,7 @@ public class FlatBufferIgnoreTest {
         @FlatBufferIgnore
         public String ignoredField;
 
+        @SuppressWarnings("unused")
         public String notIgnoredField;
     }
 }

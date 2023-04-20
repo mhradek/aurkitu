@@ -26,10 +26,10 @@ public class Comparators {
         }
     };
 
-    public static Comparator<Schema.Constant> CONSTANT_DECLARATION = new Comparator<Schema.Constant>() {
+    public static Comparator<Schema.Constant<?>> CONSTANT_DECLARATION = new Comparator<Schema.Constant<?>>() {
 
         @Override
-        public int compare(Schema.Constant o1, Schema.Constant o2) {
+        public int compare(Schema.Constant<?> o1, Schema.Constant<?> o2) {
             return o1.name.compareToIgnoreCase(o2.name);
         }
     };
