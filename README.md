@@ -287,12 +287,11 @@ target/bin/flatc --cpp -o target/aurkitu/output/cpp target/aurkitu/schemas/*.fbs
 
 All this can be automated via Maven. Examples can be found in the `aurkitu-test-service/pom-test.xml`.
 
-
 ## building the project
 Unfortunately, later versions of Java disable some of the whizardry that occurs within the creation of objects and classes using reflection. As of 2023-04-03, the following configuration builds and runs this project:
 
 ### Java 1.8
-```
+```commandline
 aurkitu % java -version
 openjdk version "1.8.0_292"
 OpenJDK Runtime Environment (AdoptOpenJDK)(build 1.8.0_292-b10)
@@ -300,7 +299,7 @@ OpenJDK 64-Bit Server VM (AdoptOpenJDK)(build 25.292-b10, mixed mode)
 ```
 
 ### Maven 3.6.3
-```
+```commandline
 aurkitu % mvn -version
 Apache Maven 3.6.3 (cecedd343002696d0abb50b32b541b8a6ba2883f)
 Maven home: /Library/apache-maven-3.6.3
