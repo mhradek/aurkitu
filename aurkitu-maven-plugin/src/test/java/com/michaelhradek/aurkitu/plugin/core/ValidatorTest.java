@@ -305,7 +305,7 @@ public class ValidatorTest {
 
 
     @Test
-    public void test_isFlatbufferTypeByName() throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+    public void testIsFlatbufferTypeByName() throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
         Validator validator = new Validator();
 
         // Get the private method that we are testing
