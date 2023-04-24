@@ -1,4 +1,4 @@
-//generated using Reflections JavaCodeSerializer [Thu Apr 20 14:39:56 CEST 2023]
+//generated using Reflections JavaCodeSerializer [Mon Apr 24 16:14:09 CEST 2023]
 package com.michaelhradek.aurkitu.reflections;
 
 public interface MyTestModelStore {

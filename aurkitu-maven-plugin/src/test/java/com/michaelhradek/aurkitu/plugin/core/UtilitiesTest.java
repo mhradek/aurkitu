@@ -65,13 +65,13 @@ public class UtilitiesTest extends AbstractMojoTestCase {
     }
 
     @Test
-    public void test_PrivateConstructor() throws NoSuchMethodException {
+    public void testPrivateConstructor() throws NoSuchMethodException {
         final Constructor<Utilities> constructor = Utilities.class.getDeclaredConstructor();
         Assert.assertTrue(Modifier.isPrivate(constructor.getModifiers()));
     }
 
     @Test
-    public void test_isPrimitiveOrWrapperType() {
+    public void testIsPrimitiveOrWrapperType() {
 
         Double primDouble = 123D;
         Assert.assertTrue(Utilities.isPrimitiveOrWrapperType(primDouble.getClass()));
@@ -110,7 +110,7 @@ public class UtilitiesTest extends AbstractMojoTestCase {
     }
 
     @Test
-    public void test_getPrimitiveNameForWrapperType() {
+    public void testGetPrimitiveNameForWrapperType() {
         try {
             Utilities.getPrimitiveNameForWrapperType(Schema.class);
             Assert.fail("Expecting an IllegalArgumentException for a non-primitive class ");
