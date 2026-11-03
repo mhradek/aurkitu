@@ -1,9 +1,9 @@
 package com.michaelhradek.aurkitu.plugin.core.testmodels;
 
 import com.michaelhradek.aurkitu.annotations.FlatBufferEnum;
-import com.michaelhradek.aurkitu.annotations.types.FieldType;
+import com.michaelhradek.aurkitu.annotations.types.EnumType;
 
-@FlatBufferEnum(enumType = FieldType.BYTE)
+@FlatBufferEnum(enumType = EnumType.BYTE)
 public enum SampleEnum {
     ALPHA, BETA, GAMMA
 }
