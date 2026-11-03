@@ -483,9 +483,14 @@ public class SchemaGenerator {
 
         int ordinal = 0;
         for (FieldInfo field : classInfo.getDeclaredFieldInfo()) {
+            String fname = field.getName();
+            // Skip synthetic enum $VALUES
+            if (fname.startsWith("$") || fname.equals("VALUES")) {
+                continue;
+            }
             if (java.lang.reflect.Modifier.isStatic(field.getModifiers()) &&
                 field.getTypeSignatureOrTypeDescriptor().toString().contains(classInfo.getName())) {
-                sb.append("  ").append(field.getName());
+                sb.append("  ").append(fname);
                 if (!isUnion) {
                     Object constVal = field.getConstantInitializerValue();
                     if (constVal != null) {
