@@ -4,7 +4,6 @@ import com.michaelhradek.aurkitu.annotations.FlatBufferEnum;
 import com.michaelhradek.aurkitu.annotations.FlatBufferFieldOptions;
 import com.michaelhradek.aurkitu.annotations.FlatBufferIgnore;
 import com.michaelhradek.aurkitu.annotations.FlatBufferTable;
-import com.michaelhradek.aurkitu.annotations.types.FieldType;
 import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ClassInfo;
 import io.github.classgraph.FieldInfo;
@@ -15,12 +14,11 @@ import org.apache.maven.project.MavenProject;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * Core generator using ClassGraph for modern, reliable classpath scanning.
- * Processes fields of annotated tables and enums.
+ * Processes fields of annotated tables and enums, including Map support via generated MapValueSet tables.
  */
 @Slf4j
 public class SchemaGenerator {
@@ -29,6 +27,9 @@ public class SchemaGenerator {
     private final List<String> specifiedPackages;
     private final boolean validate;
 
+    // Collected auto-generated map tables: name -> schema fragment
+    private final Map<String, String> generatedMapTables = new LinkedHashMap<>();
+
     public SchemaGenerator(MavenProject project, List<String> specifiedPackages, boolean validate) {
         this.project = project;
         this.specifiedPackages = specifiedPackages;
@@ -36,6 +37,8 @@ public class SchemaGenerator {
     }
 
     public void generate(String schemaName, String namespace, File outputDir) {
+        generatedMapTables.clear();
+
         try (ScanResult scanResult = new ClassGraph()
                 .enableAnnotationInfo()
                 .enableClassInfo()
@@ -67,6 +70,11 @@ public class SchemaGenerator {
                 schema.append(buildEnum(classInfo));
             }
 
+            // Emit auto-generated MapValueSet tables
+            for (String mapTable : generatedMapTables.values()) {
+                schema.append(mapTable);
+            }
+
             if (rootType != null) {
                 schema.append("root_type ").append(rootType).append(";\n");
             }
@@ -84,8 +92,8 @@ public class SchemaGenerator {
     }
 
     private boolean isRootType(ClassInfo classInfo) {
-        return classInfo.getAnnotationInfo(FlatBufferTable.class.getName())
-                .getParameterValues().get("rootType").getValue() == Boolean.TRUE;
+        var anno = classInfo.getAnnotationInfo(FlatBufferTable.class.getName());
+        return anno != null && Boolean.TRUE.equals(anno.getParameterValues().get("rootType").getValue());
     }
 
     private String buildTable(ClassInfo classInfo) {
@@ -93,7 +101,7 @@ public class SchemaGenerator {
         boolean isStruct = false;
         var tableAnno = classInfo.getAnnotationInfo(FlatBufferTable.class.getName());
         if (tableAnno != null && tableAnno.getParameterValues().get("value") != null) {
-            String structure = tableAnno.getParameterValues().get("value").getValue().toString();
+            String structure = String.valueOf(tableAnno.getParameterValues().get("value").getValue());
             isStruct = structure.contains("STRUCT");
         }
 
@@ -104,10 +112,10 @@ public class SchemaGenerator {
                 continue;
             }
             if (java.lang.reflect.Modifier.isStatic(field.getModifiers())) {
-                continue; // default ignore statics
+                continue;
             }
 
-            String fieldLine = buildField(field);
+            String fieldLine = buildField(field, classInfo);
             if (fieldLine != null) {
                 sb.append("  ").append(fieldLine).append(";\n");
             }
@@ -117,9 +125,9 @@ public class SchemaGenerator {
         return sb.toString();
     }
 
-    private String buildField(FieldInfo field) {
+    private String buildField(FieldInfo field, ClassInfo owner) {
         String name = field.getName();
-        String typeName = mapType(field);
+        String typeName = mapType(field, owner);
 
         if (typeName == null) {
             log.debug("Skipping unsupported field: {}", name);
@@ -128,11 +136,10 @@ public class SchemaGenerator {
 
         StringBuilder line = new StringBuilder(name).append(":").append(typeName);
 
-        // Handle default value from annotation
         if (field.hasAnnotation(FlatBufferFieldOptions.class.getName())) {
             var options = field.getAnnotationInfo(FlatBufferFieldOptions.class.getName());
             String defaultValue = Optional.ofNullable(options.getParameterValues().get("defaultValue"))
-                    .map(p -> p.getValue().toString())
+                    .map(p -> String.valueOf(p.getValue()))
                     .orElse("");
             if (!defaultValue.isBlank()) {
                 line.append(" = ").append(defaultValue);
@@ -142,11 +149,10 @@ public class SchemaGenerator {
         return line.toString();
     }
 
-    private String mapType(FieldInfo field) {
-        String typeDescriptor = field.getTypeDescriptorStr();
+    private String mapType(FieldInfo field, ClassInfo owner) {
         String simpleType = field.getTypeSignatureOrTypeDescriptor().toStringWithSimpleNames();
 
-        // Check for explicit FieldType override
+        // Explicit FieldType override (simplified)
         if (field.hasAnnotation(FlatBufferFieldOptions.class.getName())) {
             var options = field.getAnnotationInfo(FlatBufferFieldOptions.class.getName());
             Object ft = options.getParameterValues().get("fieldType").getValue();
@@ -160,75 +166,117 @@ public class SchemaGenerator {
                 if (ftName.contains("LONG")) return "long";
                 if (ftName.contains("FLOAT")) return "float";
                 if (ftName.contains("DOUBLE")) return "double";
-                // IDENT / ARRAY / MAP handled below or left as-is for now
             }
         }
 
-        // Primitive / wrapper mapping
-        if (typeDescriptor.contains("Z") || simpleType.contains("boolean") || simpleType.contains("Boolean")) return "bool";
-        if (typeDescriptor.contains("B") || simpleType.contains("byte") || simpleType.contains("Byte")) return "byte";
-        if (typeDescriptor.contains("S") || simpleType.contains("short") || simpleType.contains("Short")) return "short";
-        if (typeDescriptor.contains("I") || simpleType.contains("int") || simpleType.contains("Integer")) return "int";
-        if (typeDescriptor.contains("J") || simpleType.contains("long") || simpleType.contains("Long")) return "long";
-        if (typeDescriptor.contains("F") || simpleType.contains("float") || simpleType.contains("Float")) return "float";
-        if (typeDescriptor.contains("D") || simpleType.contains("double") || simpleType.contains("Double")) return "double";
-        if (simpleType.contains("String")) return "string";
-
-        // Enum or table reference (simple name for now)
-        if (field.getClassInfo() != null || !simpleType.contains("[")) {
-            return simpleType.replace("java.lang.", "").replace("java.util.", "");
+        // Map support — generate MapValueSet table and return list reference
+        if (simpleType.contains("Map<") || simpleType.contains("java.util.Map")) {
+            return generateMapTable(field, owner, simpleType);
         }
 
-        // Basic list / array support
-        if (simpleType.contains("List") || simpleType.contains("[")) {
-            // Very simplified - extract element type
+        // Primitive / wrapper mapping
+        if (simpleType.contains("boolean") || simpleType.contains("Boolean")) return "bool";
+        if (simpleType.contains("byte") || simpleType.contains("Byte")) return "byte";
+        if (simpleType.contains("short") || simpleType.contains("Short")) return "short";
+        if (simpleType.contains("int") || simpleType.contains("Integer")) return "int";
+        if (simpleType.contains("long") || simpleType.contains("Long")) return "long";
+        if (simpleType.contains("float") || simpleType.contains("Float")) return "float";
+        if (simpleType.contains("double") || simpleType.contains("Double")) return "double";
+        if (simpleType.contains("String")) return "string";
+
+        // Basic list / array
+        if (simpleType.contains("List<") || simpleType.contains("[]")) {
             return "[" + extractElementType(simpleType) + "]";
         }
 
-        return null;
+        // Table / enum reference
+        return simpleType.replace("java.lang.", "").replace("java.util.", "").trim();
+    }
+
+    private String generateMapTable(FieldInfo field, ClassInfo owner, String simpleType) {
+        String mapTableName = "MapValueSet_" + owner.getSimpleName() + "_" + field.getName();
+
+        if (!generatedMapTables.containsKey(mapTableName)) {
+            String keyType = extractMapType(simpleType, true);
+            String valueType = extractMapType(simpleType, false);
+
+            String mapSchema = "// Auto-generated type for use with Map<?, ?>\n" +
+                    "table " + mapTableName + " {\n" +
+                    "  key:" + keyType + ";\n" +
+                    "  value:" + valueType + ";\n" +
+                    "}\n\n";
+
+            generatedMapTables.put(mapTableName, mapSchema);
+            log.debug("Generated map table: {}", mapTableName);
+        }
+
+        return "[" + mapTableName + "]";
+    }
+
+    private String extractMapType(String simpleType, boolean key) {
+        // Rough parse of Map<K, V>
+        int start = simpleType.indexOf('<');
+        int end = simpleType.lastIndexOf('>');
+        if (start < 0 || end < 0 || end <= start) {
+            return "string";
+        }
+        String params = simpleType.substring(start + 1, end);
+        String[] parts = params.split(",");
+        if (parts.length < 2) {
+            return "string";
+        }
+        String raw = (key ? parts[0] : parts[1]).trim();
+        return mapSimpleType(raw);
+    }
+
+    private String mapSimpleType(String raw) {
+        String t = raw.replace("java.lang.", "").replace("java.util.", "").trim();
+        if (t.contains("String")) return "string";
+        if (t.contains("Boolean") || t.contains("boolean")) return "bool";
+        if (t.contains("Byte") || t.contains("byte")) return "byte";
+        if (t.contains("Short") || t.contains("short")) return "short";
+        if (t.contains("Integer") || t.contains("int")) return "int";
+        if (t.contains("Long") || t.contains("long")) return "long";
+        if (t.contains("Float") || t.contains("float")) return "float";
+        if (t.contains("Double") || t.contains("double")) return "double";
+        return t; // enum or table name
     }
 
     private String extractElementType(String simpleType) {
-        // Rough extraction for List<T> or T[]
         if (simpleType.contains("<")) {
             int start = simpleType.indexOf('<') + 1;
             int end = simpleType.lastIndexOf('>');
             if (start > 0 && end > start) {
-                return simpleType.substring(start, end).replace("java.lang.", "").trim();
+                return mapSimpleType(simpleType.substring(start, end));
             }
         }
         if (simpleType.endsWith("[]")) {
-            return simpleType.substring(0, simpleType.length() - 2).replace("java.lang.", "").trim();
+            return mapSimpleType(simpleType.substring(0, simpleType.length() - 2));
         }
-        return "string"; // fallback
+        return "string";
     }
 
     private String buildEnum(ClassInfo classInfo) {
         StringBuilder sb = new StringBuilder();
-        String enumType = "int"; // default
+        String enumType = "int";
 
         var enumAnno = classInfo.getAnnotationInfo(FlatBufferEnum.class.getName());
         if (enumAnno != null && enumAnno.getParameterValues().get("enumType") != null) {
-            String et = enumAnno.getParameterValues().get("enumType").getValue().toString();
+            String et = String.valueOf(enumAnno.getParameterValues().get("enumType").getValue());
             if (et.contains("BYTE")) enumType = "byte";
             else if (et.contains("SHORT")) enumType = "short";
             else if (et.contains("LONG")) enumType = "long";
-            // else int
         }
 
         sb.append("enum ").append(classInfo.getSimpleName()).append(" : ").append(enumType).append(" {\n");
 
-        // Enum constants are fields that are static final of the enum type
         for (FieldInfo field : classInfo.getDeclaredFieldInfo()) {
             if (java.lang.reflect.Modifier.isStatic(field.getModifiers()) &&
                 field.getTypeSignatureOrTypeDescriptor().toString().contains(classInfo.getName())) {
-                sb.append("  ").append(field.getName());
-                // Optional value if present - simplified
-                sb.append(",\n");
+                sb.append("  ").append(field.getName()).append(",\n");
             }
         }
 
-        // Clean trailing comma
         String result = sb.toString().replaceAll(",\n$", "\n");
         return result + "}\n\n";
     }
