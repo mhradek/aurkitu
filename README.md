@@ -299,7 +299,7 @@ mvn clean verify
 | **High** | Confirm `plugin.xml` descriptor in a release build | Ensures the plugin is installable | Done (`AurkituMojoIntegrationTest`) |
 | **High** | Final Javadoc pass on public API (`AurkituMojo`, `SchemaGenerator`, annotations) | Usability for consumers | Partial |
 | **Medium** | Full Mojo integration tests | Parameter binding & lifecycle confidence | Done (`AurkituMojoIntegrationTest`) |
-| **Medium** | Upload JaCoCo coverage to codecov/coveralls | Visibility & badge accuracy | JaCoCo reports generated locally |
+| **Done** | Upload JaCoCo to Codecov and Coveralls | Coverage badges | Wired in CI |
 | **Medium** | Document `byte[]` → `[ubyte]` and `fieldId` in configuration examples | Completeness | Done |
 | **Low** | True multi-namespace schema splitting | Advanced use case | Not started |
 | **Low** | Additional field attributes (`key`, `hash`, …) | Advanced use case | `fieldId` only |
