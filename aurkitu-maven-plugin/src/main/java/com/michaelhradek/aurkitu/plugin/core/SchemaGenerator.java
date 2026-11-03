@@ -15,8 +15,8 @@ import java.util.*;
 
 /**
  * Core generator using ClassGraph for modern, reliable classpath scanning.
- * Processes fields of annotated tables and enums, including Map support via generated MapValueSet tables.
- * Uses ClassGraph TypeSignature for more accurate generic type parsing.
+ * Processes fields of annotated tables and enums, including nested Map support
+ * via recursively generated MapValueSet tables.
  */
 @Slf4j
 public class SchemaGenerator {
@@ -125,7 +125,7 @@ public class SchemaGenerator {
 
     private String buildField(FieldInfo field, ClassInfo owner) {
         String name = field.getName();
-        String typeName = mapType(field, owner);
+        String typeName = mapType(field.getTypeSignatureOrTypeDescriptor(), owner, field.getName());
 
         if (typeName == null) {
             log.debug("Skipping unsupported field: {}", name);
@@ -147,37 +147,25 @@ public class SchemaGenerator {
         return line.toString();
     }
 
-    private String mapType(FieldInfo field, ClassInfo owner) {
-        TypeSignature typeSig = field.getTypeSignatureOrTypeDescriptor();
-
-        // Explicit FieldType override (simplified)
-        if (field.hasAnnotation(FlatBufferFieldOptions.class.getName())) {
-            var options = field.getAnnotationInfo(FlatBufferFieldOptions.class.getName());
-            Object ft = options.getParameterValues().get("fieldType").getValue();
-            if (ft != null) {
-                String ftName = ft.toString();
-                if (ftName.contains("STRING")) return "string";
-                if (ftName.contains("BOOL")) return "bool";
-                if (ftName.contains("BYTE")) return "byte";
-                if (ftName.contains("SHORT")) return "short";
-                if (ftName.contains("INT")) return "int";
-                if (ftName.contains("LONG")) return "long";
-                if (ftName.contains("FLOAT")) return "float";
-                if (ftName.contains("DOUBLE")) return "double";
-            }
+    /**
+     * Recursively maps a TypeSignature to a FlatBuffers type name.
+     * Nested maps generate intermediate MapValueSet tables.
+     */
+    private String mapType(TypeSignature typeSig, ClassInfo owner, String contextName) {
+        if (typeSig == null) {
+            return "string";
         }
 
-        // Map support using structured TypeSignature
+        // Explicit override is handled at the field level; here we process the signature.
+
         if (isMapType(typeSig)) {
-            return generateMapTable(field, owner, typeSig);
+            return generateMapTable(typeSig, owner, contextName);
         }
 
-        // List / array using structured parsing
         if (isListOrArray(typeSig)) {
-            return "[" + extractListElementType(typeSig) + "]";
+            return "[" + extractListElementType(typeSig, owner, contextName) + "]";
         }
 
-        // Primitive / wrapper / string / reference
         return mapTypeSignature(typeSig);
     }
 
@@ -201,8 +189,8 @@ public class SchemaGenerator {
         return false;
     }
 
-    private String generateMapTable(FieldInfo field, ClassInfo owner, TypeSignature typeSig) {
-        String mapTableName = "MapValueSet_" + owner.getSimpleName() + "_" + field.getName();
+    private String generateMapTable(TypeSignature typeSig, ClassInfo owner, String contextName) {
+        String mapTableName = "MapValueSet_" + owner.getSimpleName() + "_" + sanitize(contextName);
 
         if (!generatedMapTables.containsKey(mapTableName)) {
             String keyType = "string";
@@ -211,10 +199,10 @@ public class SchemaGenerator {
             if (typeSig instanceof ClassRefTypeSignature classRef) {
                 List<TypeArgument> args = classRef.getTypeArguments();
                 if (args.size() >= 1) {
-                    keyType = mapTypeSignature(args.get(0).getTypeSignature());
+                    keyType = mapType(args.get(0).getTypeSignature(), owner, contextName + "_key");
                 }
                 if (args.size() >= 2) {
-                    valueType = mapTypeSignature(args.get(1).getTypeSignature());
+                    valueType = mapType(args.get(1).getTypeSignature(), owner, contextName + "_value");
                 }
             }
 
@@ -231,14 +219,14 @@ public class SchemaGenerator {
         return "[" + mapTableName + "]";
     }
 
-    private String extractListElementType(TypeSignature typeSig) {
+    private String extractListElementType(TypeSignature typeSig, ClassInfo owner, String contextName) {
         if (typeSig instanceof ArrayTypeSignature array) {
-            return mapTypeSignature(array.getElementTypeSignature());
+            return mapType(array.getElementTypeSignature(), owner, contextName + "_elem");
         }
         if (typeSig instanceof ClassRefTypeSignature classRef) {
             List<TypeArgument> args = classRef.getTypeArguments();
             if (!args.isEmpty()) {
-                return mapTypeSignature(args.get(0).getTypeSignature());
+                return mapType(args.get(0).getTypeSignature(), owner, contextName + "_elem");
             }
         }
         return "string";
@@ -258,14 +246,13 @@ public class SchemaGenerator {
                 case 'J' -> "long";
                 case 'F' -> "float";
                 case 'D' -> "double";
-                case 'C' -> "string"; // char -> string for FlatBuffers
+                case 'C' -> "string";
                 default -> "string";
             };
         }
 
         if (typeSig instanceof ClassRefTypeSignature classRef) {
             String baseName = classRef.getBaseClassName();
-            // Wrappers and common types
             if (baseName.endsWith("String")) return "string";
             if (baseName.endsWith("Boolean")) return "bool";
             if (baseName.endsWith("Byte")) return "byte";
@@ -276,7 +263,6 @@ public class SchemaGenerator {
             if (baseName.endsWith("Double")) return "double";
             if (baseName.endsWith("Character")) return "string";
 
-            // Simple name for tables/enums
             int lastDot = baseName.lastIndexOf('.');
             return lastDot >= 0 ? baseName.substring(lastDot + 1) : baseName;
         }
@@ -285,8 +271,11 @@ public class SchemaGenerator {
             return "[" + mapTypeSignature(array.getElementTypeSignature()) + "]";
         }
 
-        // Fallback
         return typeSig.toStringWithSimpleNames().replace("java.lang.", "").replace("java.util.", "").trim();
+    }
+
+    private String sanitize(String name) {
+        return name.replaceAll("[^a-zA-Z0-9_]", "_");
     }
 
     private String buildEnum(ClassInfo classInfo) {
