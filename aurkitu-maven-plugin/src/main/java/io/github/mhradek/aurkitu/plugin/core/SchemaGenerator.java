@@ -146,7 +146,9 @@ public class SchemaGenerator {
                 }
             }
 
-            Files.writeString(outFile.toPath(), schema.toString());
+            // Final sanitization for flatc compatibility
+            String sanitized = schema.toString().replace('$', '_');
+            Files.writeString(outFile.toPath(), sanitized);
             if (config.cacheEnabled) {
                 Files.writeString(cacheFile.toPath(), inputHash);
             }
