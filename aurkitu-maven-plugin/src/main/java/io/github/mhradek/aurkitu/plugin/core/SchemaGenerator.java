@@ -19,6 +19,10 @@ import java.util.*;
 @Slf4j
 public class SchemaGenerator {
 
+    private final Config config;
+    private final Map<String, String> generatedMapTables = new LinkedHashMap<>();
+    private final List<String> validationIssues = new ArrayList<>();
+
     public static class Config {
         public final MavenProject project;
         public final List<String> specifiedPackages;
@@ -55,10 +59,6 @@ public class SchemaGenerator {
         }
     }
 
-    private final Config config;
-    private final Map<String, String> generatedMapTables = new LinkedHashMap<>();
-    private final List<String> validationIssues = new ArrayList<>();
-
     public SchemaGenerator(Config config) {
         this.config = config;
     }
@@ -68,6 +68,7 @@ public class SchemaGenerator {
         this(new Config(project, specifiedPackages, validate));
     }
 
+    @SuppressWarnings("PMD")
     public void generate(String schemaName, String namespace, File outputDir) {
         generatedMapTables.clear();
         validationIssues.clear();
@@ -96,7 +97,6 @@ public class SchemaGenerator {
             StringBuilder schema = new StringBuilder();
             schema.append("// Aurkitu 1.0.0 automatically generated FlatBuffer schema\n");
             // Placeholder for version; filled later if generateVersion is true
-            int versionInsertPoint = schema.length();
             schema.append("namespace ").append(namespace).append(";\n\n");
 
             if (config.fileIdentifier != null && !config.fileIdentifier.isBlank()) {
@@ -197,12 +197,12 @@ public class SchemaGenerator {
                 } else {
                     log.warn("Validation issues found ({}). See schema comments.", validationIssues.size());
                     if (config.failOnValidationIssues) {
-                        throw new RuntimeException("Schema validation failed with " + validationIssues.size() + " issue(s). See schema comments.");
+                        throw new SchemaGenerationException("Schema validation failed with " + validationIssues.size() + " issue(s). See schema comments.");
                     }
                 }
             }
         } catch (IOException e) {
-            throw new RuntimeException("Failed to generate schema", e);
+            throw new SchemaGenerationException("Failed to generate schema", e);
         }
     }
 
@@ -211,6 +211,7 @@ public class SchemaGenerator {
         return anno != null && Boolean.TRUE.equals(anno.getParameterValues().get("rootType").getValue());
     }
 
+    @SuppressWarnings("PMD")
     private String buildTable(ClassInfo classInfo) {
         StringBuilder sb = new StringBuilder();
         boolean isStruct = false;
@@ -239,7 +240,7 @@ public class SchemaGenerator {
         sb.append(isStruct ? "struct " : "table ").append(classInfo.getSimpleName()).append(" {\n");
 
         // Collect fields from this class and all superclasses (avoiding duplicates)
-        java.util.Set<String> seen = new java.util.HashSet<>();
+        Set<String> seen = new HashSet<>();
         ClassInfo current = classInfo;
         while (current != null) {
             for (FieldInfo field : current.getDeclaredFieldInfo()) {
@@ -272,6 +273,7 @@ public class SchemaGenerator {
         return sb.toString();
     }
 
+    @SuppressWarnings("PMD")
     private String buildField(FieldInfo field, ClassInfo owner) {
         String name = field.getName();
         String typeName = mapType(field.getTypeSignatureOrTypeDescriptor(), owner, field.getName(), field);
@@ -434,6 +436,7 @@ public class SchemaGenerator {
         return "string";
     }
 
+    @SuppressWarnings("PMD")
     private String mapTypeSignature(TypeSignature typeSig, boolean useFullName) {
         if (typeSig == null) {
             return "string";
@@ -502,6 +505,7 @@ public class SchemaGenerator {
         return name.replaceAll("[^a-zA-Z0-9_]", "_");
     }
 
+    @SuppressWarnings("PMD")
     private String buildEnum(ClassInfo classInfo) {
         StringBuilder sb = new StringBuilder();
         String enumType = "byte";

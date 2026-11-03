@@ -1,5 +1,6 @@
 package io.github.mhradek.aurkitu.plugin;
 
+import io.github.mhradek.aurkitu.plugin.core.SchemaGenerationException;
 import io.github.mhradek.aurkitu.plugin.core.SchemaGenerator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -109,7 +110,7 @@ class AurkituMojoConfigTest {
                 true); // failOnValidationIssues = true
         SchemaGenerator generator = new SchemaGenerator(config);
 
-        assertThrows(RuntimeException.class, () ->
+        assertThrows(SchemaGenerationException.class, () ->
                 generator.generate("fail", "test.fail", tempDir.toFile()));
     }
 
