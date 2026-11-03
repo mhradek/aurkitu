@@ -130,7 +130,19 @@ public class SchemaGenerator {
             for (ClassInfo ci : scanResult.getClassesWithAnnotation(FlatBufferEnum.class.getName())) {
                 typeNames.append(ci.getName()).append(';');
             }
-            inputHash = Integer.toHexString(Objects.hash(configHash, typeNames.toString()));
+            String inputHash = Integer.toHexString(Objects.hash(configHash, typeNames.toString()));
+
+            if (config.cacheEnabled && outFile.exists() && cacheFile.exists()) {
+                try {
+                    String cached = Files.readString(cacheFile.toPath()).trim();
+                    if (inputHash.equals(cached)) {
+                        log.info("Schema cache hit for {}; skipping regeneration", schemaName);
+                        return;
+                    }
+                } catch (IOException ignored) {
+                    // fall through
+                }
+            }
 
             String rootType = null;
 
