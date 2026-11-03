@@ -36,6 +36,7 @@ public class SchemaGenerator {
         public final boolean generateVersion;
         public final boolean failOnValidationIssues;
 
+        @SuppressWarnings("PMD.ExcessiveParameterList")
         public Config(MavenProject project, List<String> specifiedPackages, boolean validate,
                       boolean ignoreStaticMembers, String fileIdentifier, List<String> includes,
                       boolean mapCommonTypes, boolean cacheEnabled, boolean snakeCaseFields,
