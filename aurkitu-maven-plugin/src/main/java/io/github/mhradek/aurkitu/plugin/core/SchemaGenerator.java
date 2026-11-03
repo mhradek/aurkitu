@@ -395,14 +395,22 @@ public class SchemaGenerator {
 
     private String buildEnum(ClassInfo classInfo) {
         StringBuilder sb = new StringBuilder();
-        String enumType = "int";
+        String enumType = "byte";
+        boolean isUnion = false;
 
         var enumAnno = classInfo.getAnnotationInfo(FlatBufferEnum.class.getName());
-        if (enumAnno != null && enumAnno.getParameterValues().get("enumType") != null) {
-            String et = String.valueOf(enumAnno.getParameterValues().get("enumType").getValue());
-            if (et.contains("BYTE")) enumType = "byte";
-            else if (et.contains("SHORT")) enumType = "short";
-            else if (et.contains("LONG")) enumType = "long";
+        if (enumAnno != null) {
+            if (enumAnno.getParameterValues().get("enumType") != null) {
+                String et = String.valueOf(enumAnno.getParameterValues().get("enumType").getValue());
+                if (et.contains("SHORT")) enumType = "short";
+                else if (et.contains("INT")) enumType = "int";
+                else if (et.contains("LONG")) enumType = "long";
+                else if (et.contains("BYTE")) enumType = "byte";
+            }
+            if (enumAnno.getParameterValues().get("value") != null) {
+                String structure = String.valueOf(enumAnno.getParameterValues().get("value").getValue());
+                isUnion = structure.contains("UNION");
+            }
         }
 
         if (classInfo.hasAnnotation(FlatBufferComment.class.getName())) {
@@ -413,17 +421,28 @@ public class SchemaGenerator {
             }
         }
 
-        sb.append("enum ").append(classInfo.getSimpleName()).append(" : ").append(enumType).append(" {\n");
+        if (isUnion) {
+            sb.append("union ").append(classInfo.getSimpleName()).append(" {\n");
+        } else {
+            sb.append("enum ").append(classInfo.getSimpleName()).append(" : ").append(enumType).append(" {\n");
+        }
 
+        int ordinal = 0;
         for (FieldInfo field : classInfo.getDeclaredFieldInfo()) {
             if (java.lang.reflect.Modifier.isStatic(field.getModifiers()) &&
                 field.getTypeSignatureOrTypeDescriptor().toString().contains(classInfo.getName())) {
                 sb.append("  ").append(field.getName());
-                Object constVal = field.getConstantInitializerValue();
-                if (constVal != null) {
-                    sb.append(" = ").append(constVal);
+                if (!isUnion) {
+                    Object constVal = field.getConstantInitializerValue();
+                    if (constVal != null) {
+                        sb.append(" = ").append(constVal);
+                    } else {
+                        // Fallback to declaration order
+                        sb.append(" = ").append(ordinal);
+                    }
                 }
                 sb.append(",\n");
+                ordinal++;
             }
         }
 
