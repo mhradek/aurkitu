@@ -165,17 +165,33 @@ public class SchemaGenerator {
 
         sb.append(isStruct ? "struct " : "table ").append(classInfo.getSimpleName()).append(" {\n");
 
-        for (FieldInfo field : classInfo.getDeclaredFieldInfo()) {
-            if (field.hasAnnotation(FlatBufferIgnore.class.getName())) {
-                continue;
-            }
-            if (config.ignoreStaticMembers && java.lang.reflect.Modifier.isStatic(field.getModifiers())) {
-                continue;
-            }
+        // Collect fields from this class and all superclasses (avoiding duplicates)
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        ClassInfo current = classInfo;
+        while (current != null) {
+            for (FieldInfo field : current.getDeclaredFieldInfo()) {
+                String fname = field.getName();
+                if (seen.contains(fname)) {
+                    continue;
+                }
+                seen.add(fname);
 
-            String fieldLine = buildField(field, classInfo);
-            if (fieldLine != null) {
-                sb.append("  ").append(fieldLine).append(";\n");
+                if (field.hasAnnotation(FlatBufferIgnore.class.getName())) {
+                    continue;
+                }
+                if (config.ignoreStaticMembers && java.lang.reflect.Modifier.isStatic(field.getModifiers())) {
+                    continue;
+                }
+
+                String fieldLine = buildField(field, current);
+                if (fieldLine != null) {
+                    sb.append("  ").append(fieldLine).append(";\n");
+                }
+            }
+            current = current.getSuperclass();
+            // Stop at Object
+            if (current != null && "java.lang.Object".equals(current.getName())) {
+                break;
             }
         }
 
