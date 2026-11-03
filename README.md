@@ -345,7 +345,7 @@ Comparison of Aurkitu 1.0.0 output against the [official FlatBuffers schema docu
 | snake_case fields | Default on | Recommended | Match |
 | `///` doc comments | No | Supported | Minor gap |
 | `rpc_service` | No | Supported | Not implemented |
-| Unsigned types | Via `fieldType` | Full set | Partial (override required) |
+| Unsigned types | Via `fieldType` (`UBYTE`, `USHORT`, `UINT`, `ULONG`) | Full set | Supported (explicit override) |
 | Multiple namespaces | Per-type `namespace` line | Supported | Basic support |
 | Map workaround | `MapValueSet_*` | No native map | Standard workaround |
 
@@ -354,7 +354,7 @@ Comparison of Aurkitu 1.0.0 output against the [official FlatBuffers schema docu
 - Partial `fieldId` use (some fields only) can produce schemas `flatc` rejects.
 - Structs with non-scalar fields are flagged but still emitted unless `failOnValidationIssues` is true.
 - `rpc_service` and `///` documentation comments are not generated.
-- Unsigned types require an explicit `fieldType` override.
+- Unsigned types are supported via `fieldType` (`UBYTE`, `USHORT`, `UINT`, `ULONG`).
 
 ## License
 
