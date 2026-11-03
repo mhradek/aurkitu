@@ -22,6 +22,7 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
           cache: maven
+          maven-version: '3.9.9'
           server-id: central
           server-username: MAVEN_USERNAME
           server-password: MAVEN_PASSWORD
@@ -73,5 +74,6 @@ jobs:
           MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
           mvn -B deploy -P release -DskipTests \
+            -Daether.syncContext.named.factory=rwlock-local \
             -Dgpg.passphrase="${MAVEN_GPG_PASSPHRASE}" \
             -Dgpg.keyname="${KEY_ID}"
