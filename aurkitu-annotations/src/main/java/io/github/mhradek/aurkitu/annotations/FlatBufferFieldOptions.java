@@ -42,4 +42,10 @@ public @interface FlatBufferFieldOptions {
      * Marks the field as deprecated in the generated schema.
      */
     boolean deprecated() default false;
+
+    /**
+     * Optional explicit field id (emitted as id: N).
+     * Use -1 to omit.
+     */
+    int fieldId() default -1;
 }

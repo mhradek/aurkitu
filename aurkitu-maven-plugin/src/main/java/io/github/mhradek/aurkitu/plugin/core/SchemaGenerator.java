@@ -30,11 +30,12 @@ public class SchemaGenerator {
         public final boolean cacheEnabled;
         public final boolean snakeCaseFields;
         public final boolean generateVersion;
+        public final boolean failOnValidationIssues;
 
         public Config(MavenProject project, List<String> specifiedPackages, boolean validate,
                       boolean ignoreStaticMembers, String fileIdentifier, List<String> includes,
                       boolean mapCommonTypes, boolean cacheEnabled, boolean snakeCaseFields,
-                      boolean generateVersion) {
+                      boolean generateVersion, boolean failOnValidationIssues) {
             this.project = project;
             this.specifiedPackages = specifiedPackages;
             this.validate = validate;
@@ -45,11 +46,12 @@ public class SchemaGenerator {
             this.cacheEnabled = cacheEnabled;
             this.snakeCaseFields = snakeCaseFields;
             this.generateVersion = generateVersion;
+            this.failOnValidationIssues = failOnValidationIssues;
         }
 
         // Convenience constructor for tests
         public Config(MavenProject project, List<String> specifiedPackages, boolean validate) {
-            this(project, specifiedPackages, validate, true, null, List.of(), true, false, true, false);
+            this(project, specifiedPackages, validate, true, null, List.of(), true, false, true, false, false);
         }
     }
 
@@ -74,9 +76,12 @@ public class SchemaGenerator {
         File cacheFile = new File(outputDir, schemaName + ".fbs.cache");
 
         // Simple content-hash cache
-        String inputHash = Integer.toHexString(Objects.hash(
+        // Hash will be refined after scan; start with config
+        String configHash = Integer.toHexString(Objects.hash(
                 config.specifiedPackages, config.validate, config.ignoreStaticMembers,
-                config.fileIdentifier, config.includes, config.mapCommonTypes, namespace));
+                config.fileIdentifier, config.includes, config.mapCommonTypes, namespace,
+                config.snakeCaseFields, config.generateVersion));
+        String inputHash = configHash;
         if (config.cacheEnabled && outFile.exists() && cacheFile.exists()) {
             try {
                 String cached = Files.readString(cacheFile.toPath()).trim();
@@ -116,6 +121,16 @@ public class SchemaGenerator {
             if (!config.includes.isEmpty()) {
                 schema.append("\n");
             }
+
+            // Include scanned type names in the cache hash
+            StringBuilder typeNames = new StringBuilder();
+            for (ClassInfo ci : scanResult.getClassesWithAnnotation(FlatBufferTable.class.getName())) {
+                typeNames.append(ci.getName()).append(';');
+            }
+            for (ClassInfo ci : scanResult.getClassesWithAnnotation(FlatBufferEnum.class.getName())) {
+                typeNames.append(ci.getName()).append(';');
+            }
+            inputHash = Integer.toHexString(Objects.hash(configHash, typeNames.toString()));
 
             String rootType = null;
 
@@ -181,6 +196,9 @@ public class SchemaGenerator {
                     log.info("Basic validation complete. No issues found.");
                 } else {
                     log.warn("Validation issues found ({}). See schema comments.", validationIssues.size());
+                    if (config.failOnValidationIssues) {
+                        throw new RuntimeException("Schema validation failed with " + validationIssues.size() + " issue(s). See schema comments.");
+                    }
                 }
             }
         } catch (IOException e) {
@@ -317,6 +335,10 @@ public class SchemaGenerator {
             }
             if (Boolean.TRUE.equals(options.getParameterValues().get("deprecated").getValue())) {
                 line.append(" (deprecated)");
+            }
+            Object fid = options.getParameterValues().get("fieldId").getValue();
+            if (fid instanceof Number n && n.intValue() >= 0) {
+                line.append(" (id: ").append(n.intValue()).append(")");
             }
         }
 
@@ -465,7 +487,12 @@ public class SchemaGenerator {
         }
 
         if (typeSig instanceof ArrayTypeSignature array) {
-            return "[" + mapTypeSignature(array.getElementTypeSignature(), useFullName) + "]";
+            String elem = mapTypeSignature(array.getElementTypeSignature(), useFullName);
+            // byte[] -> [ubyte] (common binary convention)
+            if ("byte".equals(elem)) {
+                return "[ubyte]";
+            }
+            return "[" + elem + "]";
         }
 
         return typeSig.toStringWithSimpleNames().replace("java.lang.", "").replace("java.util.", "").trim();

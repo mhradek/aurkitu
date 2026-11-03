@@ -108,6 +108,7 @@ class SchemaGeneratorTest {
                 true,
                 false,
                 true,
+                false,
                 false);
         SchemaGenerator generator = new SchemaGenerator(config);
         File out = tempDir.toFile();
@@ -160,6 +161,7 @@ class SchemaGeneratorTest {
                 false,
                 false,
                 true,
+                false,
                 false);
         SchemaGenerator generator = new SchemaGenerator(config);
         File out = tempDir.toFile();
