@@ -78,6 +78,10 @@ Run `mvn process-classes` (or a later phase) to generate `target/aurkitu/schemas
 | `outputDir` | No | `${project.build.directory}/aurkitu/schemas` | Destination directory |
 | `specifiedPackages` | No | all packages | Limit ClassGraph scanning for performance |
 | `validate` | No | `true` | Enable basic schema validation reporting |
+| `ignoreStaticMembers` | No | `true` | Skip static fields when generating tables |
+| `fileIdentifier` | No | — | Optional 4-character file identifier |
+| `includes` | No | — | List of schema files to `include` |
+| `mapCommonTypes` | No | `true` | Map `Date`, `URL`, `BigDecimal`, `UUID`, etc. to `string` |
 
 Additional options from the 0.0.x series (namespace overrides, schema includes, consolidated vs per-dependency schemas, schema caching, ignore static members, file identifier, etc.) will be re-introduced as the generator matures.
 
