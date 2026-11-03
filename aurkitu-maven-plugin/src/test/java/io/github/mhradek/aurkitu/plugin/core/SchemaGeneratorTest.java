@@ -68,8 +68,8 @@ class SchemaGeneratorTest {
         assertTrue(content.contains("table MapValueSet_SampleRootTable_scores {"));
 
         // Nested map
-        assertTrue(content.contains("nestedMap:[MapValueSet_SampleRootTable_nestedMap]"));
-        assertTrue(content.contains("table MapValueSet_SampleRootTable_nestedMap {"));
+        assertTrue(content.contains("nested_map:[MapValueSet_SampleRootTable_nested_map]"));
+        assertTrue(content.contains("table MapValueSet_SampleRootTable_nested_map {"));
 
         // Enum
         assertTrue(content.contains("enum SampleEnum : byte {"));
@@ -91,9 +91,9 @@ class SchemaGeneratorTest {
         assertTrue(content.contains("// A table with various field options"));
         assertTrue(content.contains("// Required identifier"));
         assertTrue(content.contains("code:string (required)"));
-        assertTrue(content.contains("legacyValue:int = 0 (deprecated)") || content.contains("legacyValue:int=0 (deprecated)"));
-        assertTrue(content.contains("baseId:long"));
-        assertTrue(content.contains("baseName:string"));
+        assertTrue(content.contains("legacy_value:int = 0 (deprecated)") || content.contains("legacy_value:int=0 (deprecated)"));
+        assertTrue(content.contains("base_id:long"));
+        assertTrue(content.contains("base_name:string"));
     }
 
     @Test
@@ -106,7 +106,8 @@ class SchemaGeneratorTest {
                 "AB12",
                 List.of("common.fbs", "types.fbs"),
                 true,
-                false);
+                false,
+                true);
         SchemaGenerator generator = new SchemaGenerator(config);
         File out = tempDir.toFile();
         generator.generate("config", "test.config", out);
@@ -156,7 +157,8 @@ class SchemaGeneratorTest {
                 null,
                 List.of(),
                 false,
-                false);
+                false,
+                true);
         SchemaGenerator generator = new SchemaGenerator(config);
         File out = tempDir.toFile();
         generator.generate("nocommon", "test.nocommon", out);

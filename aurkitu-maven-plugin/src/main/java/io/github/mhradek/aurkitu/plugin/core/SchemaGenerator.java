@@ -28,10 +28,11 @@ public class SchemaGenerator {
         public final List<String> includes;
         public final boolean mapCommonTypes;
         public final boolean cacheEnabled;
+        public final boolean snakeCaseFields;
 
         public Config(MavenProject project, List<String> specifiedPackages, boolean validate,
                       boolean ignoreStaticMembers, String fileIdentifier, List<String> includes,
-                      boolean mapCommonTypes, boolean cacheEnabled) {
+                      boolean mapCommonTypes, boolean cacheEnabled, boolean snakeCaseFields) {
             this.project = project;
             this.specifiedPackages = specifiedPackages;
             this.validate = validate;
@@ -40,11 +41,12 @@ public class SchemaGenerator {
             this.includes = includes != null ? includes : List.of();
             this.mapCommonTypes = mapCommonTypes;
             this.cacheEnabled = cacheEnabled;
+            this.snakeCaseFields = snakeCaseFields;
         }
 
         // Convenience constructor for tests
         public Config(MavenProject project, List<String> specifiedPackages, boolean validate) {
-            this(project, specifiedPackages, validate, true, null, List.of(), true, false);
+            this(project, specifiedPackages, validate, true, null, List.of(), true, false, true);
         }
     }
 
@@ -278,6 +280,9 @@ public class SchemaGenerator {
 
         // Sanitize field name
         String safeName = name.replace('$', '_');
+        if (config.snakeCaseFields) {
+            safeName = toSnakeCase(safeName);
+        }
         line.append(safeName).append(":").append(typeName);
 
         if (field.hasAnnotation(FlatBufferFieldOptions.class.getName())) {
@@ -507,5 +512,9 @@ public class SchemaGenerator {
 
         String result = sb.toString().replaceAll(",\n$", "\n");
         return result + "}\n\n";
+    }
+
+    private String toSnakeCase(String name) {
+        return name.replaceAll("([a-z0-9])([A-Z])", "$1_$2").toLowerCase();
     }
 }

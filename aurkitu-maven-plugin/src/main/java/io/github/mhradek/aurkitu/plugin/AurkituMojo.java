@@ -63,6 +63,12 @@ public class AurkituMojo extends AbstractMojo {
     @Parameter(property = "aurkitu.cacheEnabled", defaultValue = "false")
     private boolean cacheEnabled;
 
+    /**
+     * When true (default), convert Java field names to snake_case in the schema.
+     */
+    @Parameter(property = "aurkitu.snakeCaseFields", defaultValue = "true")
+    private boolean snakeCaseFields;
+
     @Override
     public void execute() throws MojoExecutionException {
         log.info("Aurkitu 1.0.0 - generating schema '{}' in namespace '{}'", schemaName, schemaNamespace);
@@ -72,7 +78,7 @@ public class AurkituMojo extends AbstractMojo {
         }
 
         SchemaGenerator.Config config = new SchemaGenerator.Config(
-                project, specifiedPackages, validate, ignoreStaticMembers, fileIdentifier, includes, mapCommonTypes, cacheEnabled);
+                project, specifiedPackages, validate, ignoreStaticMembers, fileIdentifier, includes, mapCommonTypes, cacheEnabled, snakeCaseFields);
         SchemaGenerator generator = new SchemaGenerator(config);
         generator.generate(schemaName, schemaNamespace, outputDirectory);
 
