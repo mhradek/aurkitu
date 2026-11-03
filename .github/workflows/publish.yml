@@ -34,7 +34,7 @@ jobs:
           echo "$GPG_PRIVATE_KEY" | head -1
           printf '%s\n' "$GPG_PRIVATE_KEY" | gpg --batch --import
           gpg --list-secret-keys --keyid-format LONG
-          KEY_ID=$(gpg --list-secret-keys --with-colons | awk -F: '/^sec:/ { print $5; exit }')
+          KEY_ID=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr:/ { print $10; exit }')
           if [ -z "${KEY_ID}" ]; then
             echo "No secret key imported. GPG_PRIVATE_KEY must be an armored PRIVATE key block."
             exit 1
