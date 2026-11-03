@@ -347,7 +347,11 @@ public class SchemaGenerator {
     }
 
     private String generateMapTable(TypeSignature typeSig, ClassInfo owner, String contextName) {
-        String mapTableName = "MapValueSet_" + owner.getSimpleName() + "_" + sanitize(contextName);
+        String ctx = contextName;
+        if (config.snakeCaseFields) {
+            ctx = toSnakeCase(ctx);
+        }
+        String mapTableName = "MapValueSet_" + owner.getSimpleName() + "_" + sanitize(ctx);
 
         if (!generatedMapTables.containsKey(mapTableName)) {
             String keyType = "string";
