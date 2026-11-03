@@ -615,4 +615,12 @@ public class SchemaGenerator {
     private String toSnakeCase(String name) {
         return name.replaceAll("([a-z0-9])([A-Z])", "$1_$2").toLowerCase();
     }
+
+    private boolean isNonScalarField(String fieldLine) {
+        int colon = fieldLine.indexOf(':');
+        if (colon < 0) return false;
+        String type = fieldLine.substring(colon + 1).split(" ")[0];
+        return type.equals("string") || type.startsWith("[") ||
+               !type.matches("byte|ubyte|short|ushort|int|uint|long|ulong|float|double|bool");
+    }
 }
