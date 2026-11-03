@@ -273,7 +273,9 @@ public class SchemaGenerator {
             }
         }
 
-        line.append(name).append(":").append(typeName);
+        // Sanitize field name
+        String safeName = name.replace('$', '_');
+        line.append(safeName).append(":").append(typeName);
 
         if (field.hasAnnotation(FlatBufferFieldOptions.class.getName())) {
             var options = field.getAnnotationInfo(FlatBufferFieldOptions.class.getName());
@@ -422,6 +424,8 @@ public class SchemaGenerator {
             if (baseName.endsWith("Double")) return "double";
             if (baseName.endsWith("Character")) return "string";
 
+            // Sanitize inner-class $ and package dots
+            baseName = baseName.replace('$', '_');
             if (useFullName) {
                 return baseName.replace('.', '_');
             }
