@@ -112,6 +112,11 @@ public class SchemaGenerator {
 
             String rootType = null;
 
+            // Emit enums first so they are defined before tables that reference them
+            for (ClassInfo classInfo : scanResult.getClassesWithAnnotation(FlatBufferEnum.class.getName())) {
+                schema.append(buildEnum(classInfo));
+            }
+
             for (ClassInfo classInfo : scanResult.getClassesWithAnnotation(FlatBufferTable.class.getName())) {
                 schema.append(buildTable(classInfo));
                 if (isRootType(classInfo)) {
@@ -123,10 +128,6 @@ public class SchemaGenerator {
                     }
                     rootType = classInfo.getSimpleName();
                 }
-            }
-
-            for (ClassInfo classInfo : scanResult.getClassesWithAnnotation(FlatBufferEnum.class.getName())) {
-                schema.append(buildEnum(classInfo));
             }
 
             for (String mapTable : generatedMapTables.values()) {
