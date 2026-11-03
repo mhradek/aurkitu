@@ -41,16 +41,44 @@ class SchemaGeneratorTest {
         assertTrue(Files.exists(schemaPath));
         String content = Files.readString(schemaPath);
 
-        System.out.println("=== Generated schema ===");
-        System.out.println(content);
-        System.out.println("=== End schema ===");
-
         // Header and namespace
         assertTrue(content.contains("namespace test.models;"));
         assertTrue(content.contains("// Aurkitu 1.0.0"));
 
-        // At least the root table and enum should appear
-        assertTrue(content.contains("SampleRootTable") || content.contains("SampleEnum") || content.contains("SampleStruct"),
-                "Expected at least one annotated type in schema. Content was:\n" + content);
+        // Root table
+        assertTrue(content.contains("table SampleRootTable {"));
+        assertTrue(content.contains("root_type SampleRootTable;"));
+
+        // Primitives
+        assertTrue(content.contains("id:long;"));
+        assertTrue(content.contains("name:string;"));
+        assertTrue(content.contains("active:bool;"));
+
+        // Field options default
+        assertTrue(content.contains("level:int = 42") || content.contains("level:int=42"));
+
+        // Ignore
+        assertFalse(content.contains("ignored:"));
+
+        // List
+        assertTrue(content.contains("tags:[string]") || content.contains("tags:[String]"));
+
+        // Simple map
+        assertTrue(content.contains("scores:[MapValueSet_SampleRootTable_scores]"));
+        assertTrue(content.contains("table MapValueSet_SampleRootTable_scores {"));
+
+        // Nested map
+        assertTrue(content.contains("nestedMap:[MapValueSet_SampleRootTable_nestedMap]"));
+        assertTrue(content.contains("table MapValueSet_SampleRootTable_nestedMap {"));
+
+        // Enum
+        assertTrue(content.contains("enum SampleEnum : byte {"));
+        assertTrue(content.contains("ALPHA"));
+        assertTrue(content.contains("BETA"));
+        assertTrue(content.contains("GAMMA"));
+
+        // Struct
+        assertTrue(content.contains("struct SampleStruct {"));
+        assertTrue(content.contains("x:float"));
     }
 }

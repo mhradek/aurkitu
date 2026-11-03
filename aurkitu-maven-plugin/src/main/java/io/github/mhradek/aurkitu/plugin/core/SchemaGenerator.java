@@ -41,6 +41,7 @@ public class SchemaGenerator {
                 .enableAnnotationInfo()
                 .enableClassInfo()
                 .enableFieldInfo()
+                .ignoreFieldVisibility()
                 .acceptPackages(specifiedPackages != null && !specifiedPackages.isEmpty()
                         ? specifiedPackages.toArray(new String[0])
                         : new String[]{"*"})
@@ -155,8 +156,6 @@ public class SchemaGenerator {
         if (typeSig == null) {
             return "string";
         }
-
-        // Explicit override is handled at the field level; here we process the signature.
 
         if (isMapType(typeSig)) {
             return generateMapTable(typeSig, owner, contextName);
