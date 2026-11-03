@@ -77,6 +77,13 @@ class SchemaGeneratorTest {
         assertTrue(content.contains("BETA"));
         assertTrue(content.contains("GAMMA"));
 
+        // Unsigned
+        assertTrue(content.contains("table SampleUnsigned {"));
+        assertTrue(content.contains("flags:ubyte"));
+        assertTrue(content.contains("port:ushort"));
+        assertTrue(content.contains("count:uint"));
+        assertTrue(content.contains("id:ulong") || content.contains(":ulong"));
+
         // Struct
         assertTrue(content.contains("struct SampleStruct {"));
         assertTrue(content.contains("x:float"));

@@ -101,6 +101,25 @@ Additional options from the 0.0.x series (namespace overrides, schema includes, 
 ---
 
 
+
+### Unsigned types
+
+Java has no unsigned primitives. Use `fieldType` to emit unsigned FlatBuffers types:
+
+```java
+@FlatBufferFieldOptions(fieldType = FieldType.UBYTE)
+private byte flags;    // → flags:ubyte;
+
+@FlatBufferFieldOptions(fieldType = FieldType.USHORT)
+private short port;    // → port:ushort;
+
+@FlatBufferFieldOptions(fieldType = FieldType.UINT)
+private int count;     // → count:uint;
+
+@FlatBufferFieldOptions(fieldType = FieldType.ULONG)
+private long id;       // → id:ulong;
+```
+
 ### Binary data and field ids
 
 `byte[]` fields are mapped to `[ubyte]` (the common FlatBuffers binary vector convention):

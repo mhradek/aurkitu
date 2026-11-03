@@ -305,10 +305,9 @@ public class SchemaGenerator {
                         typeName = typeName.substring(typeName.lastIndexOf('.') + 1).toLowerCase();
                     }
                 }
-                // Unsigned note
-                if (ftStr.contains("U") && config.validate) {
-                    validationIssues.add("Unsigned type forced on " + owner.getSimpleName() + "." + name +
-                            " (" + ft + ") — Java has no unsigned primitives");
+                // Unsigned types are valid in the schema; note only in debug
+                if (ftStr.contains("UBYTE") || ftStr.contains("USHORT") || ftStr.contains("UINT") || ftStr.contains("ULONG")) {
+                    log.debug("Unsigned type {} on {}.{} (Java has no unsigned primitives)", ft, owner.getSimpleName(), name);
                 }
             }
         }
