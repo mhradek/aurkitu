@@ -98,8 +98,6 @@ Run `mvn process-classes` (or a later phase) to generate `target/aurkitu/schemas
 | `failOnValidationIssues` | No | `false` | Fail the build when validation issues are found |
 | `fileExtension` | No | — | Emit `file_extension "..."` |
 
-Additional options from the 0.0.x series (namespace overrides, schema includes, consolidated vs per-dependency schemas, schema caching, ignore static members, file identifier, etc.) will be re-introduced as the generator matures.
-
 ---
 
 ### Unsigned types
