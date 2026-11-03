@@ -32,7 +32,7 @@ class SchemaGeneratorTest {
     void generatesTablesEnumsMapsAndLists() throws Exception {
         SchemaGenerator generator = new SchemaGenerator(
                 null,
-                List.of("com.michaelhradek.aurkitu.plugin.core.testmodels"),
+                List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
                 true);
         File out = tempDir.toFile();
         generator.generate("models", "test.models", out);
