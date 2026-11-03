@@ -57,6 +57,12 @@ public class AurkituMojo extends AbstractMojo {
     @Parameter(property = "aurkitu.flatcPath")
     private String flatcPath;
 
+    /**
+     * When true, skip regeneration if the output schema already exists and the input hash matches.
+     */
+    @Parameter(property = "aurkitu.cacheEnabled", defaultValue = "false")
+    private boolean cacheEnabled;
+
     @Override
     public void execute() throws MojoExecutionException {
         log.info("Aurkitu 1.0.0 - generating schema '{}' in namespace '{}'", schemaName, schemaNamespace);
@@ -66,7 +72,7 @@ public class AurkituMojo extends AbstractMojo {
         }
 
         SchemaGenerator.Config config = new SchemaGenerator.Config(
-                project, specifiedPackages, validate, ignoreStaticMembers, fileIdentifier, includes, mapCommonTypes);
+                project, specifiedPackages, validate, ignoreStaticMembers, fileIdentifier, includes, mapCommonTypes, cacheEnabled);
         SchemaGenerator generator = new SchemaGenerator(config);
         generator.generate(schemaName, schemaNamespace, outputDirectory);
 

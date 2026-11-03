@@ -27,10 +27,11 @@ public class SchemaGenerator {
         public final String fileIdentifier;
         public final List<String> includes;
         public final boolean mapCommonTypes;
+        public final boolean cacheEnabled;
 
         public Config(MavenProject project, List<String> specifiedPackages, boolean validate,
                       boolean ignoreStaticMembers, String fileIdentifier, List<String> includes,
-                      boolean mapCommonTypes) {
+                      boolean mapCommonTypes, boolean cacheEnabled) {
             this.project = project;
             this.specifiedPackages = specifiedPackages;
             this.validate = validate;
@@ -38,11 +39,12 @@ public class SchemaGenerator {
             this.fileIdentifier = fileIdentifier;
             this.includes = includes != null ? includes : List.of();
             this.mapCommonTypes = mapCommonTypes;
+            this.cacheEnabled = cacheEnabled;
         }
 
         // Convenience constructor for tests
         public Config(MavenProject project, List<String> specifiedPackages, boolean validate) {
-            this(project, specifiedPackages, validate, true, null, List.of(), true);
+            this(project, specifiedPackages, validate, true, null, List.of(), true, false);
         }
     }
 
@@ -62,6 +64,25 @@ public class SchemaGenerator {
     public void generate(String schemaName, String namespace, File outputDir) {
         generatedMapTables.clear();
         validationIssues.clear();
+
+        File outFile = new File(outputDir, schemaName + ".fbs");
+        File cacheFile = new File(outputDir, schemaName + ".fbs.cache");
+
+        // Simple content-hash cache
+        String inputHash = Integer.toHexString(Objects.hash(
+                config.specifiedPackages, config.validate, config.ignoreStaticMembers,
+                config.fileIdentifier, config.includes, config.mapCommonTypes, namespace));
+        if (config.cacheEnabled && outFile.exists() && cacheFile.exists()) {
+            try {
+                String cached = Files.readString(cacheFile.toPath()).trim();
+                if (inputHash.equals(cached)) {
+                    log.info("Schema cache hit for {}; skipping regeneration", schemaName);
+                    return;
+                }
+            } catch (IOException ignored) {
+                // fall through to regenerate
+            }
+        }
 
         try (ScanResult scanResult = new ClassGraph()
                 .enableAnnotationInfo()
@@ -125,8 +146,10 @@ public class SchemaGenerator {
                 }
             }
 
-            File outFile = new File(outputDir, schemaName + ".fbs");
             Files.writeString(outFile.toPath(), schema.toString());
+            if (config.cacheEnabled) {
+                Files.writeString(cacheFile.toPath(), inputHash);
+            }
             log.info("Wrote schema to {}", outFile.getAbsolutePath());
 
             if (config.validate) {
@@ -160,6 +183,14 @@ public class SchemaGenerator {
             String comment = String.valueOf(commentAnno.getParameterValues().get("comment").getValue());
             if (!comment.isBlank()) {
                 sb.append("// ").append(comment).append("\n");
+            }
+        }
+
+        // Per-type namespace override
+        if (tableAnno != null && tableAnno.getParameterValues().get("namespace") != null) {
+            String ns = String.valueOf(tableAnno.getParameterValues().get("namespace").getValue());
+            if (!ns.isBlank()) {
+                sb.append("// namespace: ").append(ns).append("\n");
             }
         }
 
