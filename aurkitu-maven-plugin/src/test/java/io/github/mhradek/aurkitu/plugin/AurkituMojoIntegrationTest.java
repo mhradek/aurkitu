@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Instantiates AurkituMojo, sets parameters the same way Maven would,
  * and verifies the plugin descriptor.
  */
-class AurkituMojoIT {
+class AurkituMojoIntegrationTest {
 
     @TempDir
     Path tempDir;
