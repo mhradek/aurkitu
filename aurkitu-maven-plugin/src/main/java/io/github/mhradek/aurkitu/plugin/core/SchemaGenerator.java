@@ -187,6 +187,27 @@ public class SchemaGenerator {
         String name = field.getName();
         String typeName = mapType(field.getTypeSignatureOrTypeDescriptor(), owner, field.getName(), field);
 
+        // Honour explicit fieldType override when present
+        if (field.hasAnnotation(FlatBufferFieldOptions.class.getName())) {
+            var options = field.getAnnotationInfo(FlatBufferFieldOptions.class.getName());
+            Object ft = options.getParameterValues().get("fieldType").getValue();
+            if (ft != null) {
+                String ftStr = ft.toString();
+                // Only override for concrete scalar / string types; leave MAP/ARRAY/IDENT to signature logic
+                if (!ftStr.contains("MAP") && !ftStr.contains("ARRAY") && !ftStr.contains("IDENT")) {
+                    typeName = ftStr.toLowerCase().replace("fieldtype.", "");
+                    if (typeName.contains(".")) {
+                        typeName = typeName.substring(typeName.lastIndexOf('.') + 1).toLowerCase();
+                    }
+                }
+                // Unsigned note
+                if (ftStr.contains("U") && config.validate) {
+                    validationIssues.add("Unsigned type forced on " + owner.getSimpleName() + "." + name +
+                            " (" + ft + ") — Java has no unsigned primitives");
+                }
+            }
+        }
+
         if (typeName == null) {
             log.debug("Skipping unsupported field: {}", name);
             if (config.validate) {
@@ -214,15 +235,6 @@ public class SchemaGenerator {
                     .orElse("");
             if (!defaultValue.isBlank()) {
                 line.append(" = ").append(defaultValue);
-            }
-
-            // Note unsigned force
-            Object ft = options.getParameterValues().get("fieldType").getValue();
-            if (ft != null && ft.toString().contains("U")) {
-                if (config.validate) {
-                    validationIssues.add("Unsigned type forced on " + owner.getSimpleName() + "." + name +
-                            " (" + ft + ") — Java has no unsigned primitives");
-                }
             }
         }
 
