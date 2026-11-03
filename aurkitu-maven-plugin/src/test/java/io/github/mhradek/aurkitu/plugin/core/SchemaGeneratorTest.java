@@ -107,7 +107,7 @@ class SchemaGeneratorTest {
         // Scan a package that has no annotated tables
         SchemaGenerator generator = new SchemaGenerator(
                 null,
-                List.of("io.github.mhradek.aurkitu.plugin.core"),
+                List.of("java.lang"),
                 true);
         File out = tempDir.toFile();
         generator.generate("empty", "test.empty", out);
