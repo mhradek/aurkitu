@@ -32,4 +32,14 @@ public @interface FlatBufferFieldOptions {
      * @return String; default empty String
      */
     String defaultValue() default "";
+
+    /**
+     * Marks the field as required in the generated schema.
+     */
+    boolean required() default false;
+
+    /**
+     * Marks the field as deprecated in the generated schema.
+     */
+    boolean deprecated() default false;
 }

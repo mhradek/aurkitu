@@ -236,6 +236,12 @@ public class SchemaGenerator {
             if (!defaultValue.isBlank()) {
                 line.append(" = ").append(defaultValue);
             }
+            if (Boolean.TRUE.equals(options.getParameterValues().get("required").getValue())) {
+                line.append(" (required)");
+            }
+            if (Boolean.TRUE.equals(options.getParameterValues().get("deprecated").getValue())) {
+                line.append(" (deprecated)");
+            }
         }
 
         return line.toString();
