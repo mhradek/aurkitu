@@ -50,6 +50,12 @@ public class AurkituMojo extends AbstractMojo {
     @Parameter(property = "aurkitu.mapCommonTypes", defaultValue = "true")
     private boolean mapCommonTypes;
 
+    /**
+     * Optional path to the flatc binary. When set and validate=true, the generated schema is validated with flatc.
+     */
+    @Parameter(property = "aurkitu.flatcPath")
+    private String flatcPath;
+
     @Override
     public void execute() throws MojoExecutionException {
         log.info("Aurkitu 1.0.0 - generating schema '{}' in namespace '{}'", schemaName, schemaNamespace);
@@ -64,5 +70,27 @@ public class AurkituMojo extends AbstractMojo {
         generator.generate(schemaName, schemaNamespace, outputDirectory);
 
         log.info("Schema generation complete. Output: {}", outputDirectory.getAbsolutePath());
+
+        if (validate && flatcPath != null && !flatcPath.isBlank()) {
+            runFlatcValidation(new File(outputDirectory, schemaName + ".fbs"));
+        }
+    }
+
+    private void runFlatcValidation(File schemaFile) throws MojoExecutionException {
+        try {
+            ProcessBuilder pb = new ProcessBuilder(flatcPath, "--schema", schemaFile.getAbsolutePath());
+            pb.directory(schemaFile.getParentFile());
+            pb.redirectErrorStream(true);
+            Process process = pb.start();
+            int exit = process.waitFor();
+            if (exit != 0) {
+                String output = new String(process.getInputStream().readAllBytes());
+                throw new MojoExecutionException("flatc validation failed for " + schemaFile.getName() + ":\n" + output);
+            }
+            log.info("flatc validation succeeded for {}", schemaFile.getName());
+        } catch (IOException | InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new MojoExecutionException("Failed to run flatc", e);
+        }
     }
 }

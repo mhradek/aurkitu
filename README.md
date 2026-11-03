@@ -248,3 +248,42 @@ MIT
 4. Review any custom translation code that relies on the old `MapValueSet` naming (names are similar but not guaranteed identical).
 5. Prefer `specifiedPackages` for faster scans.
 
+
+---
+
+## Optional flatc validation
+
+### Via the plugin
+Set `flatcPath` to the location of the `flatc` binary. When `validate` is true the generated schema is checked:
+
+```xml
+<configuration>
+    <schemaName>user</schemaName>
+    <flatcPath>/usr/local/bin/flatc</flatcPath>
+    <validate>true</validate>
+</configuration>
+```
+
+### Via the Maven exec plugin (alternative)
+```xml
+<plugin>
+    <groupId>org.codehaus.mojo</groupId>
+    <artifactId>exec-maven-plugin</artifactId>
+    <version>3.1.0</version>
+    <executions>
+        <execution>
+            <id>validate-schema</id>
+            <phase>verify</phase>
+            <goals><goal>exec</goal></goals>
+            <configuration>
+                <executable>flatc</executable>
+                <arguments>
+                    <argument>--schema</argument>
+                    <argument>${project.build.directory}/aurkitu/schemas/user.fbs</argument>
+                </arguments>
+            </configuration>
+        </execution>
+    </executions>
+</plugin>
+```
+
