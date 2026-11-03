@@ -217,3 +217,29 @@ mvn clean verify
 ## License
 
 MIT
+
+---
+
+## Migration from 0.0.x to 1.0.0
+
+### Coordinates
+| | 0.0.x | 1.0.0 |
+|---|-------|-------|
+| groupId | `com.michaelhradek` | `io.github.mhradek` |
+| Java packages | `com.michaelhradek.aurkitu.*` | `io.github.mhradek.aurkitu.*` |
+
+### Key changes
+- **Java baseline**: 8 → 17
+- **Scanning**: Custom Reflections fork → ClassGraph
+- **Architecture**: Monolithic `Processor` → simplified `SchemaGenerator` + Mojo
+- **Tests**: Mixed → pure JUnit 5
+- **Maps**: Still use generated `MapValueSet_*` tables (workaround unchanged)
+- **New options**: `ignoreStaticMembers`, `fileIdentifier`, `includes`, `mapCommonTypes`
+
+### Migration steps
+1. Update dependency/plugin coordinates to `io.github.mhradek`.
+2. Change imports from `com.michaelhradek.aurkitu.*` to `io.github.mhradek.aurkitu.*`.
+3. Rebuild and re-generate schemas.
+4. Review any custom translation code that relies on the old `MapValueSet` naming (names are similar but not guaranteed identical).
+5. Prefer `specifiedPackages` for faster scans.
+
