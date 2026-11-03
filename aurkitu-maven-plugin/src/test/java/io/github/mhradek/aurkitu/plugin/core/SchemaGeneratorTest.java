@@ -91,7 +91,8 @@ class SchemaGeneratorTest {
                 true,
                 "AB12",
                 List.of("common.fbs", "types.fbs"),
-                true);
+                true,
+                false);
         SchemaGenerator generator = new SchemaGenerator(config);
         File out = tempDir.toFile();
         generator.generate("config", "test.config", out);
@@ -140,6 +141,7 @@ class SchemaGeneratorTest {
                 true,
                 null,
                 List.of(),
+                false,
                 false);
         SchemaGenerator generator = new SchemaGenerator(config);
         File out = tempDir.toFile();
