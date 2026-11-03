@@ -17,7 +17,12 @@ import java.lang.annotation.*;
 public @interface FlatBufferTable {
     boolean rootType() default false;
 
-    TableStructureType value() default TableStructureType.TABLE;\n\n    /**\n     * Optional per-type namespace override.\n     */\n    String namespace() default "";
+    TableStructureType value() default TableStructureType.TABLE;
+
+    /**
+     * Optional per-type namespace override.
+     */
+    String namespace() default "";
 
     public enum TableStructureType {
         TABLE, STRUCT
