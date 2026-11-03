@@ -10,6 +10,7 @@ This is the **modernised 1.0.0** release:
 - Simplified architecture with clearer separation of concerns
 - Updated dependencies and Maven plugin toolchain
 - Oriented toward current FlatBuffers (25.x series)
+- **New coordinates**: `io.github.mhradek` (migrated from `com.michaelhradek`)
 
 *Note: 1.0.0 is a clean modern foundation. Full field-level processing, advanced type support, and complete `flatc` validation are being expanded on top of the ClassGraph scanner. The original 0.0.x behaviour is the reference for historical edge cases.*
 
@@ -20,7 +21,7 @@ This is the **modernised 1.0.0** release:
 ### Annotations
 ```xml
 <dependency>
-    <groupId>com.michaelhradek</groupId>
+    <groupId>io.github.mhradek</groupId>
     <artifactId>aurkitu-annotations</artifactId>
     <version>1.0.0</version>
 </dependency>
@@ -29,7 +30,7 @@ This is the **modernised 1.0.0** release:
 ### Maven Plugin
 ```xml
 <plugin>
-    <groupId>com.michaelhradek</groupId>
+    <groupId>io.github.mhradek</groupId>
     <artifactId>aurkitu-maven-plugin</artifactId>
     <version>1.0.0</version>
     <configuration>
@@ -54,6 +55,8 @@ This is the **modernised 1.0.0** release:
 
 ### Annotate models
 ```java
+import io.github.mhradek.aurkitu.annotations.FlatBufferTable;
+
 @FlatBufferTable(rootType = true)
 public class User {
     private long id;
@@ -196,6 +199,7 @@ mvn clean verify
 
 - [x] Modern Java 17 baseline + ClassGraph scanning
 - [x] Drop custom Reflections module
+- [x] Migrate coordinates to `io.github.mhradek`
 - [ ] Complete field-level processing (primitives, wrappers, enums, lists, maps, defaults, comments)
 - [ ] Full validation against current `flatc`
 - [ ] Re-introduce advanced configuration (includes, namespace overrides, caching, etc.)
