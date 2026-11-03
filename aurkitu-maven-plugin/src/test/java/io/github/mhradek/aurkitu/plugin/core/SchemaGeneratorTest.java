@@ -81,4 +81,72 @@ class SchemaGeneratorTest {
         assertTrue(content.contains("struct SampleStruct {"));
         assertTrue(content.contains("x:float"));
     }
+
+    @Test
+    void emitsFileIdentifierAndIncludes() throws Exception {
+        SchemaGenerator.Config config = new SchemaGenerator.Config(
+                null,
+                List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
+                true,
+                true,
+                "AB12",
+                List.of("common.fbs", "types.fbs"),
+                true);
+        SchemaGenerator generator = new SchemaGenerator(config);
+        File out = tempDir.toFile();
+        generator.generate("config", "test.config", out);
+
+        String content = Files.readString(out.toPath().resolve("config.fbs"));
+        assertTrue(content.contains("file_identifier \"AB12\";"));
+        assertTrue(content.contains("include \"common.fbs\";"));
+        assertTrue(content.contains("include \"types.fbs\";"));
+    }
+
+    @Test
+    void reportsMissingRootTypeWhenNonePresent() throws Exception {
+        // Scan a package that has no annotated tables
+        SchemaGenerator generator = new SchemaGenerator(
+                null,
+                List.of("io.github.mhradek.aurkitu.plugin.core"),
+                true);
+        File out = tempDir.toFile();
+        generator.generate("empty", "test.empty", out);
+
+        String content = Files.readString(out.toPath().resolve("empty.fbs"));
+        assertTrue(content.contains("// Validation issues:"));
+        assertTrue(content.contains("No root type defined"));
+    }
+
+    @Test
+    void ignoresStaticMembersByDefault() throws Exception {
+        SchemaGenerator generator = new SchemaGenerator(
+                null,
+                List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
+                true);
+        File out = tempDir.toFile();
+        generator.generate("staticcheck", "test.static", out);
+
+        String content = Files.readString(out.toPath().resolve("staticcheck.fbs"));
+        // Sample models have no public static fields that should appear; ensure no unexpected static leakage
+        assertFalse(content.contains("static "));
+    }
+
+    @Test
+    void mapCommonTypesCanBeDisabled() throws Exception {
+        SchemaGenerator.Config config = new SchemaGenerator.Config(
+                null,
+                List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
+                false,
+                true,
+                null,
+                List.of(),
+                false);
+        SchemaGenerator generator = new SchemaGenerator(config);
+        File out = tempDir.toFile();
+        generator.generate("nocommon", "test.nocommon", out);
+
+        String content = Files.readString(out.toPath().resolve("nocommon.fbs"));
+        // With the flag off we still expect normal primitives; just ensure generation succeeds
+        assertTrue(content.contains("table SampleRootTable"));
+    }
 }
