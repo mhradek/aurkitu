@@ -2,19 +2,22 @@
 
 [![Build](https://github.com/mhradek/aurkitu/actions/workflows/main.yml/badge.svg)](https://github.com/mhradek/aurkitu/actions)
 
-**Aurkitu** (Basque for “to find”) generates FlatBuffers IDL (`.fbs`) schemas from annotated Java models. This keeps your server-side models as the single source of truth.
+**Aurkitu** (Basque for “to find”) generates FlatBuffers IDL (`.fbs`) schemas from annotated Java models. This keeps your server-side models as the single source of truth — especially useful when models carry storage annotations (e.g. DynamoDB) that must remain authoritative.
 
 This is the **modernised 1.0.0** release:
 - Targets **Java 17**
-- Uses **ClassGraph** for reliable classpath scanning (replaces the old custom Reflections fork)
+- Uses **ClassGraph** for reliable classpath scanning (replaces the old custom Reflections fork and fragile classloader logic)
 - Simplified architecture with clearer separation of concerns
 - Updated dependencies and Maven plugin toolchain
-- Ready for current FlatBuffers (25.x series)
+- Oriented toward current FlatBuffers (25.x series)
+
+*Note: 1.0.0 is a clean modern foundation. Full field-level processing, advanced type support, and complete `flatc` validation are being expanded on top of the ClassGraph scanner. The original 0.0.x behaviour is the reference for historical edge cases.*
+
+---
 
 ## Quick Start
 
-Add the annotations:
-
+### Annotations
 ```xml
 <dependency>
     <groupId>com.michaelhradek</groupId>
@@ -23,8 +26,7 @@ Add the annotations:
 </dependency>
 ```
 
-Configure the plugin:
-
+### Maven Plugin
 ```xml
 <plugin>
     <groupId>com.michaelhradek</groupId>
@@ -33,10 +35,11 @@ Configure the plugin:
     <configuration>
         <schemaName>user</schemaName>
         <schemaNamespace>com.example.flatbuffers</schemaNamespace>
-        <!-- Optional: limit scanning for speed -->
+        <!-- Optional but strongly recommended for speed -->
         <specifiedPackages>
             <specifiedPackage>com.example.models</specifiedPackage>
         </specifiedPackages>
+        <validate>true</validate>
     </configuration>
     <executions>
         <execution>
@@ -49,8 +52,7 @@ Configure the plugin:
 </plugin>
 ```
 
-Annotate your models:
-
+### Annotate models
 ```java
 @FlatBufferTable(rootType = true)
 public class User {
@@ -62,19 +64,147 @@ public class User {
 
 Run `mvn process-classes` (or a later phase) to generate `target/aurkitu/schemas/user.fbs`.
 
-## Status
+---
 
-1.0.0 is a clean modern foundation. Full field-level processing, advanced type support (maps, lists, defaults, etc.), and complete validation against current `flatc` are being expanded on top of the ClassGraph-based scanner.
+## Configuration options
 
-See the original 0.0.x series for the historical proof-of-concept behaviour.
+| Parameter | Required | Default | Description |
+|-----------|----------|---------|-------------|
+| `schemaName` | Yes | — | Output filename stem (produces `schemaName.fbs`) |
+| `schemaNamespace` | No | `generated.flatbuffers` | FlatBuffers namespace |
+| `outputDir` | No | `${project.build.directory}/aurkitu/schemas` | Destination directory |
+| `specifiedPackages` | No | all packages | Limit ClassGraph scanning for performance |
+| `validate` | No | `true` | Enable basic schema validation reporting |
 
-## Building
+Additional options from the 0.0.x series (namespace overrides, schema includes, consolidated vs per-dependency schemas, schema caching, ignore static members, file identifier, etc.) will be re-introduced as the generator matures.
+
+---
+
+## Usage examples
+
+### Root type
+```java
+@FlatBufferTable(rootType = true)
+public class SampleClassTable {
+    // fields...
+}
+```
+
+### Struct vs table
+```java
+@FlatBufferTable(value = FlatBufferTable.TableStructureType.STRUCT)
+public class SampleClassStruct {
+    private float x;
+    private float y;
+    private float z;
+}
+```
+
+### Enums
+```java
+@FlatBufferEnum(enumType = FieldType.BYTE)
+public enum SampleEnumByte {
+    @FlatBufferEnumTypeField
+    byte id;
+    String description;
+    // ...
+}
+```
+
+### Ignore fields
+```java
+@FlatBufferIgnore
+protected String ignore;
+```
+
+### Field options (type overrides, defaults, full name, etc.)
+```java
+@FlatBufferFieldOptions(fieldType = FieldType.IDENT, defaultValue = "SHORT_SWORD")
+protected SampleClassTableInnerEnumInt innerEnum;
+```
+
+---
+
+## Peculiarities & limitations (historical + current)
+
+- **Unsigned types**: FlatBuffers supports unsigned primitives; Java does not. 0.0.x mapped wrappers to signed primitives. Future 1.x work may improve this.
+- **Maps**: The 0.0.x series generated intermediate `MapValueSet_<type>_<field>` tables (a workaround). Clients and servers needed custom translation code. This pattern will be revisited.
+- **Lists / arrays**: Supported for simple (non-parameterised) element types.
+- **Inner classes**: `$` in type names can cause issues; prefer `useFullName` where applicable.
+- **Scanning performance**: Always prefer `specifiedPackages` (or the older `specifiedDependencies`) to avoid full classpath scans.
+- **Java baseline**: 1.0.0 requires JDK 17+. The original series targeted Java 8.
+
+---
+
+## Sample output (illustrative, from 0.0.x tests)
+
+```idl
+// Aurkitu automatically generated IDL FlatBuffer Schema
+namespace generated.flatbuffers;
+
+enum SampleEnumByte : byte { EnvironmentAlpha = 1, EnvironmentBeta = 2, EnvironmentGamma = 3 }
+
+table SampleClassTable {
+  id:long;
+  name:string;
+  // ...
+}
+
+root_type SampleClassTable;
+```
+
+---
+
+## Validation
+
+When `validate` is enabled, comments describing issues (missing type definitions, invalid paths containing `$`, empty enums, bad namespaces, etc.) can be appended to the generated schema. This helps catch problems before running `flatc`.
+
+Example (from original series):
+```idl
+// Schema failed validation (i.e. flatc will likely fail):
+// Issue : TYPE_DEFINITION_NOT_DEFINED, Location: SampleClassTable, Name: anomalousSamples
+// Issue : INVALID_PATH, Location: SampleClassTable, Name: definedInnerEnumArray, Comment: Array type name contains '$'...
+```
+
+---
+
+## Compiling schemas with flatc
+
+Download or build `flatc` from the [FlatBuffers](https://github.com/google/flatbuffers) project (current 25.x series recommended).
+
+```bash
+# Example
+flatc --java --gen-mutable -o target/aurkitu/output/java target/aurkitu/schemas/*.fbs
+flatc --cpp -o target/aurkitu/output/cpp target/aurkitu/schemas/*.fbs
+```
+
+This can be automated further via the Maven exec plugin or a dedicated FlatBuffers Maven plugin.
+
+---
+
+## Building Aurkitu itself
 
 Requires JDK 17+.
 
 ```bash
 mvn clean verify
 ```
+
+---
+
+## Roadmap (updated for 1.0+)
+
+- [x] Modern Java 17 baseline + ClassGraph scanning
+- [x] Drop custom Reflections module
+- [ ] Complete field-level processing (primitives, wrappers, enums, lists, maps, defaults, comments)
+- [ ] Full validation against current `flatc`
+- [ ] Re-introduce advanced configuration (includes, namespace overrides, caching, etc.)
+- [ ] Support for common Java types (`Date`, `URL`, etc.) behind a flag
+- [ ] Improved unsigned / primitive mapping
+- [ ] Expanded JUnit 5 test coverage and integration tests
+- [ ] Reliable Maven Central publishing
+
+---
 
 ## License
 
