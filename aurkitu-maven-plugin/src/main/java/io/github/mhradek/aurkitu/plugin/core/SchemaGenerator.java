@@ -40,6 +40,7 @@ public class SchemaGenerator {
                 .enableAnnotationInfo()
                 .enableClassInfo()
                 .enableFieldInfo()
+                .enableStaticFinalFieldConstantInitializerValues()
                 .ignoreFieldVisibility()
                 .acceptPackages(specifiedPackages != null && !specifiedPackages.isEmpty()
                         ? specifiedPackages.toArray(new String[0])
