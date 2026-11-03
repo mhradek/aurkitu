@@ -25,6 +25,19 @@ jobs:
           server-id: central
           server-username: MAVEN_USERNAME
           server-password: MAVEN_PASSWORD
+      - name: Check Central credentials
+        run: |
+          python3 - << 'PY2'
+          from pathlib import Path
+          import os
+          text = Path.home().joinpath(".m2/settings.xml").read_text()
+          user_len = len(os.environ.get("MAVEN_USERNAME", ""))
+          pass_len = len(os.environ.get("MAVEN_PASSWORD", ""))
+          print(f"MAVEN_USERNAME length: {user_len}")
+          print(f"MAVEN_PASSWORD length: {pass_len}")
+          print("settings has server id central:", "<id>central</id>" in text)
+          print("settings username empty:", "<username></username>" in text or "<username/>" in text)
+          PY2
       - name: Import GPG key
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
