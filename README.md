@@ -242,21 +242,29 @@ mvn clean verify
 | **Tests** | Mixed | Pure JUnit 5 + flatc test | — |
 | **CI** | Basic | JDK 17 + official flatc download | [Optional flatc validation](#optional-flatc-validation) |
 
-## Roadmap (post-1.0.0)
+## Roadmap & production priorities
 
-### Near term
+### Priority table (production release)
 
-- [ ] Complete Maven Central publishing (add GPG + Central Portal secrets and enable `mvn deploy` in publish workflow)
-- [ ] Confirm generated `plugin.xml` descriptor in a release build
-- [ ] Expand Mojo integration tests (full plugin invocation with `maven-plugin-testing`)
-- [ ] Upload JaCoCo coverage to codecov/coveralls
+| Priority | Item | Why it matters | Status |
+|----------|------|----------------|--------|
+| **High** | Maven Central publishing (GPG + Central Portal secrets, enable `mvn deploy`) | Required to ship 1.0.0 | Blocked on secrets |
+| **High** | Confirm `plugin.xml` descriptor in a release build | Ensures the plugin is installable | Ready to verify |
+| **High** | Final Javadoc pass on public API (`AurkituMojo`, `SchemaGenerator`, annotations) | Usability for consumers | Partial |
+| **Medium** | Full Mojo integration tests (`maven-plugin-testing`) | Parameter binding & lifecycle confidence | Config-level tests exist |
+| **Medium** | Upload JaCoCo coverage to codecov/coveralls | Visibility & badge accuracy | JaCoCo reports generated locally |
+| **Medium** | Document `byte[]` → `[ubyte]` and `fieldId` in configuration examples | Completeness | Mentioned in changes table |
+| **Low** | True multi-namespace schema splitting | Advanced use case | Not started |
+| **Low** | Additional field attributes (`key`, `hash`, …) | Advanced use case | `fieldId` only |
+| **Low** | Schema include resolution / cross-schema references | Advanced use case | Includes are emitted only |
+| **Low** | Configurable binary vector type (`[byte]` vs `[ubyte]`) | Flexibility | Fixed to `[ubyte]` |
+| **Nice to have** | Snake_case opt-out examples in more places | Clarity | Documented in migration guide |
+| **Nice to have** | Performance notes for large codebases | Guidance | `specifiedPackages` recommended |
 
-### Future
+### Done in 1.0.0 (summary)
 
-- [ ] True multi-namespace schema splitting (separate files or namespace blocks)
-- [ ] Optional attributes beyond `id` (e.g. `key`, `hash`)
-- [ ] Schema include resolution and cross-schema type references
-- [ ] Configurable binary vector type (`[byte]` vs `[ubyte]`)
+Java 17, ClassGraph scanner, field processing (primitives, lists, nested maps, enums, unions, structs, inheritance), field options (type override, required, deprecated, defaults, comments, useFullName, fieldId), common type mapping, snake_case (default on), generateVersion, content-aware cache, failOnValidationIssues, optional flatc validation + CI binary, pure JUnit 5 + flatc test, Mojo config tests, JaCoCo, migration guide, Codacy issues addressed.
+
 
 ## License
 
