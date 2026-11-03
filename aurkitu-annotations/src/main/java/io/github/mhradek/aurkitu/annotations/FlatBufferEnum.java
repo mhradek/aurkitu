@@ -17,7 +17,7 @@ public @interface FlatBufferEnum {
     EnumStructureType value() default EnumStructureType.ENUM;
 
     // Defaulting to the smallest size
-    EnumType enumType() default EnumType.BYTE;\n\n    /**\n     * Optional per-type namespace override.\n     */\n    String namespace() default \"\";
+    EnumType enumType() default EnumType.BYTE;\n\n    /**\n     * Optional per-type namespace override.\n     */\n    String namespace() default "";
 
     enum EnumStructureType {
         ENUM, UNION;
