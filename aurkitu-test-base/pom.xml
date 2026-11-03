@@ -11,7 +11,7 @@
     <description>Test project to create base dependency with Aurkitu annotations.</description>
 
     <parent>
-        <groupId>com.michaelhradek</groupId>
+        <groupId>io.github.mhradek</groupId>
         <artifactId>aurkitu-parent</artifactId>
         <version>0.0.7.6</version>
         <relativePath>..</relativePath>
@@ -24,7 +24,7 @@
             <version>${lombok.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.michaelhradek</groupId>
+            <groupId>io.github.mhradek</groupId>
             <artifactId>aurkitu-annotations</artifactId>
             <version>${aurkitu.version}</version>
         </dependency>

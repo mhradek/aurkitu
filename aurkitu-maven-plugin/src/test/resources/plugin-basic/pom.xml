@@ -4,7 +4,7 @@
 
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.michaelhradek.aurkitu.test</groupId>
+    <groupId>io.github.mhradek.aurkitu.test</groupId>
     <artifactId>plugin-basic</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>jar</packaging>
@@ -47,7 +47,7 @@
             </plugin>
 
             <plugin>
-                <groupId>com.michaelhradek</groupId>
+                <groupId>io.github.mhradek</groupId>
                 <artifactId>aurkitu-maven-plugin</artifactId>
                 <version>0.0.7.6</version>
                 <configuration>

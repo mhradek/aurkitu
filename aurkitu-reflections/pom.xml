@@ -2,13 +2,13 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.michaelhradek.aurkitu</groupId>
+    <groupId>io.github.mhradek.aurkitu</groupId>
     <artifactId>reflections</artifactId>
     <version>0.9.12-AURKITU</version>
     <packaging>jar</packaging>
 
     <parent>
-        <groupId>com.michaelhradek</groupId>
+        <groupId>io.github.mhradek</groupId>
         <artifactId>aurkitu-parent</artifactId>
         <version>0.0.7.6</version>
         <relativePath>..</relativePath>
