@@ -8,7 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class SchemaGeneratorTest {
 
@@ -17,8 +17,6 @@ class SchemaGeneratorTest {
 
     @Test
     void generatesSchemaFile() throws Exception {
-        // Limited unit test without full MavenProject / classpath of annotated models.
-        // Verifies the generator can run and produce a schema file.
         SchemaGenerator generator = new SchemaGenerator(null, List.of(), true);
         File out = tempDir.toFile();
         generator.generate("test", "generated.flatbuffers", out);
@@ -28,5 +26,61 @@ class SchemaGeneratorTest {
         String content = Files.readString(schema);
         assertTrue(content.contains("namespace generated.flatbuffers"), "Namespace should be present");
         assertTrue(content.contains("// Aurkitu 1.0.0"), "Header should be present");
+    }
+
+    @Test
+    void generatesTablesEnumsMapsAndLists() throws Exception {
+        SchemaGenerator generator = new SchemaGenerator(
+                null,
+                List.of("com.michaelhradek.aurkitu.plugin.core.testmodels"),
+                true);
+        File out = tempDir.toFile();
+        generator.generate("models", "test.models", out);
+
+        Path schemaPath = out.toPath().resolve("models.fbs");
+        assertTrue(Files.exists(schemaPath));
+        String content = Files.readString(schemaPath);
+
+        // Header and namespace
+        assertTrue(content.contains("namespace test.models;"));
+        assertTrue(content.contains("// Aurkitu 1.0.0"));
+
+        // Root table
+        assertTrue(content.contains("table SampleRootTable {"));
+        assertTrue(content.contains("root_type SampleRootTable;"));
+
+        // Primitives
+        assertTrue(content.contains("id:long;"));
+        assertTrue(content.contains("name:string;"));
+        assertTrue(content.contains("active:bool;"));
+
+        // Field options default
+        assertTrue(content.contains("level:int = 42;") || content.contains("level:int=42;"));
+
+        // Ignore
+        assertFalse(content.contains("ignored:"));
+
+        // List
+        assertTrue(content.contains("tags:[string];") || content.contains("tags:[String];"));
+
+        // Simple map
+        assertTrue(content.contains("scores:[MapValueSet_SampleRootTable_scores];"));
+        assertTrue(content.contains("table MapValueSet_SampleRootTable_scores {"));
+        assertTrue(content.contains("key:string;"));
+        assertTrue(content.contains("value:int;") || content.contains("value:Integer;"));
+
+        // Nested map
+        assertTrue(content.contains("nestedMap:[MapValueSet_SampleRootTable_nestedMap];"));
+        assertTrue(content.contains("table MapValueSet_SampleRootTable_nestedMap {"));
+
+        // Enum
+        assertTrue(content.contains("enum SampleEnum : byte {"));
+        assertTrue(content.contains("ALPHA"));
+        assertTrue(content.contains("BETA"));
+        assertTrue(content.contains("GAMMA"));
+
+        // Struct
+        assertTrue(content.contains("struct SampleStruct {"));
+        assertTrue(content.contains("x:float;"));
     }
 }
