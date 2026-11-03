@@ -29,10 +29,12 @@ public class SchemaGenerator {
         public final boolean mapCommonTypes;
         public final boolean cacheEnabled;
         public final boolean snakeCaseFields;
+        public final boolean generateVersion;
 
         public Config(MavenProject project, List<String> specifiedPackages, boolean validate,
                       boolean ignoreStaticMembers, String fileIdentifier, List<String> includes,
-                      boolean mapCommonTypes, boolean cacheEnabled, boolean snakeCaseFields) {
+                      boolean mapCommonTypes, boolean cacheEnabled, boolean snakeCaseFields,
+                      boolean generateVersion) {
             this.project = project;
             this.specifiedPackages = specifiedPackages;
             this.validate = validate;
@@ -42,11 +44,12 @@ public class SchemaGenerator {
             this.mapCommonTypes = mapCommonTypes;
             this.cacheEnabled = cacheEnabled;
             this.snakeCaseFields = snakeCaseFields;
+            this.generateVersion = generateVersion;
         }
 
         // Convenience constructor for tests
         public Config(MavenProject project, List<String> specifiedPackages, boolean validate) {
-            this(project, specifiedPackages, validate, true, null, List.of(), true, false, true);
+            this(project, specifiedPackages, validate, true, null, List.of(), true, false, true, false);
         }
     }
 
@@ -99,6 +102,8 @@ public class SchemaGenerator {
 
             StringBuilder schema = new StringBuilder();
             schema.append("// Aurkitu 1.0.0 automatically generated FlatBuffer schema\n");
+            // Placeholder for version; filled later if generateVersion is true
+            int versionInsertPoint = schema.length();
             schema.append("namespace ").append(namespace).append(";\n\n");
 
             if (config.fileIdentifier != null && !config.fileIdentifier.isBlank()) {
@@ -151,6 +156,20 @@ public class SchemaGenerator {
 
             // Final sanitization for flatc compatibility
             String sanitized = schema.toString().replace('$', '_');
+
+            if (config.generateVersion) {
+                // Hash the schema excluding any validation comment block
+                String forHash = sanitized;
+                int valIdx = forHash.indexOf("\n// Validation issues:");
+                if (valIdx > 0) {
+                    forHash = forHash.substring(0, valIdx);
+                }
+                String version = Integer.toHexString(forHash.hashCode());
+                sanitized = sanitized.replace(
+                        "// Aurkitu 1.0.0 automatically generated FlatBuffer schema\n",
+                        "// Aurkitu 1.0.0 automatically generated FlatBuffer schema\n// @version: " + version + "\n");
+            }
+
             Files.writeString(outFile.toPath(), sanitized);
             if (config.cacheEnabled) {
                 Files.writeString(cacheFile.toPath(), inputHash);

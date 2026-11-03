@@ -107,7 +107,8 @@ class SchemaGeneratorTest {
                 List.of("common.fbs", "types.fbs"),
                 true,
                 false,
-                true);
+                true,
+                false);
         SchemaGenerator generator = new SchemaGenerator(config);
         File out = tempDir.toFile();
         generator.generate("config", "test.config", out);
@@ -158,7 +159,8 @@ class SchemaGeneratorTest {
                 List.of(),
                 false,
                 false,
-                true);
+                true,
+                false);
         SchemaGenerator generator = new SchemaGenerator(config);
         File out = tempDir.toFile();
         generator.generate("nocommon", "test.nocommon", out);
