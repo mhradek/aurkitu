@@ -37,6 +37,7 @@ class AurkituMojoIntegrationTest {
         set(mojo, "snakeCaseFields", true);
         set(mojo, "generateVersion", true);
         set(mojo, "failOnValidationIssues", false);
+        set(mojo, "fileExtension", "bin");
         set(mojo, "cacheEnabled", false);
 
         mojo.execute();
@@ -68,6 +69,7 @@ class AurkituMojoIntegrationTest {
         set(mojo, "snakeCaseFields", true);
         set(mojo, "generateVersion", false);
         set(mojo, "failOnValidationIssues", false);
+        set(mojo, "fileExtension", "bin");
         set(mojo, "cacheEnabled", false);
 
         mojo.execute();

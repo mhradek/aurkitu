@@ -82,6 +82,12 @@ public class AurkituMojo extends AbstractMojo {
     @Parameter(property = "aurkitu.failOnValidationIssues", defaultValue = "false")
     private boolean failOnValidationIssues;
 
+    /**
+     * Optional file extension for generated binaries (emits file_extension "...").
+     */
+    @Parameter(property = "aurkitu.fileExtension")
+    private String fileExtension;
+
     @Override
     public void execute() throws MojoExecutionException {
         log.info("Aurkitu 1.0.0 - generating schema '{}' in namespace '{}'", schemaName, schemaNamespace);
@@ -91,7 +97,7 @@ public class AurkituMojo extends AbstractMojo {
         }
 
         SchemaGenerator.Config config = new SchemaGenerator.Config(
-                project, specifiedPackages, validate, ignoreStaticMembers, fileIdentifier, includes, mapCommonTypes, cacheEnabled, snakeCaseFields, generateVersion, failOnValidationIssues);
+                project, specifiedPackages, validate, ignoreStaticMembers, fileIdentifier, includes, mapCommonTypes, cacheEnabled, snakeCaseFields, generateVersion, failOnValidationIssues, fileExtension);
         SchemaGenerator generator = new SchemaGenerator(config);
         generator.generate(schemaName, schemaNamespace, outputDirectory);
 

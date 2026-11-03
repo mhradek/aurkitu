@@ -109,7 +109,8 @@ class SchemaGeneratorTest {
                 false,
                 true,
                 false,
-                false);
+                false,
+                null);
         SchemaGenerator generator = new SchemaGenerator(config);
         File out = tempDir.toFile();
         generator.generate("config", "test.config", out);
@@ -162,7 +163,8 @@ class SchemaGeneratorTest {
                 false,
                 true,
                 false,
-                false);
+                false,
+                null);
         SchemaGenerator generator = new SchemaGenerator(config);
         File out = tempDir.toFile();
         generator.generate("nocommon", "test.nocommon", out);

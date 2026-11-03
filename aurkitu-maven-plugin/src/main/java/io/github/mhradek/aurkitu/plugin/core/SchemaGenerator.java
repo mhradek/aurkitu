@@ -52,11 +52,12 @@ public class SchemaGenerator {
             this.snakeCaseFields = snakeCaseFields;
             this.generateVersion = generateVersion;
             this.failOnValidationIssues = failOnValidationIssues;
+            this.fileExtension = fileExtension;
         }
 
         // Convenience constructor for tests
         public Config(MavenProject project, List<String> specifiedPackages, boolean validate) {
-            this(project, specifiedPackages, validate, true, null, List.of(), true, false, true, false, false);
+            this(project, specifiedPackages, validate, true, null, List.of(), true, false, true, false, false, null);
         }
     }
 
@@ -102,6 +103,9 @@ public class SchemaGenerator {
 
             if (config.fileIdentifier != null && !config.fileIdentifier.isBlank()) {
                 schema.append("file_identifier \"").append(config.fileIdentifier).append("\";\n\n");
+            }
+            if (config.fileExtension != null && !config.fileExtension.isBlank()) {
+                schema.append("file_extension \"").append(config.fileExtension).append("\";\n\n");
             }
 
             for (String include : config.includes) {
@@ -234,7 +238,7 @@ public class SchemaGenerator {
         if (tableAnno != null && tableAnno.getParameterValues().get("namespace") != null) {
             String ns = String.valueOf(tableAnno.getParameterValues().get("namespace").getValue());
             if (!ns.isBlank()) {
-                sb.append("// namespace: ").append(ns).append("\n");
+                sb.append("namespace ").append(ns).append(";\n");
             }
         }
 
@@ -260,6 +264,14 @@ public class SchemaGenerator {
 
                 String fieldLine = buildField(field, current);
                 if (fieldLine != null) {
+                    if (isStruct && isNonScalarField(fieldLine)) {
+                        if (config.validate) {
+                            validationIssues.add("Struct " + classInfo.getSimpleName() + " field " + field.getName() + " is non-scalar; structs may only contain scalars or other structs");
+                        }
+                        if (config.failOnValidationIssues) {
+                            continue;
+                        }
+                    }
                     sb.append("  ").append(fieldLine).append(";\n");
                 }
             }
@@ -342,6 +354,36 @@ public class SchemaGenerator {
             Object fid = options.getParameterValues().get("fieldId").getValue();
             if (fid instanceof Number n && n.intValue() >= 0) {
                 line.append(" (id: ").append(n.intValue()).append(")");
+            }
+            if (Boolean.TRUE.equals(options.getParameterValues().get("key").getValue())) {
+                line.append(" (key)");
+            }
+            Object hash = options.getParameterValues().get("hash").getValue();
+            if (hash != null && !String.valueOf(hash).isBlank()) {
+                line.append(" (hash: \"").append(hash).append("\")");
+            }
+            Object nfb = options.getParameterValues().get("nestedFlatbuffer").getValue();
+            if (nfb != null && !String.valueOf(nfb).isBlank()) {
+                line.append(" (nested_flatbuffer: \"").append(nfb).append("\")");
+            }
+            if (Boolean.TRUE.equals(options.getParameterValues().get("flexbuffer").getValue())) {
+                line.append(" (flexbuffer)");
+            }
+            Object fa = options.getParameterValues().get("forceAlign").getValue();
+            if (fa instanceof Number fn && fn.intValue() > 0) {
+                line.append(" (force_align: ").append(fn.intValue()).append(")");
+            }
+            Object fl = options.getParameterValues().get("fixedLength").getValue();
+            if (fl instanceof Number ln && ln.intValue() > 0) {
+                // Rewrite trailing type as fixed array if not already
+                String current = line.toString();
+                if (!current.contains("[")) {
+                    int colon = current.lastIndexOf(':');
+                    if (colon > 0) {
+                        line = new StringBuilder(current.substring(0, colon + 1))
+                                .append("[").append(current.substring(colon + 1)).append(":").append(ln.intValue()).append("]");
+                    }
+                }
             }
         }
 

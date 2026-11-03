@@ -94,6 +94,7 @@ Run `mvn process-classes` (or a later phase) to generate `target/aurkitu/schemas
 | `snakeCaseFields` | No | `true` | Convert Java field names to snake_case in the schema |
 | `generateVersion` | No | `false` | Emit a content hash of the schema (excluding validation comments) as `// @version: <hash>` |
 | `failOnValidationIssues` | No | `false` | Fail the build when validation issues are found |
+| `fileExtension` | No | — | Emit `file_extension "..."` |
 
 Additional options from the 0.0.x series (namespace overrides, schema includes, consolidated vs per-dependency schemas, schema caching, ignore static members, file identifier, etc.) will be re-introduced as the generator matures.
 

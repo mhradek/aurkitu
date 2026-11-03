@@ -62,7 +62,8 @@ class AurkituMojoConfigTest {
                 false,
                 false, // snakeCaseFields = false
                 false,
-                false);
+                false,
+                null);
         SchemaGenerator generator = new SchemaGenerator(config);
         File out = tempDir.toFile();
         generator.generate("camel", "test.camel", out);
@@ -85,7 +86,8 @@ class AurkituMojoConfigTest {
                 false,
                 true,
                 false,
-                false);
+                false,
+                null);
         SchemaGenerator generator = new SchemaGenerator(config);
         File out = tempDir.toFile();
         generator.generate("inc", "test.inc", out);
@@ -127,7 +129,8 @@ class AurkituMojoConfigTest {
                 true, // cacheEnabled
                 true,
                 false,
-                false);
+                false,
+                null);
         SchemaGenerator generator = new SchemaGenerator(config);
         File out = tempDir.toFile();
 
