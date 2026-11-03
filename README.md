@@ -10,6 +10,7 @@
 **Aurkitu** (Basque for “to find”) generates FlatBuffers IDL (`.fbs`) schemas from annotated Java models. This keeps your server-side models as the single source of truth — especially useful when models carry storage annotations (e.g. DynamoDB) that must remain authoritative.
 
 This is the **modernised 1.0.0** release:
+
 - Targets **Java 17**
 - Uses **ClassGraph** for reliable classpath scanning (replaces the old custom Reflections fork and fragile classloader logic)
 - Simplified architecture with clearer separation of concerns
@@ -24,6 +25,7 @@ This is the **modernised 1.0.0** release:
 ## Quick Start
 
 ### Annotations
+
 ```xml
 <dependency>
     <groupId>io.github.mhradek</groupId>
@@ -33,6 +35,7 @@ This is the **modernised 1.0.0** release:
 ```
 
 ### Maven Plugin
+
 ```xml
 <plugin>
     <groupId>io.github.mhradek</groupId>
@@ -59,6 +62,7 @@ This is the **modernised 1.0.0** release:
 ```
 
 ### Annotate models
+
 ```java
 import io.github.mhradek.aurkitu.annotations.FlatBufferTable;
 
@@ -98,6 +102,7 @@ Additional options from the 0.0.x series (namespace overrides, schema includes, 
 ## Usage examples
 
 ### Root type
+
 ```java
 @FlatBufferTable(rootType = true)
 public class SampleClassTable {
@@ -106,6 +111,7 @@ public class SampleClassTable {
 ```
 
 ### Struct vs table
+
 ```java
 @FlatBufferTable(value = FlatBufferTable.TableStructureType.STRUCT)
 public class SampleClassStruct {
@@ -116,6 +122,7 @@ public class SampleClassStruct {
 ```
 
 ### Enums
+
 ```java
 @FlatBufferEnum(enumType = FieldType.BYTE)
 public enum SampleEnumByte {
@@ -127,12 +134,14 @@ public enum SampleEnumByte {
 ```
 
 ### Ignore fields
+
 ```java
 @FlatBufferIgnore
 protected String ignore;
 ```
 
 ### Field options (type overrides, defaults, full name, etc.)
+
 ```java
 @FlatBufferFieldOptions(fieldType = FieldType.IDENT, defaultValue = "SHORT_SWORD")
 protected SampleClassTableInnerEnumInt innerEnum;
@@ -175,6 +184,7 @@ root_type SampleClassTable;
 When `validate` is enabled, comments describing issues (missing type definitions, invalid paths containing `$`, empty enums, bad namespaces, etc.) can be appended to the generated schema. This helps catch problems before running `flatc`.
 
 Example (from original series):
+
 ```idl
 // Schema failed validation (i.e. flatc will likely fail):
 // Issue : TYPE_DEFINITION_NOT_DEFINED, Location: SampleClassTable, Name: anomalousSamples
@@ -235,12 +245,14 @@ mvn clean verify
 ## Roadmap (post-1.0.0)
 
 ### Near term
+
 - [ ] Complete Maven Central publishing (add GPG + Central Portal secrets and enable `mvn deploy` in publish workflow)
 - [ ] Confirm generated `plugin.xml` descriptor in a release build
 - [ ] Expand Mojo integration tests (full plugin invocation with `maven-plugin-testing`)
 - [ ] Upload JaCoCo coverage to codecov/coveralls
 
 ### Future
+
 - [ ] True multi-namespace schema splitting (separate files or namespace blocks)
 - [ ] Optional attributes beyond `id` (e.g. `key`, `hash`)
 - [ ] Schema include resolution and cross-schema type references
@@ -255,12 +267,14 @@ MIT
 ## Migration from 0.0.x to 1.0.0
 
 ### Coordinates
+
 | | 0.0.x | 1.0.0 |
 |---|-------|-------|
 | groupId | `com.michaelhradek` | `io.github.mhradek` |
 | Java packages | `com.michaelhradek.aurkitu.*` | `io.github.mhradek.aurkitu.*` |
 
 ### Key changes
+
 - **Java baseline**: 8 → 17
 - **Scanning**: Custom Reflections fork → ClassGraph
 - **Architecture**: Monolithic `Processor` → simplified `SchemaGenerator` + Mojo
@@ -270,12 +284,12 @@ MIT
 - **New options**: `ignoreStaticMembers`, `fileIdentifier`, `includes`, `mapCommonTypes`, `snakeCaseFields` (default `true`)
 
 ### Migration steps
+
 1. Update dependency/plugin coordinates to `io.github.mhradek`.
 2. Change imports from `com.michaelhradek.aurkitu.*` to `io.github.mhradek.aurkitu.*`.
 3. Rebuild and re-generate schemas.
 4. Review any custom translation code that relies on the old `MapValueSet` naming (names are similar but not guaranteed identical).
 5. Prefer `specifiedPackages` for faster scans.
-
 
 ---
 
@@ -296,6 +310,7 @@ mvn -B clean verify
 ```
 
 ### Via the plugin
+
 Set `flatcPath` to the location of the `flatc` binary. When `validate` is true the generated schema is checked:
 
 ```xml
@@ -307,6 +322,7 @@ Set `flatcPath` to the location of the `flatc` binary. When `validate` is true t
 ```
 
 ### Via the Maven exec plugin (alternative)
+
 ```xml
 <plugin>
     <groupId>org.codehaus.mojo</groupId>
@@ -328,4 +344,3 @@ Set `flatcPath` to the location of the `flatc` binary. When `validate` is true t
     </executions>
 </plugin>
 ```
-
