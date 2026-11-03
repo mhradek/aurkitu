@@ -11,11 +11,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
           cache: maven
+
+      - name: Download flatc
+        run: |
+          curl -sL -o flatc.zip https://github.com/google/flatbuffers/releases/download/v25.12.19/Linux.flatc.binary.g++-13.zip
+          unzip -o flatc.zip -d /tmp/flatc-bin
+          chmod +x /tmp/flatc-bin/flatc
+          echo "/tmp/flatc-bin" >> $GITHUB_PATH
+          /tmp/flatc-bin/flatc --version
+
       - name: Build with Maven
         run: mvn -B clean verify
+        env:
+          FLATC_PATH: /tmp/flatc-bin/flatc
