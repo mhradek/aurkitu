@@ -99,6 +99,36 @@ Additional options from the 0.0.x series (namespace overrides, schema includes, 
 
 ---
 
+
+### Binary data and field ids
+
+`byte[]` fields are mapped to `[ubyte]` (the common FlatBuffers binary vector convention):
+
+```java
+@FlatBufferTable
+public class Blob {
+    private byte[] payload;   // → payload:[ubyte];
+}
+```
+
+Optional explicit field ids can be set with `fieldId` (use `-1` to omit):
+
+```java
+@FlatBufferFieldOptions(fieldId = 0, required = true)
+private String id;
+
+@FlatBufferFieldOptions(fieldId = 1)
+private int version;
+```
+
+emits:
+
+```idl
+id:string (required) (id: 0);
+version:int (id: 1);
+```
+
+
 ## Usage examples
 
 ### Root type
