@@ -214,6 +214,43 @@ mvn clean verify
 - [x] Field options: type override, required, deprecated, defaults, comments, useFullName
 - [x] Inheritance / superclass field scanning
 - [x] Common Java type mapping (Date, URL, BigDecimal, UUID, …)
+- [x] Configuration: fileIdentifier, includes, ignoreStaticMembers, mapCommonTypes, cacheEnabled, snakeCaseFields
+- [x] Optional flatc validation (Mojo + CI download of official binary)
+- [x] Pure JUnit 5 tests + flatc integration test
+- [x] Namespace migration to `io.github.mhradek`
+- [x] Migration guide
+- [x] snakeCaseFields option (default true)
+
+### Production-readiness outstanding items
+
+**Release blockers**
+- [ ] Maven Central publishing (GPG signing + Central Portal credentials + complete publish workflow)
+- [ ] Confirm plugin descriptor / `plugin.xml` generation is correct for 1.0.0 coordinates
+- [ ] Final README / Javadoc pass for public API
+
+**Quality & correctness**
+- [ ] Mojo integration tests (parameter binding, output directory, flatcPath path)
+- [ ] Stronger content-aware schema cache (currently hashes config, not class content)
+- [ ] Fail-the-build option when validation issues exist
+- [ ] Coverage reporting in CI (codecov or coveralls)
+
+**Feature completeness (optional for 1.0.0)**
+- [ ] True multi-namespace schema splitting
+- [ ] `byte[]` → `[ubyte]` (or configurable binary vector) mapping
+- [ ] Optional attributes / explicit field `id` support
+
+**Maintenance**
+- [ ] Remove unused test resources under `src/test/resources/plugin-*` if no longer referenced
+- [ ] Document snake_case breaking change clearly in migration guide
+
+
+## Done in 1.0.0
+- [x] Java 17 baseline
+- [x] ClassGraph scanner (replaces custom Reflections)
+- [x] Field processing: primitives, lists, maps (nested), enums, unions, structs
+- [x] Field options: type override, required, deprecated, defaults, comments, useFullName
+- [x] Inheritance / superclass field scanning
+- [x] Common Java type mapping (Date, URL, BigDecimal, UUID, …)
 - [x] Configuration: fileIdentifier, includes, ignoreStaticMembers, mapCommonTypes, cacheEnabled
 - [x] Optional flatc validation (Mojo + CI download of official binary)
 - [x] Pure JUnit 5 tests + flatc integration test
