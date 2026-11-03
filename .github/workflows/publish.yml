@@ -19,10 +19,32 @@ jobs:
           server-id: central
           server-username: MAVEN_USERNAME
           server-password: MAVEN_PASSWORD
-          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
-          gpg-passphrase: MAVEN_GPG_PASSPHRASE
+      - name: Import GPG key
         env:
-          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GPG_PRIVATE_KEY}" ]; then
+            echo "GPG_PRIVATE_KEY secret is empty"
+            exit 1
+          fi
+          echo "$GPG_PRIVATE_KEY" | head -1
+          printf '%s\n' "$GPG_PRIVATE_KEY" | gpg --batch --import
+          gpg --list-secret-keys --keyid-format LONG
+          KEY_ID=$(gpg --list-secret-keys --with-colons | awk -F: '/^sec:/ { print $5; exit }')
+          if [ -z "${KEY_ID}" ]; then
+            echo "No secret key imported. GPG_PRIVATE_KEY must be an armored PRIVATE key block."
+            exit 1
+          fi
+          echo "Imported key: ${KEY_ID}"
+          echo "${KEY_ID}:6:" | gpg --import-ownertrust
+          mkdir -p ~/.gnupg
+          chmod 700 ~/.gnupg
+          echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
+          echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
+          gpg-connect-agent reloadagent /bye || true
+          echo "KEY_ID=${KEY_ID}" >> "$GITHUB_ENV"
       - name: Build
         run: mvn -B clean verify
       - name: Publish to Maven Central
@@ -30,4 +52,7 @@ jobs:
           MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
           MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-        run: mvn -B deploy -P release -DskipTests -Dgpg.passphrase="${MAVEN_GPG_PASSPHRASE}"
+        run: |
+          mvn -B deploy -P release -DskipTests \
+            -Dgpg.passphrase="${MAVEN_GPG_PASSPHRASE}" \
+            -Dgpg.keyname="${KEY_ID}"
