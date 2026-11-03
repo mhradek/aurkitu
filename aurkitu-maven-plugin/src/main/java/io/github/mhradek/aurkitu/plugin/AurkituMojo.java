@@ -38,6 +38,18 @@ public class AurkituMojo extends AbstractMojo {
     @Parameter(property = "aurkitu.validate", defaultValue = "true")
     private boolean validate;
 
+    @Parameter(property = "aurkitu.ignoreStaticMembers", defaultValue = "true")
+    private boolean ignoreStaticMembers;
+
+    @Parameter(property = "aurkitu.fileIdentifier")
+    private String fileIdentifier;
+
+    @Parameter(property = "aurkitu.includes")
+    private List<String> includes;
+
+    @Parameter(property = "aurkitu.mapCommonTypes", defaultValue = "true")
+    private boolean mapCommonTypes;
+
     @Override
     public void execute() throws MojoExecutionException {
         log.info("Aurkitu 1.0.0 - generating schema '{}' in namespace '{}'", schemaName, schemaNamespace);
@@ -46,7 +58,9 @@ public class AurkituMojo extends AbstractMojo {
             throw new MojoExecutionException("Failed to create output directory: " + outputDirectory);
         }
 
-        SchemaGenerator generator = new SchemaGenerator(project, specifiedPackages, validate);
+        SchemaGenerator.Config config = new SchemaGenerator.Config(
+                project, specifiedPackages, validate, ignoreStaticMembers, fileIdentifier, includes, mapCommonTypes);
+        SchemaGenerator generator = new SchemaGenerator(config);
         generator.generate(schemaName, schemaNamespace, outputDirectory);
 
         log.info("Schema generation complete. Output: {}", outputDirectory.getAbsolutePath());

@@ -14,22 +14,49 @@ import java.util.*;
  * Core generator using ClassGraph for modern, reliable classpath scanning.
  * Processes fields of annotated tables and enums, including nested Map support
  * via recursively generated MapValueSet tables. Supports comments, useFullName,
- * and basic validation reporting.
+ * common Java types, and basic validation reporting.
  */
 @Slf4j
 public class SchemaGenerator {
 
-    private final MavenProject project;
-    private final List<String> specifiedPackages;
-    private final boolean validate;
+    public static class Config {
+        public final MavenProject project;
+        public final List<String> specifiedPackages;
+        public final boolean validate;
+        public final boolean ignoreStaticMembers;
+        public final String fileIdentifier;
+        public final List<String> includes;
+        public final boolean mapCommonTypes;
 
+        public Config(MavenProject project, List<String> specifiedPackages, boolean validate,
+                      boolean ignoreStaticMembers, String fileIdentifier, List<String> includes,
+                      boolean mapCommonTypes) {
+            this.project = project;
+            this.specifiedPackages = specifiedPackages;
+            this.validate = validate;
+            this.ignoreStaticMembers = ignoreStaticMembers;
+            this.fileIdentifier = fileIdentifier;
+            this.includes = includes != null ? includes : List.of();
+            this.mapCommonTypes = mapCommonTypes;
+        }
+
+        // Convenience constructor for tests
+        public Config(MavenProject project, List<String> specifiedPackages, boolean validate) {
+            this(project, specifiedPackages, validate, true, null, List.of(), true);
+        }
+    }
+
+    private final Config config;
     private final Map<String, String> generatedMapTables = new LinkedHashMap<>();
     private final List<String> validationIssues = new ArrayList<>();
 
+    public SchemaGenerator(Config config) {
+        this.config = config;
+    }
+
+    // Backward-compatible constructor
     public SchemaGenerator(MavenProject project, List<String> specifiedPackages, boolean validate) {
-        this.project = project;
-        this.specifiedPackages = specifiedPackages;
-        this.validate = validate;
+        this(new Config(project, specifiedPackages, validate));
     }
 
     public void generate(String schemaName, String namespace, File outputDir) {
@@ -42,14 +69,25 @@ public class SchemaGenerator {
                 .enableFieldInfo()
                 .enableStaticFinalFieldConstantInitializerValues()
                 .ignoreFieldVisibility()
-                .acceptPackages(specifiedPackages != null && !specifiedPackages.isEmpty()
-                        ? specifiedPackages.toArray(new String[0])
+                .acceptPackages(config.specifiedPackages != null && !config.specifiedPackages.isEmpty()
+                        ? config.specifiedPackages.toArray(new String[0])
                         : new String[]{"*"})
                 .scan()) {
 
             StringBuilder schema = new StringBuilder();
             schema.append("// Aurkitu 1.0.0 automatically generated FlatBuffer schema\n");
             schema.append("namespace ").append(namespace).append(";\n\n");
+
+            if (config.fileIdentifier != null && !config.fileIdentifier.isBlank()) {
+                schema.append("file_identifier \"").append(config.fileIdentifier).append("\";\n\n");
+            }
+
+            for (String include : config.includes) {
+                schema.append("include \"").append(include).append("\";\n");
+            }
+            if (!config.includes.isEmpty()) {
+                schema.append("\n");
+            }
 
             String rootType = null;
 
@@ -58,7 +96,7 @@ public class SchemaGenerator {
                 if (isRootType(classInfo)) {
                     if (rootType != null) {
                         log.warn("Multiple root types detected; using last one: {}", classInfo.getSimpleName());
-                        if (validate) {
+                        if (config.validate) {
                             validationIssues.add("Multiple root types; last used: " + classInfo.getSimpleName());
                         }
                     }
@@ -76,11 +114,11 @@ public class SchemaGenerator {
 
             if (rootType != null) {
                 schema.append("root_type ").append(rootType).append(";\n");
-            } else if (validate) {
+            } else if (config.validate) {
                 validationIssues.add("No root type defined");
             }
 
-            if (validate && !validationIssues.isEmpty()) {
+            if (config.validate && !validationIssues.isEmpty()) {
                 schema.append("\n// Validation issues:\n");
                 for (String issue : validationIssues) {
                     schema.append("// - ").append(issue).append("\n");
@@ -91,7 +129,7 @@ public class SchemaGenerator {
             Files.writeString(outFile.toPath(), schema.toString());
             log.info("Wrote schema to {}", outFile.getAbsolutePath());
 
-            if (validate) {
+            if (config.validate) {
                 if (validationIssues.isEmpty()) {
                     log.info("Basic validation complete. No issues found.");
                 } else {
@@ -117,7 +155,6 @@ public class SchemaGenerator {
             isStruct = structure.contains("STRUCT");
         }
 
-        // Type-level comment
         if (classInfo.hasAnnotation(FlatBufferComment.class.getName())) {
             var commentAnno = classInfo.getAnnotationInfo(FlatBufferComment.class.getName());
             String comment = String.valueOf(commentAnno.getParameterValues().get("comment").getValue());
@@ -132,7 +169,7 @@ public class SchemaGenerator {
             if (field.hasAnnotation(FlatBufferIgnore.class.getName())) {
                 continue;
             }
-            if (java.lang.reflect.Modifier.isStatic(field.getModifiers())) {
+            if (config.ignoreStaticMembers && java.lang.reflect.Modifier.isStatic(field.getModifiers())) {
                 continue;
             }
 
@@ -152,7 +189,7 @@ public class SchemaGenerator {
 
         if (typeName == null) {
             log.debug("Skipping unsupported field: {}", name);
-            if (validate) {
+            if (config.validate) {
                 validationIssues.add("Unsupported field type: " + owner.getSimpleName() + "." + name);
             }
             return null;
@@ -160,7 +197,6 @@ public class SchemaGenerator {
 
         StringBuilder line = new StringBuilder();
 
-        // Field-level comment
         if (field.hasAnnotation(FlatBufferComment.class.getName())) {
             var commentAnno = field.getAnnotationInfo(FlatBufferComment.class.getName());
             String comment = String.valueOf(commentAnno.getParameterValues().get("comment").getValue());
@@ -178,6 +214,15 @@ public class SchemaGenerator {
                     .orElse("");
             if (!defaultValue.isBlank()) {
                 line.append(" = ").append(defaultValue);
+            }
+
+            // Note unsigned force
+            Object ft = options.getParameterValues().get("fieldType").getValue();
+            if (ft != null && ft.toString().contains("U")) {
+                if (config.validate) {
+                    validationIssues.add("Unsigned type forced on " + owner.getSimpleName() + "." + name +
+                            " (" + ft + ") — Java has no unsigned primitives");
+                }
             }
         }
 
@@ -290,6 +335,18 @@ public class SchemaGenerator {
 
         if (typeSig instanceof ClassRefTypeSignature classRef) {
             String baseName = classRef.getBaseClassName();
+
+            // Common Java types (optional)
+            if (config.mapCommonTypes) {
+                if (baseName.endsWith("Date") || baseName.endsWith("LocalDate") ||
+                    baseName.endsWith("LocalDateTime") || baseName.endsWith("Instant") ||
+                    baseName.endsWith("URL") || baseName.endsWith("URI") ||
+                    baseName.endsWith("BigDecimal") || baseName.endsWith("BigInteger") ||
+                    baseName.endsWith("UUID")) {
+                    return "string";
+                }
+            }
+
             if (baseName.endsWith("String")) return "string";
             if (baseName.endsWith("Boolean")) return "bool";
             if (baseName.endsWith("Byte")) return "byte";
@@ -344,7 +401,6 @@ public class SchemaGenerator {
             if (java.lang.reflect.Modifier.isStatic(field.getModifiers()) &&
                 field.getTypeSignatureOrTypeDescriptor().toString().contains(classInfo.getName())) {
                 sb.append("  ").append(field.getName());
-                // Constant initializer value if available
                 Object constVal = field.getConstantInitializerValue();
                 if (constVal != null) {
                     sb.append(" = ").append(constVal);
