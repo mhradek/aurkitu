@@ -6,6 +6,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -15,11 +16,10 @@ class SchemaGeneratorTest {
     Path tempDir;
 
     @Test
-    void generatesSchemaWithFields() throws Exception {
-        // Note: full MavenProject integration is limited in unit tests;
-        // this verifies the generator writes a file without crashing.
-        // Real coverage comes from integration tests against annotated classes.
-        SchemaGenerator generator = new SchemaGenerator(null, List.of("com.michaelhradek.aurkitu"), true);
+    void generatesSchemaFile() throws Exception {
+        // Limited unit test without full MavenProject / classpath of annotated models.
+        // Verifies the generator can run and produce a schema file.
+        SchemaGenerator generator = new SchemaGenerator(null, List.of(), true);
         File out = tempDir.toFile();
         generator.generate("test", "generated.flatbuffers", out);
 
