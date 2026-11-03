@@ -31,3 +31,13 @@ jobs:
         run: mvn -B clean verify
         env:
           FLATC_PATH: /tmp/flatc-bin/flatc
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: >-
+            aurkitu-annotations/target/site/jacoco/jacoco.xml,
+            aurkitu-maven-plugin/target/site/jacoco/jacoco.xml
+          fail_ci_if_error: false
+
