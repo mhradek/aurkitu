@@ -279,11 +279,11 @@ mvn clean verify
 | Priority | Item | Why it matters | Status |
 |----------|------|----------------|--------|
 | **High** | Maven Central publishing (GPG + Central Portal secrets, enable `mvn deploy`) | Required to ship 1.0.0 | Blocked on secrets |
-| **High** | Confirm `plugin.xml` descriptor in a release build | Ensures the plugin is installable | Ready to verify |
+| **High** | Confirm `plugin.xml` descriptor in a release build | Ensures the plugin is installable | Done (`AurkituMojoIntegrationTest`) |
 | **High** | Final Javadoc pass on public API (`AurkituMojo`, `SchemaGenerator`, annotations) | Usability for consumers | Partial |
-| **Medium** | Full Mojo integration tests (`maven-plugin-testing`) | Parameter binding & lifecycle confidence | Config-level tests exist |
+| **Medium** | Full Mojo integration tests | Parameter binding & lifecycle confidence | Done (`AurkituMojoIntegrationTest`) |
 | **Medium** | Upload JaCoCo coverage to codecov/coveralls | Visibility & badge accuracy | JaCoCo reports generated locally |
-| **Medium** | Document `byte[]` → `[ubyte]` and `fieldId` in configuration examples | Completeness | Mentioned in changes table |
+| **Medium** | Document `byte[]` → `[ubyte]` and `fieldId` in configuration examples | Completeness | Done |
 | **Low** | True multi-namespace schema splitting | Advanced use case | Not started |
 | **Low** | Additional field attributes (`key`, `hash`, …) | Advanced use case | `fieldId` only |
 | **Low** | Schema include resolution / cross-schema references | Advanced use case | Includes are emitted only |
