@@ -69,7 +69,7 @@ class FlatcValidationTest {
         assertTrue(Files.exists(schema));
 
         String flatc = findFlatc();
-        ProcessBuilder pb = new ProcessBuilder(flatc, "--schema", schema.toAbsolutePath().toString());
+        ProcessBuilder pb = new ProcessBuilder(flatc, "--java", "-o", out.getAbsolutePath(), schema.toAbsolutePath().toString());
         pb.directory(out);
         pb.redirectErrorStream(true);
         Process process = pb.start();
