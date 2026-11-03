@@ -100,8 +100,6 @@ Additional options from the 0.0.x series (namespace overrides, schema includes, 
 
 ---
 
-
-
 ### Unsigned types
 
 Java has no unsigned primitives. Use `fieldType` to emit unsigned FlatBuffers types:
@@ -147,7 +145,6 @@ emits:
 id:string (required) (id: 0);
 version:int (id: 1);
 ```
-
 
 ## Usage examples
 
@@ -314,8 +311,6 @@ mvn clean verify
 ### Done in 1.0.0 (summary)
 
 Java 17, ClassGraph scanner, field processing (primitives, lists, nested maps, enums, unions, structs, inheritance), field options (type override, required, deprecated, defaults, comments, useFullName, fieldId), common type mapping, snake_case (default on), generateVersion, content-aware cache, failOnValidationIssues, optional flatc validation + CI binary, pure JUnit 5 + flatc test, Mojo config tests, JaCoCo, migration guide, Codacy issues addressed.
-
-
 
 ## FlatBuffers schema compatibility
 

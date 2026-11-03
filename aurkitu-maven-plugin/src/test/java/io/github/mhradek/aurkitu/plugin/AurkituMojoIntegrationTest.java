@@ -98,6 +98,7 @@ class AurkituMojoIntegrationTest {
         assertTrue(xml.contains("<name>flatcPath</name>"));
     }
 
+    @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
     private static void set(Object target, String field, Object value) throws Exception {
         Field f = target.getClass().getDeclaredField(field);
         f.setAccessible(true);
