@@ -28,7 +28,4 @@ jobs:
           MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-        run: |
-          echo "Configure Central Portal credentials and GPG secrets, then enable:"
-          echo "mvn -B deploy -DskipTests"
-          # mvn -B deploy -DskipTests
+        run: mvn -B deploy -P release -DskipTests
