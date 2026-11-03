@@ -204,20 +204,28 @@ mvn clean verify
 
 ---
 
-## Roadmap (updated for 1.0+)
+## Roadmap (updated for 1.0.0)
 
-- [x] Modern Java 17 baseline + ClassGraph scanning
-- [x] Drop custom Reflections module
-- [x] Migrate coordinates to `io.github.mhradek`
-- [ ] Complete field-level processing (primitives, wrappers, enums, lists, maps, defaults, comments)
-- [ ] Full validation against current `flatc`
-- [ ] Re-introduce advanced configuration (includes, namespace overrides, caching, etc.)
-- [ ] Support for common Java types (`Date`, `URL`, etc.) behind a flag
-- [ ] Improved unsigned / primitive mapping
-- [ ] Expanded JUnit 5 test coverage and integration tests
-- [ ] Reliable Maven Central publishing
+### Done in 1.0.0
+- [x] Java 17 baseline
+- [x] ClassGraph scanner (replaces custom Reflections)
+- [x] Field processing: primitives, lists, maps (nested), enums, unions, structs
+- [x] Field options: type override, required, deprecated, defaults, comments, useFullName
+- [x] Inheritance / superclass field scanning
+- [x] Common Java type mapping (Date, URL, BigDecimal, UUID, …)
+- [x] Configuration: fileIdentifier, includes, ignoreStaticMembers, mapCommonTypes, cacheEnabled
+- [x] Optional flatc validation (Mojo + CI download of official binary)
+- [x] Pure JUnit 5 tests + flatc integration test
+- [x] Namespace migration to `io.github.mhradek`
+- [x] Migration guide
 
----
+### Remaining / future
+- [ ] True multi-namespace schema splitting
+- [ ] Stronger content-aware schema cache
+- [ ] Optional snake_case field names
+- [ ] Mojo integration tests
+- [ ] Coverage reporting in CI
+- [ ] Maven Central publishing (GPG + Central Portal)
 
 ## License
 

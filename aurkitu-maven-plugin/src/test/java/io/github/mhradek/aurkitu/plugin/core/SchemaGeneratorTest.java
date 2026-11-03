@@ -80,6 +80,20 @@ class SchemaGeneratorTest {
         // Struct
         assertTrue(content.contains("struct SampleStruct {"));
         assertTrue(content.contains("x:float"));
+
+        // Union
+        assertTrue(content.contains("union SampleUnion {"));
+        assertTrue(content.contains("NONE"));
+        assertTrue(content.contains("SampleRootTable"));
+
+        // Required / deprecated / comments / inheritance
+        assertTrue(content.contains("table SampleWithOptions {"));
+        assertTrue(content.contains("// A table with various field options"));
+        assertTrue(content.contains("// Required identifier"));
+        assertTrue(content.contains("code:string (required)"));
+        assertTrue(content.contains("legacyValue:int = 0 (deprecated)") || content.contains("legacyValue:int=0 (deprecated)"));
+        assertTrue(content.contains("baseId:long"));
+        assertTrue(content.contains("baseName:string"));
     }
 
     @Test
