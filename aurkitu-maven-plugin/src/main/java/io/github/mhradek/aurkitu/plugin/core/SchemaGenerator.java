@@ -1,9 +1,6 @@
 package io.github.mhradek.aurkitu.plugin.core;
 
-import io.github.mhradek.aurkitu.annotations.FlatBufferEnum;
-import io.github.mhradek.aurkitu.annotations.FlatBufferFieldOptions;
-import io.github.mhradek.aurkitu.annotations.FlatBufferIgnore;
-import io.github.mhradek.aurkitu.annotations.FlatBufferTable;
+import io.github.mhradek.aurkitu.annotations.*;
 import io.github.classgraph.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.maven.project.MavenProject;
@@ -16,7 +13,8 @@ import java.util.*;
 /**
  * Core generator using ClassGraph for modern, reliable classpath scanning.
  * Processes fields of annotated tables and enums, including nested Map support
- * via recursively generated MapValueSet tables.
+ * via recursively generated MapValueSet tables. Supports comments, useFullName,
+ * and basic validation reporting.
  */
 @Slf4j
 public class SchemaGenerator {
@@ -25,8 +23,8 @@ public class SchemaGenerator {
     private final List<String> specifiedPackages;
     private final boolean validate;
 
-    // Collected auto-generated map tables: name -> schema fragment
     private final Map<String, String> generatedMapTables = new LinkedHashMap<>();
+    private final List<String> validationIssues = new ArrayList<>();
 
     public SchemaGenerator(MavenProject project, List<String> specifiedPackages, boolean validate) {
         this.project = project;
@@ -36,6 +34,7 @@ public class SchemaGenerator {
 
     public void generate(String schemaName, String namespace, File outputDir) {
         generatedMapTables.clear();
+        validationIssues.clear();
 
         try (ScanResult scanResult = new ClassGraph()
                 .enableAnnotationInfo()
@@ -53,29 +52,38 @@ public class SchemaGenerator {
 
             String rootType = null;
 
-            // Tables
             for (ClassInfo classInfo : scanResult.getClassesWithAnnotation(FlatBufferTable.class.getName())) {
                 schema.append(buildTable(classInfo));
                 if (isRootType(classInfo)) {
                     if (rootType != null) {
                         log.warn("Multiple root types detected; using last one: {}", classInfo.getSimpleName());
+                        if (validate) {
+                            validationIssues.add("Multiple root types; last used: " + classInfo.getSimpleName());
+                        }
                     }
                     rootType = classInfo.getSimpleName();
                 }
             }
 
-            // Enums
             for (ClassInfo classInfo : scanResult.getClassesWithAnnotation(FlatBufferEnum.class.getName())) {
                 schema.append(buildEnum(classInfo));
             }
 
-            // Emit auto-generated MapValueSet tables
             for (String mapTable : generatedMapTables.values()) {
                 schema.append(mapTable);
             }
 
             if (rootType != null) {
                 schema.append("root_type ").append(rootType).append(";\n");
+            } else if (validate) {
+                validationIssues.add("No root type defined");
+            }
+
+            if (validate && !validationIssues.isEmpty()) {
+                schema.append("\n// Validation issues:\n");
+                for (String issue : validationIssues) {
+                    schema.append("// - ").append(issue).append("\n");
+                }
             }
 
             File outFile = new File(outputDir, schemaName + ".fbs");
@@ -83,7 +91,11 @@ public class SchemaGenerator {
             log.info("Wrote schema to {}", outFile.getAbsolutePath());
 
             if (validate) {
-                log.info("Basic validation complete. Run flatc for full schema validation.");
+                if (validationIssues.isEmpty()) {
+                    log.info("Basic validation complete. No issues found.");
+                } else {
+                    log.warn("Validation issues found ({}). See schema comments.", validationIssues.size());
+                }
             }
         } catch (IOException e) {
             throw new RuntimeException("Failed to generate schema", e);
@@ -102,6 +114,15 @@ public class SchemaGenerator {
         if (tableAnno != null && tableAnno.getParameterValues().get("value") != null) {
             String structure = String.valueOf(tableAnno.getParameterValues().get("value").getValue());
             isStruct = structure.contains("STRUCT");
+        }
+
+        // Type-level comment
+        if (classInfo.hasAnnotation(FlatBufferComment.class.getName())) {
+            var commentAnno = classInfo.getAnnotationInfo(FlatBufferComment.class.getName());
+            String comment = String.valueOf(commentAnno.getParameterValues().get("comment").getValue());
+            if (!comment.isBlank()) {
+                sb.append("// ").append(comment).append("\n");
+            }
         }
 
         sb.append(isStruct ? "struct " : "table ").append(classInfo.getSimpleName()).append(" {\n");
@@ -126,14 +147,28 @@ public class SchemaGenerator {
 
     private String buildField(FieldInfo field, ClassInfo owner) {
         String name = field.getName();
-        String typeName = mapType(field.getTypeSignatureOrTypeDescriptor(), owner, field.getName());
+        String typeName = mapType(field.getTypeSignatureOrTypeDescriptor(), owner, field.getName(), field);
 
         if (typeName == null) {
             log.debug("Skipping unsupported field: {}", name);
+            if (validate) {
+                validationIssues.add("Unsupported field type: " + owner.getSimpleName() + "." + name);
+            }
             return null;
         }
 
-        StringBuilder line = new StringBuilder(name).append(":").append(typeName);
+        StringBuilder line = new StringBuilder();
+
+        // Field-level comment
+        if (field.hasAnnotation(FlatBufferComment.class.getName())) {
+            var commentAnno = field.getAnnotationInfo(FlatBufferComment.class.getName());
+            String comment = String.valueOf(commentAnno.getParameterValues().get("comment").getValue());
+            if (!comment.isBlank()) {
+                line.append("// ").append(comment).append("\n  ");
+            }
+        }
+
+        line.append(name).append(":").append(typeName);
 
         if (field.hasAnnotation(FlatBufferFieldOptions.class.getName())) {
             var options = field.getAnnotationInfo(FlatBufferFieldOptions.class.getName());
@@ -148,13 +183,15 @@ public class SchemaGenerator {
         return line.toString();
     }
 
-    /**
-     * Recursively maps a TypeSignature to a FlatBuffers type name.
-     * Nested maps generate intermediate MapValueSet tables.
-     */
-    private String mapType(TypeSignature typeSig, ClassInfo owner, String contextName) {
+    private String mapType(TypeSignature typeSig, ClassInfo owner, String contextName, FieldInfo field) {
         if (typeSig == null) {
             return "string";
+        }
+
+        boolean useFullName = false;
+        if (field != null && field.hasAnnotation(FlatBufferFieldOptions.class.getName())) {
+            var options = field.getAnnotationInfo(FlatBufferFieldOptions.class.getName());
+            useFullName = Boolean.TRUE.equals(options.getParameterValues().get("useFullName").getValue());
         }
 
         if (isMapType(typeSig)) {
@@ -165,7 +202,7 @@ public class SchemaGenerator {
             return "[" + extractListElementType(typeSig, owner, contextName) + "]";
         }
 
-        return mapTypeSignature(typeSig);
+        return mapTypeSignature(typeSig, useFullName);
     }
 
     private boolean isMapType(TypeSignature typeSig) {
@@ -198,10 +235,10 @@ public class SchemaGenerator {
             if (typeSig instanceof ClassRefTypeSignature classRef) {
                 List<TypeArgument> args = classRef.getTypeArguments();
                 if (args.size() >= 1) {
-                    keyType = mapType(args.get(0).getTypeSignature(), owner, contextName + "_key");
+                    keyType = mapType(args.get(0).getTypeSignature(), owner, contextName + "_key", null);
                 }
                 if (args.size() >= 2) {
-                    valueType = mapType(args.get(1).getTypeSignature(), owner, contextName + "_value");
+                    valueType = mapType(args.get(1).getTypeSignature(), owner, contextName + "_value", null);
                 }
             }
 
@@ -220,18 +257,18 @@ public class SchemaGenerator {
 
     private String extractListElementType(TypeSignature typeSig, ClassInfo owner, String contextName) {
         if (typeSig instanceof ArrayTypeSignature array) {
-            return mapType(array.getElementTypeSignature(), owner, contextName + "_elem");
+            return mapType(array.getElementTypeSignature(), owner, contextName + "_elem", null);
         }
         if (typeSig instanceof ClassRefTypeSignature classRef) {
             List<TypeArgument> args = classRef.getTypeArguments();
             if (!args.isEmpty()) {
-                return mapType(args.get(0).getTypeSignature(), owner, contextName + "_elem");
+                return mapType(args.get(0).getTypeSignature(), owner, contextName + "_elem", null);
             }
         }
         return "string";
     }
 
-    private String mapTypeSignature(TypeSignature typeSig) {
+    private String mapTypeSignature(TypeSignature typeSig, boolean useFullName) {
         if (typeSig == null) {
             return "string";
         }
@@ -262,12 +299,15 @@ public class SchemaGenerator {
             if (baseName.endsWith("Double")) return "double";
             if (baseName.endsWith("Character")) return "string";
 
+            if (useFullName) {
+                return baseName.replace('.', '_');
+            }
             int lastDot = baseName.lastIndexOf('.');
             return lastDot >= 0 ? baseName.substring(lastDot + 1) : baseName;
         }
 
         if (typeSig instanceof ArrayTypeSignature array) {
-            return "[" + mapTypeSignature(array.getElementTypeSignature()) + "]";
+            return "[" + mapTypeSignature(array.getElementTypeSignature(), useFullName) + "]";
         }
 
         return typeSig.toStringWithSimpleNames().replace("java.lang.", "").replace("java.util.", "").trim();
@@ -289,12 +329,26 @@ public class SchemaGenerator {
             else if (et.contains("LONG")) enumType = "long";
         }
 
+        if (classInfo.hasAnnotation(FlatBufferComment.class.getName())) {
+            var commentAnno = classInfo.getAnnotationInfo(FlatBufferComment.class.getName());
+            String comment = String.valueOf(commentAnno.getParameterValues().get("comment").getValue());
+            if (!comment.isBlank()) {
+                sb.append("// ").append(comment).append("\n");
+            }
+        }
+
         sb.append("enum ").append(classInfo.getSimpleName()).append(" : ").append(enumType).append(" {\n");
 
         for (FieldInfo field : classInfo.getDeclaredFieldInfo()) {
             if (java.lang.reflect.Modifier.isStatic(field.getModifiers()) &&
                 field.getTypeSignatureOrTypeDescriptor().toString().contains(classInfo.getName())) {
-                sb.append("  ").append(field.getName()).append(",\n");
+                sb.append("  ").append(field.getName());
+                // Constant initializer value if available
+                Object constVal = field.getConstantInitializerValue();
+                if (constVal != null) {
+                    sb.append(" = ").append(constVal);
+                }
+                sb.append(",\n");
             }
         }
 
