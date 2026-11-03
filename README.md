@@ -87,6 +87,7 @@ Run `mvn process-classes` (or a later phase) to generate `target/aurkitu/schemas
 | `fileIdentifier` | No | — | Optional 4-character file identifier |
 | `includes` | No | — | List of schema files to `include` |
 | `mapCommonTypes` | No | `true` | Map `Date`, `URL`, `BigDecimal`, `UUID`, etc. to `string` |
+| `snakeCaseFields` | No | `true` | Convert Java field names to snake_case in the schema |
 
 Additional options from the 0.0.x series (namespace overrides, schema includes, consolidated vs per-dependency schemas, schema caching, ignore static members, file identifier, etc.) will be re-introduced as the generator matures.
 
