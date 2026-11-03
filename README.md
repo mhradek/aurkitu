@@ -253,6 +253,20 @@ MIT
 
 ## Optional flatc validation
 
+### CI setup
+
+GitHub Actions (`.github/workflows/main.yml`) automatically downloads the official `flatc` 25.12.19 Linux binary and makes it available for the build:
+
+- The binary is placed on `PATH` and exported as `FLATC_PATH`.
+- `mvn verify` runs `FlatcValidationTest`, which generates a representative schema and invokes `flatc --java` against it.
+- The test is skipped automatically when `flatc` is not present (so local builds without it still pass).
+
+To run the validation test locally, install `flatc` or set `FLATC_PATH` to the binary, then run:
+
+```bash
+mvn -B clean verify
+```
+
 ### Via the plugin
 Set `flatcPath` to the location of the `flatc` binary. When `validate` is true the generated schema is checked:
 
