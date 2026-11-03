@@ -285,7 +285,8 @@ MIT
 - **Architecture**: Monolithic `Processor` → simplified `SchemaGenerator` + Mojo
 - **Tests**: Mixed → pure JUnit 5
 - **Maps**: Still use generated `MapValueSet_*` tables (workaround unchanged)
-- **New options**: `ignoreStaticMembers`, `fileIdentifier`, `includes`, `mapCommonTypes`
+- **Field names (breaking)**: 0.0.x emitted Java field names as-is (camelCase). 1.0.0 converts them to snake_case by default (`nestedMap` → `nested_map`) to follow modern FlatBuffers style. Set `<snakeCaseFields>false</snakeCaseFields>` to preserve the old behaviour.
+- **New options**: `ignoreStaticMembers`, `fileIdentifier`, `includes`, `mapCommonTypes`, `snakeCaseFields` (default `true`)
 
 ### Migration steps
 1. Update dependency/plugin coordinates to `io.github.mhradek`.
