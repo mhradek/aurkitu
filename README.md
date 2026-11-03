@@ -297,6 +297,46 @@ mvn clean verify
 Java 17, ClassGraph scanner, field processing (primitives, lists, nested maps, enums, unions, structs, inheritance), field options (type override, required, deprecated, defaults, comments, useFullName, fieldId), common type mapping, snake_case (default on), generateVersion, content-aware cache, failOnValidationIssues, optional flatc validation + CI binary, pure JUnit 5 + flatc test, Mojo config tests, JaCoCo, migration guide, Codacy issues addressed.
 
 
+
+## FlatBuffers schema compatibility
+
+Comparison of Aurkitu 1.0.0 output against the [official FlatBuffers schema documentation](https://flatbuffers.dev/schema/).
+
+| Feature | Aurkitu 1.0.0 | Official schema | Notes |
+|---------|---------------|-----------------|-------|
+| `namespace` | Yes | Yes | Match; per-type override emits a new `namespace` line |
+| `file_identifier` | Yes | Yes | Match |
+| `file_extension` | Yes | Yes | Match |
+| `include` | Yes | Yes | Match (emitted only; not resolved) |
+| `root_type` | Yes | Yes | Match |
+| `table` / `struct` | Yes | Yes | Match |
+| Struct constraints | Warned | Scalars/structs only | Non-scalar fields in structs produce a validation issue |
+| `enum` | Yes | Yes | Match; explicit values emitted |
+| `union` | Yes | Yes | Match; `NONE` added by `flatc` |
+| Field defaults | Yes | Scalars only | Match for scalars |
+| `(required)` / `(deprecated)` | Yes | Yes | Match |
+| `(id: N)` | Yes | Yes | Partial use can invalidate schema; use on all fields or none |
+| `(key)` | Yes | Yes | Match |
+| `(hash: "...")` | Yes | Yes | Match |
+| `(nested_flatbuffer)` | Yes | Yes | Match |
+| `(flexbuffer)` | Yes | Yes | Match |
+| `(force_align: N)` | Yes | Yes | Match |
+| Fixed-size arrays `[type:N]` | Yes | Yes | Via `fixedLength` |
+| `byte[]` → `[ubyte]` | Yes | Valid | Match |
+| snake_case fields | Default on | Recommended | Match |
+| `///` doc comments | No | Supported | Minor gap |
+| `rpc_service` | No | Supported | Not implemented |
+| Unsigned types | Via `fieldType` | Full set | Partial (override required) |
+| Multiple namespaces | Per-type `namespace` line | Supported | Basic support |
+| Map workaround | `MapValueSet_*` | No native map | Standard workaround |
+
+### Remaining discrepancies
+
+- Partial `fieldId` use (some fields only) can produce schemas `flatc` rejects.
+- Structs with non-scalar fields are flagged but still emitted unless `failOnValidationIssues` is true.
+- `rpc_service` and `///` documentation comments are not generated.
+- Unsigned types require an explicit `fieldType` override.
+
 ## License
 
 MIT
