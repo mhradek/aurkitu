@@ -83,7 +83,7 @@ class SchemaGeneratorTest {
 
         // Union
         assertTrue(content.contains("union SampleUnion {"));
-        assertTrue(content.contains("NONE"));
+        assertTrue(content.contains("EMPTY"));
         assertTrue(content.contains("SampleRootTable"));
 
         // Required / deprecated / comments / inheritance
