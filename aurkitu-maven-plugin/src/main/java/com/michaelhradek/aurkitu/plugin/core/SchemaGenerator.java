@@ -4,10 +4,7 @@ import com.michaelhradek.aurkitu.annotations.FlatBufferEnum;
 import com.michaelhradek.aurkitu.annotations.FlatBufferFieldOptions;
 import com.michaelhradek.aurkitu.annotations.FlatBufferIgnore;
 import com.michaelhradek.aurkitu.annotations.FlatBufferTable;
-import io.github.classgraph.ClassGraph;
-import io.github.classgraph.ClassInfo;
-import io.github.classgraph.FieldInfo;
-import io.github.classgraph.ScanResult;
+import io.github.classgraph.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.maven.project.MavenProject;
 
@@ -19,6 +16,7 @@ import java.util.*;
 /**
  * Core generator using ClassGraph for modern, reliable classpath scanning.
  * Processes fields of annotated tables and enums, including Map support via generated MapValueSet tables.
+ * Uses ClassGraph TypeSignature for more accurate generic type parsing.
  */
 @Slf4j
 public class SchemaGenerator {
@@ -150,7 +148,7 @@ public class SchemaGenerator {
     }
 
     private String mapType(FieldInfo field, ClassInfo owner) {
-        String simpleType = field.getTypeSignatureOrTypeDescriptor().toStringWithSimpleNames();
+        TypeSignature typeSig = field.getTypeSignatureOrTypeDescriptor();
 
         // Explicit FieldType override (simplified)
         if (field.hasAnnotation(FlatBufferFieldOptions.class.getName())) {
@@ -169,36 +167,56 @@ public class SchemaGenerator {
             }
         }
 
-        // Map support — generate MapValueSet table and return list reference
-        if (simpleType.contains("Map<") || simpleType.contains("java.util.Map")) {
-            return generateMapTable(field, owner, simpleType);
+        // Map support using structured TypeSignature
+        if (isMapType(typeSig)) {
+            return generateMapTable(field, owner, typeSig);
         }
 
-        // Primitive / wrapper mapping
-        if (simpleType.contains("boolean") || simpleType.contains("Boolean")) return "bool";
-        if (simpleType.contains("byte") || simpleType.contains("Byte")) return "byte";
-        if (simpleType.contains("short") || simpleType.contains("Short")) return "short";
-        if (simpleType.contains("int") || simpleType.contains("Integer")) return "int";
-        if (simpleType.contains("long") || simpleType.contains("Long")) return "long";
-        if (simpleType.contains("float") || simpleType.contains("Float")) return "float";
-        if (simpleType.contains("double") || simpleType.contains("Double")) return "double";
-        if (simpleType.contains("String")) return "string";
-
-        // Basic list / array
-        if (simpleType.contains("List<") || simpleType.contains("[]")) {
-            return "[" + extractElementType(simpleType) + "]";
+        // List / array using structured parsing
+        if (isListOrArray(typeSig)) {
+            return "[" + extractListElementType(typeSig) + "]";
         }
 
-        // Table / enum reference
-        return simpleType.replace("java.lang.", "").replace("java.util.", "").trim();
+        // Primitive / wrapper / string / reference
+        return mapTypeSignature(typeSig);
     }
 
-    private String generateMapTable(FieldInfo field, ClassInfo owner, String simpleType) {
+    private boolean isMapType(TypeSignature typeSig) {
+        if (typeSig instanceof ClassRefTypeSignature classRef) {
+            String base = classRef.getBaseClassName();
+            return "java.util.Map".equals(base) || base.endsWith(".Map");
+        }
+        return false;
+    }
+
+    private boolean isListOrArray(TypeSignature typeSig) {
+        if (typeSig instanceof ArrayTypeSignature) {
+            return true;
+        }
+        if (typeSig instanceof ClassRefTypeSignature classRef) {
+            String base = classRef.getBaseClassName();
+            return "java.util.List".equals(base) || base.endsWith(".List")
+                    || "java.util.Set".equals(base) || base.endsWith(".Set");
+        }
+        return false;
+    }
+
+    private String generateMapTable(FieldInfo field, ClassInfo owner, TypeSignature typeSig) {
         String mapTableName = "MapValueSet_" + owner.getSimpleName() + "_" + field.getName();
 
         if (!generatedMapTables.containsKey(mapTableName)) {
-            String keyType = extractMapType(simpleType, true);
-            String valueType = extractMapType(simpleType, false);
+            String keyType = "string";
+            String valueType = "string";
+
+            if (typeSig instanceof ClassRefTypeSignature classRef) {
+                List<TypeArgument> args = classRef.getTypeArguments();
+                if (args.size() >= 1) {
+                    keyType = mapTypeSignature(args.get(0).getTypeSignature());
+                }
+                if (args.size() >= 2) {
+                    valueType = mapTypeSignature(args.get(1).getTypeSignature());
+                }
+            }
 
             String mapSchema = "// Auto-generated type for use with Map<?, ?>\n" +
                     "table " + mapTableName + " {\n" +
@@ -207,53 +225,68 @@ public class SchemaGenerator {
                     "}\n\n";
 
             generatedMapTables.put(mapTableName, mapSchema);
-            log.debug("Generated map table: {}", mapTableName);
+            log.debug("Generated map table: {} (key={}, value={})", mapTableName, keyType, valueType);
         }
 
         return "[" + mapTableName + "]";
     }
 
-    private String extractMapType(String simpleType, boolean key) {
-        // Rough parse of Map<K, V>
-        int start = simpleType.indexOf('<');
-        int end = simpleType.lastIndexOf('>');
-        if (start < 0 || end < 0 || end <= start) {
-            return "string";
+    private String extractListElementType(TypeSignature typeSig) {
+        if (typeSig instanceof ArrayTypeSignature array) {
+            return mapTypeSignature(array.getElementTypeSignature());
         }
-        String params = simpleType.substring(start + 1, end);
-        String[] parts = params.split(",");
-        if (parts.length < 2) {
-            return "string";
-        }
-        String raw = (key ? parts[0] : parts[1]).trim();
-        return mapSimpleType(raw);
-    }
-
-    private String mapSimpleType(String raw) {
-        String t = raw.replace("java.lang.", "").replace("java.util.", "").trim();
-        if (t.contains("String")) return "string";
-        if (t.contains("Boolean") || t.contains("boolean")) return "bool";
-        if (t.contains("Byte") || t.contains("byte")) return "byte";
-        if (t.contains("Short") || t.contains("short")) return "short";
-        if (t.contains("Integer") || t.contains("int")) return "int";
-        if (t.contains("Long") || t.contains("long")) return "long";
-        if (t.contains("Float") || t.contains("float")) return "float";
-        if (t.contains("Double") || t.contains("double")) return "double";
-        return t; // enum or table name
-    }
-
-    private String extractElementType(String simpleType) {
-        if (simpleType.contains("<")) {
-            int start = simpleType.indexOf('<') + 1;
-            int end = simpleType.lastIndexOf('>');
-            if (start > 0 && end > start) {
-                return mapSimpleType(simpleType.substring(start, end));
+        if (typeSig instanceof ClassRefTypeSignature classRef) {
+            List<TypeArgument> args = classRef.getTypeArguments();
+            if (!args.isEmpty()) {
+                return mapTypeSignature(args.get(0).getTypeSignature());
             }
         }
-        if (simpleType.endsWith("[]")) {
-            return mapSimpleType(simpleType.substring(0, simpleType.length() - 2));
-        }
         return "string";
+    }
+
+    private String mapTypeSignature(TypeSignature typeSig) {
+        if (typeSig == null) {
+            return "string";
+        }
+
+        if (typeSig instanceof BaseTypeSignature base) {
+            return switch (base.getTypeSignatureChar()) {
+                case 'Z' -> "bool";
+                case 'B' -> "byte";
+                case 'S' -> "short";
+                case 'I' -> "int";
+                case 'J' -> "long";
+                case 'F' -> "float";
+                case 'D' -> "double";
+                case 'C' -> "string"; // char -> string for FlatBuffers
+                default -> "string";
+            };
+        }
+
+        if (typeSig instanceof ClassRefTypeSignature classRef) {
+            String baseName = classRef.getBaseClassName();
+            // Wrappers and common types
+            if (baseName.endsWith("String")) return "string";
+            if (baseName.endsWith("Boolean")) return "bool";
+            if (baseName.endsWith("Byte")) return "byte";
+            if (baseName.endsWith("Short")) return "short";
+            if (baseName.endsWith("Integer")) return "int";
+            if (baseName.endsWith("Long")) return "long";
+            if (baseName.endsWith("Float")) return "float";
+            if (baseName.endsWith("Double")) return "double";
+            if (baseName.endsWith("Character")) return "string";
+
+            // Simple name for tables/enums
+            int lastDot = baseName.lastIndexOf('.');
+            return lastDot >= 0 ? baseName.substring(lastDot + 1) : baseName;
+        }
+
+        if (typeSig instanceof ArrayTypeSignature array) {
+            return "[" + mapTypeSignature(array.getElementTypeSignature()) + "]";
+        }
+
+        // Fallback
+        return typeSig.toStringWithSimpleNames().replace("java.lang.", "").replace("java.util.", "").trim();
     }
 
     private String buildEnum(ClassInfo classInfo) {
