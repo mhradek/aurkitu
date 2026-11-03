@@ -1,7 +1,7 @@
 package io.github.mhradek.aurkitu.annotations.types;
 
-import org.junit.Assert;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 public class EnumTypeTest {
 
@@ -10,39 +10,39 @@ public class EnumTypeTest {
         for (EnumType type : EnumType.values()) {
             switch (type) {
                 case BYTE:
-                    Assert.assertEquals(byte.class, type.targetClass);
-                    Assert.assertEquals("byte", type.toString());
+                    assertEquals(byte.class, type.targetClass);
+                    assertEquals("byte", type.toString());
                     break;
                 case UBYTE:
-                    Assert.assertEquals(byte.class, type.targetClass);
-                    Assert.assertEquals("ubyte", type.toString());
+                    assertEquals(byte.class, type.targetClass);
+                    assertEquals("ubyte", type.toString());
                     break;
                 case SHORT:
-                    Assert.assertEquals(short.class, type.targetClass);
-                    Assert.assertEquals("short", type.toString());
+                    assertEquals(short.class, type.targetClass);
+                    assertEquals("short", type.toString());
                     break;
                 case USHORT:
-                    Assert.assertEquals(short.class, type.targetClass);
-                    Assert.assertEquals("ushort", type.toString());
+                    assertEquals(short.class, type.targetClass);
+                    assertEquals("ushort", type.toString());
                     break;
                 case INT:
-                    Assert.assertEquals(int.class, type.targetClass);
-                    Assert.assertEquals("int", type.toString());
+                    assertEquals(int.class, type.targetClass);
+                    assertEquals("int", type.toString());
                     break;
                 case UINT:
-                    Assert.assertEquals(int.class, type.targetClass);
-                    Assert.assertEquals("uint", type.toString());
+                    assertEquals(int.class, type.targetClass);
+                    assertEquals("uint", type.toString());
                     break;
                 case LONG:
-                    Assert.assertEquals(long.class, type.targetClass);
-                    Assert.assertEquals("long", type.toString());
+                    assertEquals(long.class, type.targetClass);
+                    assertEquals("long", type.toString());
                     break;
                 case ULONG:
-                    Assert.assertEquals(long.class, type.targetClass);
-                    Assert.assertEquals("ulong", type.toString());
+                    assertEquals(long.class, type.targetClass);
+                    assertEquals("ulong", type.toString());
                     break;
                 default:
-                    Assert.fail("Undefined enum");
+                    fail("Undefined enum");
                     break;
             }
         }

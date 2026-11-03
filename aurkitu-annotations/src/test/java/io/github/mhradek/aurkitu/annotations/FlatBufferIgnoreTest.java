@@ -1,7 +1,7 @@
 package io.github.mhradek.aurkitu.annotations;
 
-import org.junit.Assert;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
@@ -12,32 +12,32 @@ public class FlatBufferIgnoreTest {
     public void testFlatbufferTableDefault() throws NoSuchFieldException {
         TestTableDefault testTable = new TestTableDefault();
         Annotation[] listClassAnnotations = testTable.getClass().getAnnotations();
-        Assert.assertNotNull(listClassAnnotations);
-        Assert.assertEquals(1, listClassAnnotations.length);
+        assertNotNull(listClassAnnotations);
+        assertEquals(1, listClassAnnotations.length);
 
         Field optionsField = testTable.getClass().getField("ignoredField");
         Annotation[] listFieldAnnotations = optionsField.getDeclaredAnnotations();
-        Assert.assertNotNull(listFieldAnnotations);
-        Assert.assertEquals(1, listFieldAnnotations.length);
+        assertNotNull(listFieldAnnotations);
+        assertEquals(1, listFieldAnnotations.length);
 
         Annotation fieldAnnotation = optionsField.getAnnotation(FlatBufferIgnore.class);
-        Assert.assertNotNull(fieldAnnotation);
+        assertNotNull(fieldAnnotation);
     }
 
     @Test
     public void testFlatbufferTableExtended() throws NoSuchFieldException {
         TestTableDefault testTable = new TestTableDefault();
         Annotation[] listClassAnnotations = testTable.getClass().getAnnotations();
-        Assert.assertNotNull(listClassAnnotations);
-        Assert.assertEquals(1, listClassAnnotations.length);
+        assertNotNull(listClassAnnotations);
+        assertEquals(1, listClassAnnotations.length);
 
         Field optionsField = testTable.getClass().getField("notIgnoredField");
         Annotation[] listFieldAnnotations = optionsField.getDeclaredAnnotations();
-        Assert.assertNotNull(listFieldAnnotations);
-        Assert.assertEquals(0, listFieldAnnotations.length);
+        assertNotNull(listFieldAnnotations);
+        assertEquals(0, listFieldAnnotations.length);
 
         Annotation fieldAnnotation = optionsField.getAnnotation(FlatBufferIgnore.class);
-        Assert.assertNull(fieldAnnotation);
+        assertNull(fieldAnnotation);
     }
 
     @FlatBufferTable

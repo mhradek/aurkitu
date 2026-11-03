@@ -1,7 +1,7 @@
 package io.github.mhradek.aurkitu.annotations;
 
-import org.junit.Assert;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 import java.lang.annotation.Annotation;
 
@@ -11,28 +11,28 @@ public class FlatBufferTableTest {
     public void testFlatbufferTableDefault() {
         TestTableDefault testTable = new TestTableDefault();
         Annotation[] listAnnotations = testTable.getClass().getAnnotations();
-        Assert.assertNotNull(listAnnotations);
-        Assert.assertEquals(1, listAnnotations.length);
+        assertNotNull(listAnnotations);
+        assertEquals(1, listAnnotations.length);
 
         Annotation classAnnotation = testTable.getClass().getAnnotation(FlatBufferTable.class);
-        Assert.assertNotNull(classAnnotation);
+        assertNotNull(classAnnotation);
 
-        Assert.assertEquals(false, ((FlatBufferTable) classAnnotation).rootType());
-        Assert.assertEquals(FlatBufferTable.TableStructureType.TABLE, ((FlatBufferTable) classAnnotation).value());
+        assertEquals(false, ((FlatBufferTable) classAnnotation).rootType());
+        assertEquals(FlatBufferTable.TableStructureType.TABLE, ((FlatBufferTable) classAnnotation).value());
     }
 
     @Test
     public void testFlatbufferTableStructRoot() {
         TestTableStructRoot testTable = new TestTableStructRoot();
         Annotation[] listAnnotations = testTable.getClass().getAnnotations();
-        Assert.assertNotNull(listAnnotations);
-        Assert.assertEquals(2, listAnnotations.length);
+        assertNotNull(listAnnotations);
+        assertEquals(2, listAnnotations.length);
 
         Annotation classAnnotation = testTable.getClass().getAnnotation(FlatBufferTable.class);
-        Assert.assertNotNull(classAnnotation);
+        assertNotNull(classAnnotation);
 
-        Assert.assertEquals(true, ((FlatBufferTable) classAnnotation).rootType());
-        Assert.assertEquals(FlatBufferTable.TableStructureType.STRUCT, ((FlatBufferTable) classAnnotation).value());
+        assertEquals(true, ((FlatBufferTable) classAnnotation).rootType());
+        assertEquals(FlatBufferTable.TableStructureType.STRUCT, ((FlatBufferTable) classAnnotation).value());
     }
 
     @FlatBufferTable

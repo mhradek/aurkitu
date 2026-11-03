@@ -1,7 +1,7 @@
 package io.github.mhradek.aurkitu.annotations.types;
 
-import org.junit.Assert;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 public class FieldTypeTest {
 
@@ -10,67 +10,67 @@ public class FieldTypeTest {
         for (FieldType type : FieldType.values()) {
             switch (type) {
                 case BOOL:
-                    Assert.assertEquals(boolean.class, type.targetClass);
-                    Assert.assertEquals("bool", type.toString());
+                    assertEquals(boolean.class, type.targetClass);
+                    assertEquals("bool", type.toString());
                     break;
                 case BYTE:
-                    Assert.assertEquals(byte.class, type.targetClass);
-                    Assert.assertEquals("byte", type.toString());
+                    assertEquals(byte.class, type.targetClass);
+                    assertEquals("byte", type.toString());
                     break;
                 case UBYTE:
-                    Assert.assertEquals(byte.class, type.targetClass);
-                    Assert.assertEquals("ubyte", type.toString());
+                    assertEquals(byte.class, type.targetClass);
+                    assertEquals("ubyte", type.toString());
                     break;
                 case SHORT:
-                    Assert.assertEquals(short.class, type.targetClass);
-                    Assert.assertEquals("short", type.toString());
+                    assertEquals(short.class, type.targetClass);
+                    assertEquals("short", type.toString());
                     break;
                 case USHORT:
-                    Assert.assertEquals(short.class, type.targetClass);
-                    Assert.assertEquals("ushort", type.toString());
+                    assertEquals(short.class, type.targetClass);
+                    assertEquals("ushort", type.toString());
                     break;
                 case INT:
-                    Assert.assertEquals(int.class, type.targetClass);
-                    Assert.assertEquals("int", type.toString());
+                    assertEquals(int.class, type.targetClass);
+                    assertEquals("int", type.toString());
                     break;
                 case UINT:
-                    Assert.assertEquals(int.class, type.targetClass);
-                    Assert.assertEquals("uint", type.toString());
+                    assertEquals(int.class, type.targetClass);
+                    assertEquals("uint", type.toString());
                     break;
                 case LONG:
-                    Assert.assertEquals(long.class, type.targetClass);
-                    Assert.assertEquals("long", type.toString());
+                    assertEquals(long.class, type.targetClass);
+                    assertEquals("long", type.toString());
                     break;
                 case ULONG:
-                    Assert.assertEquals(long.class, type.targetClass);
-                    Assert.assertEquals("ulong", type.toString());
+                    assertEquals(long.class, type.targetClass);
+                    assertEquals("ulong", type.toString());
                     break;
                 case FLOAT:
-                    Assert.assertEquals(float.class, type.targetClass);
-                    Assert.assertEquals("float", type.toString());
+                    assertEquals(float.class, type.targetClass);
+                    assertEquals("float", type.toString());
                     break;
                 case DOUBLE:
-                    Assert.assertEquals(double.class, type.targetClass);
-                    Assert.assertEquals("double", type.toString());
+                    assertEquals(double.class, type.targetClass);
+                    assertEquals("double", type.toString());
                     break;
                 case STRING:
-                    Assert.assertEquals(String.class, type.targetClass);
-                    Assert.assertEquals("string", type.toString());
+                    assertEquals(String.class, type.targetClass);
+                    assertEquals("string", type.toString());
                     break;
                 case IDENT:
-                    Assert.assertNull(type.targetClass);
-                    Assert.assertEquals("ident", type.toString());
+                    assertNull(type.targetClass);
+                    assertEquals("ident", type.toString());
                     break;
                 case ARRAY:
-                    Assert.assertNull(type.targetClass);
-                    Assert.assertEquals("array", type.toString());
+                    assertNull(type.targetClass);
+                    assertEquals("array", type.toString());
                     break;
                 case MAP:
-                    Assert.assertNull(type.targetClass);
-                    Assert.assertEquals("map", type.toString());
+                    assertNull(type.targetClass);
+                    assertEquals("map", type.toString());
                     break;
                 default:
-                    Assert.fail("Undefined enum");
+                    fail("Undefined enum");
                     break;
             }
         }

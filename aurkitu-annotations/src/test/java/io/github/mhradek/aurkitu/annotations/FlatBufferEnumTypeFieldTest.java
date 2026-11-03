@@ -1,7 +1,7 @@
 package io.github.mhradek.aurkitu.annotations;
 
-import org.junit.Assert;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
@@ -12,32 +12,32 @@ public class FlatBufferEnumTypeFieldTest {
     public void testDefault() throws NoSuchFieldException {
         TestEnumDefault testEnum = TestEnumDefault.VALUE;
         Annotation[] listClassAnnotations = testEnum.getClass().getAnnotations();
-        Assert.assertNotNull(listClassAnnotations);
-        Assert.assertEquals(1, listClassAnnotations.length);
+        assertNotNull(listClassAnnotations);
+        assertEquals(1, listClassAnnotations.length);
 
         Field optionsField = testEnum.getClass().getField("enumValue");
         Annotation[] listFieldAnnotations = optionsField.getDeclaredAnnotations();
-        Assert.assertNotNull(listFieldAnnotations);
-        Assert.assertEquals(1, listFieldAnnotations.length);
+        assertNotNull(listFieldAnnotations);
+        assertEquals(1, listFieldAnnotations.length);
 
         Annotation fieldAnnotation = optionsField.getAnnotation(FlatBufferEnumTypeField.class);
-        Assert.assertNotNull(fieldAnnotation);
+        assertNotNull(fieldAnnotation);
     }
 
     @Test
     public void testExtended() throws NoSuchFieldException {
         TestEnumDefault testEnum = TestEnumDefault.VALUE;
         Annotation[] listClassAnnotations = testEnum.getClass().getAnnotations();
-        Assert.assertNotNull(listClassAnnotations);
-        Assert.assertEquals(1, listClassAnnotations.length);
+        assertNotNull(listClassAnnotations);
+        assertEquals(1, listClassAnnotations.length);
 
         Field optionsField = testEnum.getClass().getField("enumName");
         Annotation[] listFieldAnnotations = optionsField.getDeclaredAnnotations();
-        Assert.assertNotNull(listFieldAnnotations);
-        Assert.assertEquals(2, listFieldAnnotations.length);
+        assertNotNull(listFieldAnnotations);
+        assertEquals(2, listFieldAnnotations.length);
 
         Annotation fieldAnnotation = optionsField.getAnnotation(FlatBufferEnumTypeField.class);
-        Assert.assertNotNull(fieldAnnotation);
+        assertNotNull(fieldAnnotation);
     }
 
 

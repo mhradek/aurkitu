@@ -1,8 +1,8 @@
 package io.github.mhradek.aurkitu.annotations;
 
 import io.github.mhradek.aurkitu.annotations.types.FieldType;
-import org.junit.Assert;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
@@ -15,40 +15,40 @@ public class FlatBufferFieldOptionsTest {
     public void testDefaults() throws NoSuchFieldException {
         TestTableDefault testTable = new TestTableDefault();
         Annotation[] listClassAnnotations = testTable.getClass().getAnnotations();
-        Assert.assertNotNull(listClassAnnotations);
-        Assert.assertEquals(1, listClassAnnotations.length);
+        assertNotNull(listClassAnnotations);
+        assertEquals(1, listClassAnnotations.length);
 
         Field optionsField = testTable.getClass().getField("optionsField");
         Annotation[] listFieldAnnotations = optionsField.getDeclaredAnnotations();
-        Assert.assertNotNull(listFieldAnnotations);
-        Assert.assertEquals(1, listFieldAnnotations.length);
+        assertNotNull(listFieldAnnotations);
+        assertEquals(1, listFieldAnnotations.length);
 
         Annotation fieldAnnotation = optionsField.getAnnotation(FlatBufferFieldOptions.class);
-        Assert.assertNotNull(fieldAnnotation);
+        assertNotNull(fieldAnnotation);
 
-        Assert.assertEquals(FieldType.STRING, ((FlatBufferFieldOptions) fieldAnnotation).fieldType());
-        Assert.assertEquals(false, ((FlatBufferFieldOptions) fieldAnnotation).useFullName());
-        Assert.assertEquals("", ((FlatBufferFieldOptions) fieldAnnotation).defaultValue());
+        assertEquals(FieldType.STRING, ((FlatBufferFieldOptions) fieldAnnotation).fieldType());
+        assertEquals(false, ((FlatBufferFieldOptions) fieldAnnotation).useFullName());
+        assertEquals("", ((FlatBufferFieldOptions) fieldAnnotation).defaultValue());
     }
 
     @Test
     public void testExtended() throws NoSuchFieldException {
         TestTableDefault testTable = new TestTableDefault();
         Annotation[] listClassAnnotations = testTable.getClass().getAnnotations();
-        Assert.assertNotNull(listClassAnnotations);
-        Assert.assertEquals(1, listClassAnnotations.length);
+        assertNotNull(listClassAnnotations);
+        assertEquals(1, listClassAnnotations.length);
 
         Field optionsField = testTable.getClass().getField("optionsFieldExtended");
         Annotation[] listFieldAnnotations = optionsField.getDeclaredAnnotations();
-        Assert.assertNotNull(listFieldAnnotations);
-        Assert.assertEquals(2, listFieldAnnotations.length);
+        assertNotNull(listFieldAnnotations);
+        assertEquals(2, listFieldAnnotations.length);
 
         Annotation fieldAnnotation = optionsField.getAnnotation(FlatBufferFieldOptions.class);
-        Assert.assertNotNull(fieldAnnotation);
+        assertNotNull(fieldAnnotation);
 
-        Assert.assertEquals(FieldType.ARRAY, ((FlatBufferFieldOptions) fieldAnnotation).fieldType());
-        Assert.assertEquals(true, ((FlatBufferFieldOptions) fieldAnnotation).useFullName());
-        Assert.assertEquals(TEST_DEFAULT_VALUE, ((FlatBufferFieldOptions) fieldAnnotation).defaultValue());
+        assertEquals(FieldType.ARRAY, ((FlatBufferFieldOptions) fieldAnnotation).fieldType());
+        assertEquals(true, ((FlatBufferFieldOptions) fieldAnnotation).useFullName());
+        assertEquals(TEST_DEFAULT_VALUE, ((FlatBufferFieldOptions) fieldAnnotation).defaultValue());
     }
 
     @Test
@@ -57,48 +57,48 @@ public class FlatBufferFieldOptionsTest {
 
         Field optionsDifferentTypeUintField = testTable.getClass().getField("optionsDifferentTypeUint");
         Annotation[] optionsDifferentTypeUintFieldDeclaredAnnotations = optionsDifferentTypeUintField.getDeclaredAnnotations();
-        Assert.assertNotNull(optionsDifferentTypeUintFieldDeclaredAnnotations);
-        Assert.assertEquals(1, optionsDifferentTypeUintFieldDeclaredAnnotations.length);
+        assertNotNull(optionsDifferentTypeUintFieldDeclaredAnnotations);
+        assertEquals(1, optionsDifferentTypeUintFieldDeclaredAnnotations.length);
 
         Annotation fieldAnnotation = optionsDifferentTypeUintField.getAnnotation(FlatBufferFieldOptions.class);
-        Assert.assertNotNull(fieldAnnotation);
-        Assert.assertEquals(FieldType.UINT, ((FlatBufferFieldOptions) fieldAnnotation).fieldType());
+        assertNotNull(fieldAnnotation);
+        assertEquals(FieldType.UINT, ((FlatBufferFieldOptions) fieldAnnotation).fieldType());
 
         Field optionsDifferentTypeUlongField = testTable.getClass().getField("optionsDifferentTypeUlong");
         Annotation[] optionsDifferentTypeUlongFieldDeclaredAnnotations = optionsDifferentTypeUlongField.getDeclaredAnnotations();
-        Assert.assertNotNull(optionsDifferentTypeUlongFieldDeclaredAnnotations);
-        Assert.assertEquals(1, optionsDifferentTypeUlongFieldDeclaredAnnotations.length);
+        assertNotNull(optionsDifferentTypeUlongFieldDeclaredAnnotations);
+        assertEquals(1, optionsDifferentTypeUlongFieldDeclaredAnnotations.length);
 
         fieldAnnotation = optionsDifferentTypeUlongField.getAnnotation(FlatBufferFieldOptions.class);
-        Assert.assertNotNull(fieldAnnotation);
-        Assert.assertEquals(FieldType.ULONG, ((FlatBufferFieldOptions) fieldAnnotation).fieldType());
+        assertNotNull(fieldAnnotation);
+        assertEquals(FieldType.ULONG, ((FlatBufferFieldOptions) fieldAnnotation).fieldType());
 
         Field optionsDifferentTypeUbyteField = testTable.getClass().getField("optionsDifferentTypeUbyte");
         Annotation[] optionsDifferentTypeUbyteFieldDeclaredAnnotations = optionsDifferentTypeUbyteField.getDeclaredAnnotations();
-        Assert.assertNotNull(optionsDifferentTypeUbyteFieldDeclaredAnnotations);
-        Assert.assertEquals(1, optionsDifferentTypeUbyteFieldDeclaredAnnotations.length);
+        assertNotNull(optionsDifferentTypeUbyteFieldDeclaredAnnotations);
+        assertEquals(1, optionsDifferentTypeUbyteFieldDeclaredAnnotations.length);
 
         fieldAnnotation = optionsDifferentTypeUbyteField.getAnnotation(FlatBufferFieldOptions.class);
-        Assert.assertNotNull(fieldAnnotation);
-        Assert.assertEquals(FieldType.UBYTE, ((FlatBufferFieldOptions) fieldAnnotation).fieldType());
+        assertNotNull(fieldAnnotation);
+        assertEquals(FieldType.UBYTE, ((FlatBufferFieldOptions) fieldAnnotation).fieldType());
 
         Field optionalDifferentTypeUshortField = testTable.getClass().getField("optionalDifferentTypeUshort");
         Annotation[] optionalDifferentTypeUshortFieldDeclaredAnnotations = optionalDifferentTypeUshortField.getDeclaredAnnotations();
-        Assert.assertNotNull(optionalDifferentTypeUshortFieldDeclaredAnnotations);
-        Assert.assertEquals(1, optionalDifferentTypeUshortFieldDeclaredAnnotations.length);
+        assertNotNull(optionalDifferentTypeUshortFieldDeclaredAnnotations);
+        assertEquals(1, optionalDifferentTypeUshortFieldDeclaredAnnotations.length);
 
         fieldAnnotation = optionalDifferentTypeUshortField.getAnnotation(FlatBufferFieldOptions.class);
-        Assert.assertNotNull(fieldAnnotation);
-        Assert.assertEquals(FieldType.USHORT, ((FlatBufferFieldOptions) fieldAnnotation).fieldType());
+        assertNotNull(fieldAnnotation);
+        assertEquals(FieldType.USHORT, ((FlatBufferFieldOptions) fieldAnnotation).fieldType());
 
         Field optionalDifferentTypeGeneralByteVectorField = testTable.getClass().getField("optionalDifferentTypeGeneralByteVector");
         Annotation[] optionalDifferentTypeGeneralByteVectorFieldDeclaredAnnotations = optionalDifferentTypeGeneralByteVectorField.getDeclaredAnnotations();
-        Assert.assertNotNull(optionalDifferentTypeGeneralByteVectorFieldDeclaredAnnotations);
-        Assert.assertEquals(1, optionalDifferentTypeGeneralByteVectorFieldDeclaredAnnotations.length);
+        assertNotNull(optionalDifferentTypeGeneralByteVectorFieldDeclaredAnnotations);
+        assertEquals(1, optionalDifferentTypeGeneralByteVectorFieldDeclaredAnnotations.length);
 
         fieldAnnotation = optionalDifferentTypeGeneralByteVectorField.getAnnotation(FlatBufferFieldOptions.class);
-        Assert.assertNotNull(fieldAnnotation);
-        Assert.assertEquals(FieldType.UBYTE, ((FlatBufferFieldOptions) fieldAnnotation).fieldType());
+        assertNotNull(fieldAnnotation);
+        assertEquals(FieldType.UBYTE, ((FlatBufferFieldOptions) fieldAnnotation).fieldType());
     }
 
     @FlatBufferTable
