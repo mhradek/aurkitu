@@ -206,65 +206,44 @@ mvn clean verify
 
 ---
 
-## Roadmap (updated for 1.0.0)
+## Changes from 0.0.x to 1.0.0
 
-### Done in 1.0.0
-- [x] Java 17 baseline
-- [x] ClassGraph scanner (replaces custom Reflections)
-- [x] Field processing: primitives, lists, maps (nested), enums, unions, structs
-- [x] Field options: type override, required, deprecated, defaults, comments, useFullName
-- [x] Inheritance / superclass field scanning
-- [x] Common Java type mapping (Date, URL, BigDecimal, UUID, …)
-- [x] Configuration: fileIdentifier, includes, ignoreStaticMembers, mapCommonTypes, cacheEnabled, snakeCaseFields
-- [x] Optional flatc validation (Mojo + CI download of official binary)
-- [x] Pure JUnit 5 tests + flatc integration test
-- [x] Namespace migration to `io.github.mhradek`
-- [x] Migration guide
-- [x] snakeCaseFields option (default true)
+| Area | 0.0.x | 1.0.0 | Documentation |
+|------|-------|-------|---------------|
+| **Coordinates** | `com.michaelhradek` | `io.github.mhradek` | [Migration](#migration-from-00x-to-100) |
+| **Java baseline** | 8 | 17 | [Building](#building-aurkitu-itself) |
+| **Scanning** | Custom Reflections fork | ClassGraph | [Quick Start](#quick-start) |
+| **Field names** | camelCase (as-is) | snake_case by default | [Migration](#migration-from-00x-to-100), [Configuration](#configuration-options) |
+| **Maps** | `MapValueSet_<type>_<field>` | Same pattern (snake_case aware) | [Peculiarities](#peculiarities--limitations-historical--current) |
+| **required / deprecated** | Planned | Implemented | [Configuration](#configuration-options) |
+| **Unions** | Limited | Implemented | — |
+| **Inheritance** | Not supported | Superclass fields included | — |
+| **Common types** | Not implemented | Date, URL, BigDecimal, UUID, … → string | [Configuration](#configuration-options) |
+| **byte[]** | Not special-cased | Mapped to `[ubyte]` | — |
+| **fieldId** | Not present | Optional `id: N` | [Configuration](#configuration-options) |
+| **generateVersion** | Supported | Supported (`// @version: <hash>`) | [Configuration](#configuration-options) |
+| **schema caching** | Skip if file exists | Content-aware hash (types + config) | [Configuration](#configuration-options) |
+| **failOnValidationIssues** | Not present | Optional fail-the-build | [Configuration](#configuration-options) |
+| **specifiedDependencies** | Artifact-level | `specifiedPackages` (package-level) | [Configuration](#configuration-options) |
+| **consolidatedSchemas** | Supported | Removed (single schema) | — |
+| **namespaceOverrideMap** | Supported | Per-type `namespace` comment | [Configuration](#configuration-options) |
+| **flatc validation** | Manual / script | Optional `flatcPath` + CI binary | [Optional flatc validation](#optional-flatc-validation) |
+| **Tests** | Mixed | Pure JUnit 5 + flatc test | — |
+| **CI** | Basic | JDK 17 + official flatc download | [Optional flatc validation](#optional-flatc-validation) |
 
-### Production-readiness outstanding items
+## Roadmap (post-1.0.0)
 
-**Release blockers**
-- [ ] Maven Central publishing (GPG signing + Central Portal credentials + complete publish workflow)
-- [ ] Confirm plugin descriptor / `plugin.xml` generation is correct for 1.0.0 coordinates
-- [ ] Final README / Javadoc pass for public API
+### Near term
+- [ ] Complete Maven Central publishing (add GPG + Central Portal secrets and enable `mvn deploy` in publish workflow)
+- [ ] Confirm generated `plugin.xml` descriptor in a release build
+- [ ] Expand Mojo integration tests (full plugin invocation with `maven-plugin-testing`)
+- [ ] Upload JaCoCo coverage to codecov/coveralls
 
-**Quality & correctness**
-- [ ] Mojo integration tests (parameter binding, output directory, flatcPath path)
-- [ ] Stronger content-aware schema cache (currently hashes config, not class content)
-- [ ] Fail-the-build option when validation issues exist
-- [ ] Coverage reporting in CI (codecov or coveralls)
-
-**Feature completeness (optional for 1.0.0)**
-- [ ] True multi-namespace schema splitting
-- [ ] `byte[]` → `[ubyte]` (or configurable binary vector) mapping
-- [ ] Optional attributes / explicit field `id` support
-
-**Maintenance**
-- [ ] Remove unused test resources under `src/test/resources/plugin-*` if no longer referenced
-- [ ] Document snake_case breaking change clearly in migration guide
-
-
-## Done in 1.0.0
-- [x] Java 17 baseline
-- [x] ClassGraph scanner (replaces custom Reflections)
-- [x] Field processing: primitives, lists, maps (nested), enums, unions, structs
-- [x] Field options: type override, required, deprecated, defaults, comments, useFullName
-- [x] Inheritance / superclass field scanning
-- [x] Common Java type mapping (Date, URL, BigDecimal, UUID, …)
-- [x] Configuration: fileIdentifier, includes, ignoreStaticMembers, mapCommonTypes, cacheEnabled
-- [x] Optional flatc validation (Mojo + CI download of official binary)
-- [x] Pure JUnit 5 tests + flatc integration test
-- [x] Namespace migration to `io.github.mhradek`
-- [x] Migration guide
-
-### Remaining / future
-- [ ] True multi-namespace schema splitting
-- [ ] Stronger content-aware schema cache
-- [ ] Optional snake_case field names
-- [ ] Mojo integration tests
-- [ ] Coverage reporting in CI
-- [ ] Maven Central publishing (GPG + Central Portal)
+### Future
+- [ ] True multi-namespace schema splitting (separate files or namespace blocks)
+- [ ] Optional attributes beyond `id` (e.g. `key`, `hash`)
+- [ ] Schema include resolution and cross-schema type references
+- [ ] Configurable binary vector type (`[byte]` vs `[ubyte]`)
 
 ## License
 
