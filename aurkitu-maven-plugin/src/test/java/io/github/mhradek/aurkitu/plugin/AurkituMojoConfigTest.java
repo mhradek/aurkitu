@@ -34,7 +34,7 @@ class AurkituMojoConfigTest {
                 false,
                 true,
                 true,
-                false);
+                false, null);
         SchemaGenerator generator = new SchemaGenerator(config);
         File out = tempDir.toFile();
         generator.generate("mojo-check", "test.mojo", out);
@@ -109,7 +109,8 @@ class AurkituMojoConfigTest {
                 false,
                 true,
                 false,
-                true); // failOnValidationIssues = true
+                true,
+                null); // failOnValidationIssues = true
         SchemaGenerator generator = new SchemaGenerator(config);
 
         assertThrows(SchemaGenerationException.class, () ->
