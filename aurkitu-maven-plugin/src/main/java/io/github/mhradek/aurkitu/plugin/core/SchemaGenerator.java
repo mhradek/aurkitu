@@ -81,18 +81,6 @@ public class SchemaGenerator {
                 config.specifiedPackages, config.validate, config.ignoreStaticMembers,
                 config.fileIdentifier, config.includes, config.mapCommonTypes, namespace,
                 config.snakeCaseFields, config.generateVersion));
-        String inputHash = configHash;
-        if (config.cacheEnabled && outFile.exists() && cacheFile.exists()) {
-            try {
-                String cached = Files.readString(cacheFile.toPath()).trim();
-                if (inputHash.equals(cached)) {
-                    log.info("Schema cache hit for {}; skipping regeneration", schemaName);
-                    return;
-                }
-            } catch (IOException ignored) {
-                // fall through to regenerate
-            }
-        }
 
         try (ScanResult scanResult = new ClassGraph()
                 .enableAnnotationInfo()
