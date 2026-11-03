@@ -21,7 +21,8 @@
             <artifactId>junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
-            <groupId>org.junit.vintage</groupId>
+    </dependencies>
+
     <build>
         <plugins>
             <plugin>
