@@ -465,6 +465,12 @@ public class SchemaGenerator {
                 return null;
             }
 
+            // Primitive wrappers (for map values and list elements)
+            String wrapper = mapWrapper(className);
+            if (wrapper != null) {
+                return wrapper;
+            }
+
             // Common types
             if (config.mapCommonTypes) {
                 if ("java.lang.String".equals(className)) return "string";
@@ -491,6 +497,19 @@ public class SchemaGenerator {
             case "long" -> "long";
             case "float" -> "float";
             case "double" -> "double";
+            default -> null;
+        };
+    }
+
+    private static String mapWrapper(String className) {
+        return switch (className) {
+            case "java.lang.Boolean" -> "bool";
+            case "java.lang.Byte" -> "byte";
+            case "java.lang.Short" -> "short";
+            case "java.lang.Integer" -> "int";
+            case "java.lang.Long" -> "long";
+            case "java.lang.Float" -> "float";
+            case "java.lang.Double" -> "double";
             default -> null;
         };
     }
