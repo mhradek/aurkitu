@@ -82,7 +82,7 @@ class SchemaGeneratorTest {
     void emitsFieldAttributesAndFixedArray() throws Exception {
         SchemaGenerator generator = new SchemaGenerator(
                 null,
-                List.of("io.github.mhradek.aurkitu.plugin.core.testmodels.attrs"),
+                List.of("io.github.mhradek.aurkitu.plugin.core.attrs"),
                 true);
         File out = tempDir.toFile();
         generator.generate("attrs", "test.attrs", out);
