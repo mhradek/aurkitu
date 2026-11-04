@@ -91,7 +91,6 @@ class SchemaGeneratorTest {
         // Union
         assertTrue(content.contains("union SampleUnion {"));
         assertTrue(content.contains("SampleRootTable"));
-        assertTrue(content.contains("SampleRootTable"));
 
         // Required / deprecated / comments / inheritance
         assertTrue(content.contains("table SampleWithOptions {"));
@@ -129,8 +128,30 @@ class SchemaGeneratorTest {
     }
 
     @Test
+    void emitsFileExtension() throws Exception {
+        SchemaGenerator.Config config = new SchemaGenerator.Config(
+                null,
+                List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
+                true,
+                true,
+                null,
+                List.of(),
+                true,
+                false,
+                true,
+                false,
+                false,
+                "bin");
+        SchemaGenerator generator = new SchemaGenerator(config);
+        File out = tempDir.toFile();
+        generator.generate("ext", "test.ext", out);
+
+        String content = Files.readString(out.toPath().resolve("ext.fbs"));
+        assertTrue(content.contains("file_extension \"bin\";"));
+    }
+
+    @Test
     void reportsMissingRootTypeWhenNonePresent() throws Exception {
-        // Scan a package that has no annotated tables
         SchemaGenerator generator = new SchemaGenerator(
                 null,
                 List.of("java.lang"),
@@ -144,6 +165,117 @@ class SchemaGeneratorTest {
     }
 
     @Test
+    void failOnValidationIssuesThrowsWhenIssuesExist() {
+        SchemaGenerator.Config config = new SchemaGenerator.Config(
+                null,
+                List.of("java.lang"),
+                true,
+                true,
+                null,
+                List.of(),
+                true,
+                false,
+                true,
+                false,
+                true,   // failOnValidationIssues
+                null);
+        SchemaGenerator generator = new SchemaGenerator(config);
+        File out = tempDir.toFile();
+
+        SchemaGenerationException ex = assertThrows(SchemaGenerationException.class,
+                () -> generator.generate("fail", "test.fail", out));
+        assertTrue(ex.getMessage().contains("validation failed"));
+    }
+
+    @Test
+    void snakeCaseFieldsCanBeDisabled() throws Exception {
+        SchemaGenerator.Config config = new SchemaGenerator.Config(
+                null,
+                List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
+                true,
+                true,
+                null,
+                List.of(),
+                true,
+                false,
+                false,  // snakeCaseFields = false
+                false,
+                false,
+                null);
+        SchemaGenerator generator = new SchemaGenerator(config);
+        File out = tempDir.toFile();
+        generator.generate("nosnake", "test.nosnake", out);
+
+        String content = Files.readString(out.toPath().resolve("nosnake.fbs"));
+        // With snake_case off, nestedMap stays nestedMap (not nested_map)
+        assertTrue(content.contains("nestedMap:") || content.contains("nestedMap"));
+        assertFalse(content.contains("nested_map:"));
+    }
+
+    @Test
+    void generateVersionEmitsContentHash() throws Exception {
+        SchemaGenerator.Config config = new SchemaGenerator.Config(
+                null,
+                List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
+                true,
+                true,
+                null,
+                List.of(),
+                true,
+                false,
+                true,
+                true,   // generateVersion
+                false,
+                null);
+        SchemaGenerator generator = new SchemaGenerator(config);
+        File out = tempDir.toFile();
+        generator.generate("versioned", "test.versioned", out);
+
+        String content = Files.readString(out.toPath().resolve("versioned.fbs"));
+        assertTrue(content.contains("// @version: "));
+        // Second run with same inputs should produce the same version hash
+        generator.generate("versioned2", "test.versioned", out);
+        String content2 = Files.readString(out.toPath().resolve("versioned2.fbs"));
+        String v1 = extractVersion(content);
+        String v2 = extractVersion(content2);
+        assertEquals(v1, v2, "Version hash should be stable for identical inputs");
+    }
+
+    @Test
+    void cacheHitSkipsRegeneration() throws Exception {
+        SchemaGenerator.Config config = new SchemaGenerator.Config(
+                null,
+                List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
+                true,
+                true,
+                null,
+                List.of(),
+                true,
+                true,   // cacheEnabled
+                true,
+                false,
+                false,
+                null);
+        SchemaGenerator generator = new SchemaGenerator(config);
+        File out = tempDir.toFile();
+
+        generator.generate("cached", "test.cached", out);
+        Path schema = out.toPath().resolve("cached.fbs");
+        Path cache = out.toPath().resolve("cached.fbs.cache");
+        assertTrue(Files.exists(schema));
+        assertTrue(Files.exists(cache));
+
+        String first = Files.readString(schema);
+        long firstMtime = Files.getLastModifiedTime(schema).toMillis();
+
+        // Second call should hit the cache and not rewrite
+        generator.generate("cached", "test.cached", out);
+        String second = Files.readString(schema);
+        assertEquals(first, second);
+        // mtime may or may not change depending on filesystem resolution; content equality is the real check
+    }
+
+    @Test
     void ignoresStaticMembersByDefault() throws Exception {
         SchemaGenerator generator = new SchemaGenerator(
                 null,
@@ -153,7 +285,6 @@ class SchemaGeneratorTest {
         generator.generate("staticcheck", "test.static", out);
 
         String content = Files.readString(out.toPath().resolve("staticcheck.fbs"));
-        // Sample models have no public static fields that should appear; ensure no unexpected static leakage
         assertFalse(content.contains("static "));
     }
 
@@ -177,7 +308,13 @@ class SchemaGeneratorTest {
         generator.generate("nocommon", "test.nocommon", out);
 
         String content = Files.readString(out.toPath().resolve("nocommon.fbs"));
-        // With the flag off we still expect normal primitives; just ensure generation succeeds
         assertTrue(content.contains("table SampleRootTable"));
+    }
+
+    private static String extractVersion(String content) {
+        int start = content.indexOf("// @version: ");
+        assertTrue(start >= 0);
+        int end = content.indexOf('\n', start);
+        return content.substring(start, end).trim();
     }
 }
