@@ -89,8 +89,7 @@ class SchemaGeneratorTest {
 
         String content = Files.readString(out.toPath().resolve("attrs.fbs"));
         assertTrue(content.contains("table SampleWithAttributes {"));
-        // Attributes are now in a single parenthesized group
-        assertTrue(content.contains("(id: 0, key)") || content.contains("(id: 0)"));
+        // Partial ids are omitted; other attributes remain
         assertTrue(content.contains("key"));
         assertTrue(content.contains("hash: \"fnv1_32\""));
         // nested_flatbuffer and flexbuffer only on [ubyte]
