@@ -142,15 +142,19 @@ class SchemaGeneratorTest {
         String content = Files.readString(out.toPath().resolve("partial.fbs"));
         assertTrue(content.contains("table SampleWithPartialIds {"));
         assertTrue(content.contains("Partial field ids") || content.contains("ids omitted"));
-        // ids should be omitted when partial
-        assertFalse(content.contains("id:string (id:"));
+        // Scope the check to the SampleWithPartialIds table so SampleWithAllIds
+        // (which legitimately emits id attributes) does not interfere.
+        int start = content.indexOf("table SampleWithPartialIds {");
+        int end = content.indexOf("}", start);
+        String tableBlock = content.substring(start, end);
+        assertFalse(tableBlock.contains("(id:"), "Partial table should not emit id attributes: " + tableBlock);
     }
 
     @Test
     void reportsNonScalarStructField() throws Exception {
         SchemaGenerator generator = new SchemaGenerator(
                 null,
-                List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
+                List.of("io.github.mhradek.aurkitu.plugin.core.validation"),
                 true);
         File out = tempDir.toFile();
         generator.generate("struct", "test.struct", out);
