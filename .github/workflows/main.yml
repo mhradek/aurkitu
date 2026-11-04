@@ -32,6 +32,17 @@ jobs:
         env:
           FLATC_PATH: /tmp/flatc-bin/flatc
 
+      - name: Diagnose coverage reports and tokens
+        run: |
+          echo "=== JaCoCo reports ==="
+          find . -path "*/target/site/jacoco/jacoco.xml" -type f | head -20
+          echo "=== Token presence (values not printed) ==="
+          if [ -n "$CODECOV_TOKEN" ]; then echo "CODECOV_TOKEN: set"; else echo "CODECOV_TOKEN: missing"; fi
+          if [ -n "$COVERALLS_REPO_TOKEN" ]; then echo "COVERALLS_REPO_TOKEN: set"; else echo "COVERALLS_REPO_TOKEN: missing"; fi
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
@@ -45,7 +56,10 @@ jobs:
       - name: Upload coverage to Coveralls
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
-        run: mvn -B coveralls:report -DrepoToken="${COVERALLS_REPO_TOKEN}"
+        run: |
+          mvn -B coveralls:report \
+            -DrepoToken="${COVERALLS_REPO_TOKEN}" \
+            -Dcoveralls.jacocoReportPath="aurkitu-maven-plugin/target/site/jacoco/jacoco.xml"
 
       - name: Upload coverage to Codacy
         if: ${{ secrets.CODACY_PROJECT_TOKEN != '' }}
