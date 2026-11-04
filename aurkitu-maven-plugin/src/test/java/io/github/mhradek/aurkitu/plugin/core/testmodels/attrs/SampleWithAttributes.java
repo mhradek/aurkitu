@@ -3,7 +3,6 @@ package io.github.mhradek.aurkitu.plugin.core.testmodels.attrs;
 import io.github.mhradek.aurkitu.annotations.FlatBufferFieldOptions;
 import io.github.mhradek.aurkitu.annotations.FlatBufferTable;
 import io.github.mhradek.aurkitu.annotations.types.FieldType;
-import io.github.mhradek.aurkitu.annotations.types.Structure;
 import io.github.mhradek.aurkitu.plugin.core.testmodels.SampleEnum;
 
 @FlatBufferTable
@@ -31,7 +30,7 @@ public class SampleWithAttributes {
     private FixedStruct fixedStruct;
 }
 
-@FlatBufferTable(value = Structure.STRUCT)
+@FlatBufferTable(value = FlatBufferTable.TableStructureType.STRUCT)
 class FixedStruct {
     @FlatBufferFieldOptions(fieldType = FieldType.INT, fixedLength = 4)
     private int[] values;
