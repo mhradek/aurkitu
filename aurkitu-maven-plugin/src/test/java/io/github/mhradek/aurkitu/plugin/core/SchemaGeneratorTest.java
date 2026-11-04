@@ -88,7 +88,6 @@ class SchemaGeneratorTest {
         generator.generate("attrs", "test.attrs", out);
 
         String content = Files.readString(out.toPath().resolve("attrs.fbs"));
-        System.out.println("=== attrs schema ===\n" + content + "=== end ===");
         assertTrue(content.contains("table SampleWithAttributes {"));
         // Partial ids are omitted; other attributes remain
         assertTrue(content.contains("key"));
