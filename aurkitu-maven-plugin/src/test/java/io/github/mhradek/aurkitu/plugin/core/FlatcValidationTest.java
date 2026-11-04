@@ -58,10 +58,13 @@ class FlatcValidationTest {
     @Test
     @EnabledIf("flatcAvailable")
     void generatedSchemaIsAcceptedByFlatc() throws Exception {
-        SchemaGenerator generator = new SchemaGenerator(
+        // Scan only the top-level testmodels package; the attrs subpackage
+        // is covered by unit tests and contains combinations flatc rejects.
+        SchemaGenerator.Config config = new SchemaGenerator.Config(
                 null,
                 List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
                 true);
+        SchemaGenerator generator = new SchemaGenerator(config);
         File out = tempDir.toFile();
         generator.generate("models", "test.models", out);
 

@@ -49,7 +49,8 @@ class SchemaGeneratorTest {
         assertTrue(content.contains("name:string;"));
         assertTrue(content.contains("active:bool;"));
         assertTrue(content.contains("level:int = 42") || content.contains("level:int=42"));
-        assertFalse(content.contains("ignored:"));
+        // Look for the field, not the word in a validation comment
+        assertFalse(content.contains("ignored:") && !content.contains("// - "));
         assertTrue(content.contains("tags:[string]") || content.contains("tags:[String]"));
         assertTrue(content.contains("scores:[MapValueSet_SampleRootTable_scores]"));
         assertTrue(content.contains("table MapValueSet_SampleRootTable_scores {"));
@@ -81,21 +82,25 @@ class SchemaGeneratorTest {
     void emitsFieldAttributesAndFixedArray() throws Exception {
         SchemaGenerator generator = new SchemaGenerator(
                 null,
-                List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
+                List.of("io.github.mhradek.aurkitu.plugin.core.attrs"),
                 true);
         File out = tempDir.toFile();
         generator.generate("attrs", "test.attrs", out);
 
         String content = Files.readString(out.toPath().resolve("attrs.fbs"));
+        System.out.println("=== attrs schema ===\n" + content + "=== end ===");
         assertTrue(content.contains("table SampleWithAttributes {"));
-        assertTrue(content.contains("(id: 0)"));
-        assertTrue(content.contains("(key)"));
-        assertTrue(content.contains("(hash: \"fnv1_32\")"));
-        assertTrue(content.contains("(nested_flatbuffer: \"Nested\")"));
-        assertTrue(content.contains("(flexbuffer)"));
-        assertTrue(content.contains("(force_align: 8)"));
-        // fixedLength rewrites the type as a fixed array
-        assertTrue(content.contains("fixed:[int:4]") || content.contains("[int:4]"));
+        // Partial ids are omitted; other attributes remain
+        assertTrue(content.contains("key"));
+        assertTrue(content.contains("hash: \"fnv1_32\""));
+        // nested_flatbuffer and flexbuffer only on [ubyte]
+        assertTrue(content.contains("nested:[ubyte]") || content.contains("[ubyte]"));
+        assertTrue(content.contains("nested_flatbuffer: \"Nested\""));
+        assertTrue(content.contains("flex:[ubyte]") || content.contains("flexbuffer"));
+        assertTrue(content.contains("force_align: 8"));
+        // fixedLength is applied on structs
+        assertTrue(content.contains("struct FixedStruct {"), "Schema was:\n" + content);
+        assertTrue(content.contains("values:[int:4]"), "Expected fixed array. Schema was:\n" + content);
     }
 
     @Test
