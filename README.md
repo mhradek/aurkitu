@@ -26,6 +26,22 @@ This is the **modernised 1.0.0** release:
 
 ---
 
+## Coverage
+
+JaCoCo is the **single source of truth**. `mvn verify` fails if line coverage drops below 50% on either module (see `jacoco.line.coverage.minimum` in the parent POM). Raise the threshold as tests improve.
+
+External badges (Codecov, Coveralls, Codacy) are mirrors. They require these repository secrets:
+
+| Secret | Tool | Required |
+|--------|------|----------|
+| `CODECOV_TOKEN` | Codecov | Yes (upload fails the job) |
+| `COVERALLS_REPO_TOKEN` | Coveralls | Yes (upload fails the job) |
+| `CODACY_PROJECT_TOKEN` | Codacy Coverage Reporter | Optional (step is skipped if absent) |
+
+Codacy’s quality-grade badge is independent of coverage; coverage appears only after a successful Codacy Coverage Reporter upload.
+
+---
+
 ## Quick Start
 
 ### Annotations
@@ -299,7 +315,8 @@ mvn clean verify
 
 | Priority | Item | Why it matters | Status |
 |----------|------|----------------|--------|
-| **Medium** | Upload JaCoCo to codecov or coveralls | Coverage badge accuracy | Reports generated locally only |
+| **Done** | Coverage baseline (JaCoCo check + hardened uploads) | Reliable coverage numbers | 50% line minimum; uploads fail the job |
+| **Medium** | Raise coverage threshold and expand SchemaGenerator tests | Higher confidence | See issues |
 | **Medium** | Published Javadoc site | Consumer docs beyond the README | Jars are attached on Central |
 | **Low** | True multi-namespace schema splitting | Advanced use case | Per-type `namespace` line only |
 | **Low** | Schema include resolution | Cross-schema types | Includes are emitted only |

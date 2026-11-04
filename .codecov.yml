@@ -1,2 +1,18 @@
+coverage:
+  status:
+    project:
+      default:
+        target: 50%
+        threshold: 2%
+    patch:
+      default:
+        target: 50%
+
 ignore:
-  - "Config.java"
+  - "**/Config.java"
+  - "**/generated/**"
+  - "**/target/**"
+
+fixes:
+  - "aurkitu-annotations/src/main/java/::aurkitu-annotations/src/main/java/"
+  - "aurkitu-maven-plugin/src/main/java/::aurkitu-maven-plugin/src/main/java/"
