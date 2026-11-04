@@ -29,9 +29,3 @@ public class SampleWithAttributes {
     @FlatBufferFieldOptions(fieldType = FieldType.IDENT)
     private FixedStruct fixedStruct;
 }
-
-@FlatBufferTable(value = FlatBufferTable.TableStructureType.STRUCT)
-class FixedStruct {
-    @FlatBufferFieldOptions(fieldType = FieldType.INT, fixedLength = 4)
-    private int[] values;
-}
