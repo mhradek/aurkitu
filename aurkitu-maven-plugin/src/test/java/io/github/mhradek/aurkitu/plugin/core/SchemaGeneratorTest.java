@@ -168,7 +168,7 @@ class SchemaGeneratorTest {
     void emitsPerTypeNamespaceOverride() throws Exception {
         SchemaGenerator generator = new SchemaGenerator(
                 null,
-                List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
+                List.of("io.github.mhradek.aurkitu.plugin.core.validation"),
                 true);
         File out = tempDir.toFile();
         generator.generate("ns", "test.ns", out);
