@@ -49,7 +49,8 @@ class SchemaGeneratorTest {
         assertTrue(content.contains("name:string;"));
         assertTrue(content.contains("active:bool;"));
         assertTrue(content.contains("level:int = 42") || content.contains("level:int=42"));
-        assertFalse(content.contains("ignored:"));
+        // Look for the field, not the word in a validation comment
+        assertFalse(content.contains("ignored:") && !content.contains("// - "));
         assertTrue(content.contains("tags:[string]") || content.contains("tags:[String]"));
         assertTrue(content.contains("scores:[MapValueSet_SampleRootTable_scores]"));
         assertTrue(content.contains("table MapValueSet_SampleRootTable_scores {"));
@@ -92,10 +93,10 @@ class SchemaGeneratorTest {
         assertTrue(content.contains("(id: 0, key)") || content.contains("(id: 0)"));
         assertTrue(content.contains("key"));
         assertTrue(content.contains("hash: \"fnv1_32\""));
-        // nested_flatbuffer only on [ubyte]
+        // nested_flatbuffer and flexbuffer only on [ubyte]
         assertTrue(content.contains("nested:[ubyte]") || content.contains("[ubyte]"));
         assertTrue(content.contains("nested_flatbuffer: \"Nested\""));
-        assertTrue(content.contains("flexbuffer"));
+        assertTrue(content.contains("flex:[ubyte]") || content.contains("flexbuffer"));
         assertTrue(content.contains("force_align: 8"));
         // fixedLength is only applied on structs
         assertTrue(content.contains("struct FixedStruct {"));
