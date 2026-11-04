@@ -49,8 +49,7 @@
         <jacoco.version>0.8.12</jacoco.version>
         <surefire.version>3.2.5</surefire.version>
         <compiler.version>3.13.0</compiler.version>
-        <!-- Baseline coverage threshold (line). Raise as tests improve. -->
-        <jacoco.line.coverage.minimum>0.50</jacoco.line.coverage.minimum>
+        <jacoco.line.coverage.minimum>0.80</jacoco.line.coverage.minimum>
     </properties>
 
     <dependencyManagement>
@@ -142,7 +141,7 @@
                         <configuration>
                             <rules>
                                 <rule>
-                                    <element>BUNDLE</element>
+                                    <element>CLASS</element>
                                     <limits>
                                         <limit>
                                             <counter>LINE</counter>
