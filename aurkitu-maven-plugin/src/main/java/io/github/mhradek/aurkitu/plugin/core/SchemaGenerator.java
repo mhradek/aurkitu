@@ -217,15 +217,21 @@ public class SchemaGenerator {
         return anno != null && Boolean.TRUE.equals(anno.getParameterValues().get("rootType").getValue());
     }
 
+    private boolean isStruct(ClassInfo classInfo) {
+        var tableAnno = classInfo.getAnnotationInfo(FlatBufferTable.class.getName());
+        if (tableAnno == null || tableAnno.getParameterValues().get("value") == null) {
+            return false;
+        }
+        String structure = String.valueOf(tableAnno.getParameterValues().get("value").getValue());
+        return structure.contains("STRUCT");
+    }
+
     @SuppressWarnings("PMD")
     private String buildTable(ClassInfo classInfo) {
         StringBuilder sb = new StringBuilder();
-        boolean isStruct = false;
+        boolean isStruct = isStruct(classInfo);
+
         var tableAnno = classInfo.getAnnotationInfo(FlatBufferTable.class.getName());
-        if (tableAnno != null && tableAnno.getParameterValues().get("value") != null) {
-            String structure = String.valueOf(tableAnno.getParameterValues().get("value").getValue());
-            isStruct = structure.contains("STRUCT");
-        }
 
         if (classInfo.hasAnnotation(FlatBufferComment.class.getName())) {
             var commentAnno = classInfo.getAnnotationInfo(FlatBufferComment.class.getName());
@@ -263,7 +269,7 @@ public class SchemaGenerator {
                     continue;
                 }
 
-                String fieldLine = buildField(field, current);
+                String fieldLine = buildField(field, current, isStruct);
                 if (fieldLine != null) {
                     if (isStruct && isNonScalarField(fieldLine)) {
                         if (config.validate) {
@@ -288,7 +294,7 @@ public class SchemaGenerator {
     }
 
     @SuppressWarnings("PMD")
-    private String buildField(FieldInfo field, ClassInfo owner) {
+    private String buildField(FieldInfo field, ClassInfo owner, boolean isStruct) {
         String name = field.getName();
         String typeName = mapType(field.getTypeSignatureOrTypeDescriptor(), owner, field.getName(), field);
 
@@ -318,6 +324,16 @@ public class SchemaGenerator {
                 validationIssues.add("Unsupported field type: " + owner.getSimpleName() + "." + name);
             }
             return null;
+        }
+
+        // Apply fixedLength rewrite to the type *before* any attributes,
+        // and only on structs (fixed arrays are illegal in tables).
+        if (isStruct && field.hasAnnotation(FlatBufferFieldOptions.class.getName())) {
+            var options = field.getAnnotationInfo(FlatBufferFieldOptions.class.getName());
+            Object fl = options.getParameterValues().get("fixedLength").getValue();
+            if (fl instanceof Number ln && ln.intValue() > 0 && !typeName.contains("[")) {
+                typeName = "[" + typeName + ":" + ln.intValue() + "]";
+            }
         }
 
         StringBuilder line = new StringBuilder();
@@ -373,18 +389,7 @@ public class SchemaGenerator {
             if (fa instanceof Number fn && fn.intValue() > 0) {
                 line.append(" (force_align: ").append(fn.intValue()).append(")");
             }
-            Object fl = options.getParameterValues().get("fixedLength").getValue();
-            if (fl instanceof Number ln && ln.intValue() > 0) {
-                // Rewrite trailing type as fixed array if not already
-                String current = line.toString();
-                if (!current.contains("[")) {
-                    int colon = current.lastIndexOf(':');
-                    if (colon > 0) {
-                        line = new StringBuilder(current.substring(0, colon + 1))
-                                .append("[").append(current.substring(colon + 1)).append(":").append(ln.intValue()).append("]");
-                    }
-                }
-            }
+            // fixedLength is already applied to typeName above (structs only)
         }
 
         return line.toString();
@@ -398,175 +403,100 @@ public class SchemaGenerator {
         boolean useFullName = false;
         if (field != null && field.hasAnnotation(FlatBufferFieldOptions.class.getName())) {
             var options = field.getAnnotationInfo(FlatBufferFieldOptions.class.getName());
-            useFullName = Boolean.TRUE.equals(options.getParameterValues().get("useFullName").getValue());
+            Object ufn = options.getParameterValues().get("useFullName").getValue();
+            if (Boolean.TRUE.equals(ufn)) {
+                useFullName = true;
+            }
         }
 
-        if (isMapType(typeSig)) {
-            return generateMapTable(typeSig, owner, contextName);
-        }
-
-        if (isListOrArray(typeSig)) {
-            return "[" + extractListElementType(typeSig, owner, contextName) + "]";
-        }
-
-        return mapTypeSignature(typeSig, useFullName);
-    }
-
-    private boolean isMapType(TypeSignature typeSig) {
-        if (typeSig instanceof ClassRefTypeSignature classRef) {
-            String base = classRef.getBaseClassName();
-            return "java.util.Map".equals(base) || base.endsWith(".Map");
-        }
-        return false;
-    }
-
-    private boolean isListOrArray(TypeSignature typeSig) {
+        // Handle arrays
         if (typeSig instanceof ArrayTypeSignature) {
-            return true;
+            ArrayTypeSignature arr = (ArrayTypeSignature) typeSig;
+            String element = mapType(arr.getElementTypeSignature(), owner, contextName, field);
+            return element == null ? null : "[" + element + "]";
         }
-        if (typeSig instanceof ClassRefTypeSignature classRef) {
-            String base = classRef.getBaseClassName();
-            return "java.util.List".equals(base) || base.endsWith(".List")
-                    || "java.util.Set".equals(base) || base.endsWith(".Set");
-        }
-        return false;
-    }
 
-    private String generateMapTable(TypeSignature typeSig, ClassInfo owner, String contextName) {
-        String ctx = contextName;
-        if (config.snakeCaseFields) {
-            ctx = toSnakeCase(ctx);
-        }
-        String mapTableName = "MapValueSet_" + owner.getSimpleName() + "_" + sanitize(ctx);
+        // Handle ClassRef
+        if (typeSig instanceof ClassRefTypeSignature) {
+            ClassRefTypeSignature classRef = (ClassRefTypeSignature) typeSig;
+            String className = classRef.getFullyQualifiedClassName();
 
-        if (!generatedMapTables.containsKey(mapTableName)) {
-            String keyType = "string";
-            String valueType = "string";
-
-            if (typeSig instanceof ClassRefTypeSignature classRef) {
-                List<TypeArgument> args = classRef.getTypeArguments();
-                if (args.size() >= 1) {
-                    keyType = mapType(args.get(0).getTypeSignature(), owner, contextName + "_key", null);
+            // Maps
+            if ("java.util.Map".equals(className) || className.endsWith(".Map")) {
+                List<TypeSignature> typeArgs = classRef.getTypeArguments();
+                if (typeArgs.size() == 2) {
+                    String valueType = mapType(typeArgs.get(1), owner, contextName, field);
+                    if (valueType != null) {
+                        String mapTableName = "MapValueSet_" + owner.getSimpleName() + "_" + toSnakeCase(contextName);
+                        String mapTable = "table " + mapTableName + " {\n  key:string;\n  value:" + valueType + ";\n}\n\n";
+                        generatedMapTables.put(mapTableName, mapTable);
+                        return "[" + mapTableName + "]";
+                    }
                 }
-                if (args.size() >= 2) {
-                    valueType = mapType(args.get(1).getTypeSignature(), owner, contextName + "_value", null);
-                }
+                return null;
             }
 
-            String mapSchema = "// Auto-generated type for use with Map<?, ?>\n" +
-                    "table " + mapTableName + " {\n" +
-                    "  key:" + keyType + ";\n" +
-                    "  value:" + valueType + ";\n" +
-                    "}\n\n";
-
-            generatedMapTables.put(mapTableName, mapSchema);
-            log.debug("Generated map table: {} (key={}, value={})", mapTableName, keyType, valueType);
-        }
-
-        return "[" + mapTableName + "]";
-    }
-
-    private String extractListElementType(TypeSignature typeSig, ClassInfo owner, String contextName) {
-        if (typeSig instanceof ArrayTypeSignature array) {
-            return mapType(array.getElementTypeSignature(), owner, contextName + "_elem", null);
-        }
-        if (typeSig instanceof ClassRefTypeSignature classRef) {
-            List<TypeArgument> args = classRef.getTypeArguments();
-            if (!args.isEmpty()) {
-                return mapType(args.get(0).getTypeSignature(), owner, contextName + "_elem", null);
+            // Lists / Collections
+            if (className.endsWith("List") || className.endsWith("Set") || className.endsWith("Collection")) {
+                List<TypeSignature> typeArgs = classRef.getTypeArguments();
+                if (!typeArgs.isEmpty()) {
+                    String element = mapType(typeArgs.get(0), owner, contextName, field);
+                    return element == null ? null : "[" + element + "]";
+                }
+                return null;
             }
-        }
-        return "string";
-    }
 
-    @SuppressWarnings("PMD")
-    private String mapTypeSignature(TypeSignature typeSig, boolean useFullName) {
-        if (typeSig == null) {
-            return "string";
-        }
-
-        if (typeSig instanceof BaseTypeSignature base) {
-            return switch (base.getTypeSignatureChar()) {
-                case 'Z' -> "bool";
-                case 'B' -> "byte";
-                case 'S' -> "short";
-                case 'I' -> "int";
-                case 'J' -> "long";
-                case 'F' -> "float";
-                case 'D' -> "double";
-                case 'C' -> "string";
-                default -> "string";
-            };
-        }
-
-        if (typeSig instanceof ClassRefTypeSignature classRef) {
-            String baseName = classRef.getBaseClassName();
-
-            // Common Java types (optional)
+            // Common types
             if (config.mapCommonTypes) {
-                if (baseName.endsWith("Date") || baseName.endsWith("LocalDate") ||
-                    baseName.endsWith("LocalDateTime") || baseName.endsWith("Instant") ||
-                    baseName.endsWith("URL") || baseName.endsWith("URI") ||
-                    baseName.endsWith("BigDecimal") || baseName.endsWith("BigInteger") ||
-                    baseName.endsWith("UUID")) {
-                    return "string";
-                }
+                if ("java.lang.String".equals(className)) return "string";
+                if ("java.util.Date".equals(className)) return "string";
+                if ("java.net.URL".equals(className)) return "string";
+                if ("java.math.BigDecimal".equals(className)) return "string";
             }
 
-            if (baseName.endsWith("String")) return "string";
-            if (baseName.endsWith("Boolean")) return "bool";
-            if (baseName.endsWith("Byte")) return "byte";
-            if (baseName.endsWith("Short")) return "short";
-            if (baseName.endsWith("Integer")) return "int";
-            if (baseName.endsWith("Long")) return "long";
-            if (baseName.endsWith("Float")) return "float";
-            if (baseName.endsWith("Double")) return "double";
-            if (baseName.endsWith("Character")) return "string";
-
-            // Sanitize inner-class $ and package dots
-            baseName = baseName.replace('$', '_');
-            if (useFullName) {
-                return baseName.replace('.', '_');
+            // Enums / tables / structs
+            if (className.startsWith("java.")) {
+                return null;
             }
-            int lastDot = baseName.lastIndexOf('.');
-            return lastDot >= 0 ? baseName.substring(lastDot + 1) : baseName;
+            String simple = className.substring(className.lastIndexOf('.') + 1);
+            return useFullName ? className.replace('$', '_') : simple;
         }
 
-        if (typeSig instanceof ArrayTypeSignature array) {
-            String elem = mapTypeSignature(array.getElementTypeSignature(), useFullName);
-            // byte[] -> [ubyte] (common binary convention)
-            if ("byte".equals(elem)) {
-                return "[ubyte]";
-            }
-            return "[" + elem + "]";
-        }
-
-        return typeSig.toStringWithSimpleNames().replace("java.lang.", "").replace("java.util.", "").trim();
+        // Primitives
+        String sig = typeSig.toString();
+        return switch (sig) {
+            case "boolean" -> "bool";
+            case "byte" -> "byte";
+            case "short" -> "short";
+            case "int" -> "int";
+            case "long" -> "long";
+            case "float" -> "float";
+            case "double" -> "double";
+            default -> null;
+        };
     }
 
-    private String sanitize(String name) {
-        return name.replaceAll("[^a-zA-Z0-9_]", "_");
+    private boolean isNonScalarField(String fieldLine) {
+        // Rough check: if the type after the colon contains [ or is not a primitive/scalar
+        int colon = fieldLine.indexOf(':');
+        if (colon < 0) return false;
+        String type = fieldLine.substring(colon + 1);
+        int space = type.indexOf(' ');
+        if (space > 0) type = type.substring(0, space);
+        int paren = type.indexOf('(');
+        if (paren > 0) type = type.substring(0, paren);
+        return type.contains("[") || type.contains("string") || type.contains("table");
     }
 
-    @SuppressWarnings("PMD")
     private String buildEnum(ClassInfo classInfo) {
         StringBuilder sb = new StringBuilder();
-        String enumType = "byte";
-        boolean isUnion = false;
-
         var enumAnno = classInfo.getAnnotationInfo(FlatBufferEnum.class.getName());
-        if (enumAnno != null) {
-            if (enumAnno.getParameterValues().get("enumType") != null) {
-                String et = String.valueOf(enumAnno.getParameterValues().get("enumType").getValue());
-                if (et.contains("SHORT")) enumType = "short";
-                else if (et.contains("INT")) enumType = "int";
-                else if (et.contains("LONG")) enumType = "long";
-                else if (et.contains("BYTE")) enumType = "byte";
-            }
-            if (enumAnno.getParameterValues().get("value") != null) {
-                String structure = String.valueOf(enumAnno.getParameterValues().get("value").getValue());
-                isUnion = structure.contains("UNION");
-            }
+        String underlying = "byte";
+        if (enumAnno != null && enumAnno.getParameterValues().get("enumType") != null) {
+            String et = String.valueOf(enumAnno.getParameterValues().get("enumType").getValue());
+            if (et.contains("SHORT")) underlying = "short";
+            else if (et.contains("INT")) underlying = "int";
+            else if (et.contains("LONG")) underlying = "long";
         }
 
         if (classInfo.hasAnnotation(FlatBufferComment.class.getName())) {
@@ -577,49 +507,53 @@ public class SchemaGenerator {
             }
         }
 
-        if (isUnion) {
-            sb.append("union ").append(classInfo.getSimpleName()).append(" {\n");
-        } else {
-            sb.append("enum ").append(classInfo.getSimpleName()).append(" : ").append(enumType).append(" {\n");
-        }
+        sb.append("enum ").append(classInfo.getSimpleName()).append(" : ").append(underlying).append(" {\n");
 
-        int ordinal = 0;
+        // Enum constants
         for (FieldInfo field : classInfo.getDeclaredFieldInfo()) {
-            String fname = field.getName();
-            // Skip synthetic enum $VALUES
-            if (fname.startsWith("$") || fname.equals("VALUES")) {
-                continue;
-            }
-            if (java.lang.reflect.Modifier.isStatic(field.getModifiers()) &&
-                field.getTypeSignatureOrTypeDescriptor().toString().contains(classInfo.getName())) {
-                sb.append("  ").append(fname);
-                if (!isUnion) {
-                    Object constVal = field.getConstantInitializerValue();
-                    if (constVal != null) {
-                        sb.append(" = ").append(constVal);
-                    } else {
-                        // Fallback to declaration order
-                        sb.append(" = ").append(ordinal);
-                    }
+            if (java.lang.reflect.Modifier.isStatic(field.getModifiers()) && field.isEnum()) {
+                sb.append("  ").append(field.getName());
+                Object constant = field.getConstantInitializerValue();
+                if (constant != null) {
+                    sb.append(" = ").append(constant);
                 }
                 sb.append(",\n");
-                ordinal++;
             }
         }
 
-        String result = sb.toString().replaceAll(",\n$", "\n");
-        return result + "}\n\n";
+        // Fallback: if no constants found via ClassGraph, try reflection
+        if (sb.toString().endsWith("{\n")) {
+            try {
+                Class<?> enumClass = Class.forName(classInfo.getName());
+                if (enumClass.isEnum()) {
+                    Object[] constants = enumClass.getEnumConstants();
+                    for (Object c : constants) {
+                        sb.append("  ").append(((Enum<?>) c).name()).append(",\n");
+                    }
+                }
+            } catch (ClassNotFoundException ignored) {
+                // leave empty
+            }
+        }
+
+        sb.append("}\n\n");
+        return sb.toString();
     }
 
-    private String toSnakeCase(String name) {
-        return name.replaceAll("([a-z0-9])([A-Z])", "$1_$2").toLowerCase();
-    }
-
-    private boolean isNonScalarField(String fieldLine) {
-        int colon = fieldLine.indexOf(':');
-        if (colon < 0) return false;
-        String type = fieldLine.substring(colon + 1).split(" ")[0];
-        return type.equals("string") || type.startsWith("[") ||
-               !type.matches("byte|ubyte|short|ushort|int|uint|long|ulong|float|double|bool");
+    private static String toSnakeCase(String name) {
+        if (name == null || name.isEmpty()) return name;
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < name.length(); i++) {
+            char c = name.charAt(i);
+            if (Character.isUpperCase(c)) {
+                if (i > 0 && sb.charAt(sb.length() - 1) != '_') {
+                    sb.append('_');
+                }
+                sb.append(Character.toLowerCase(c));
+            } else {
+                sb.append(c);
+            }
+        }
+        return sb.toString();
     }
 }
