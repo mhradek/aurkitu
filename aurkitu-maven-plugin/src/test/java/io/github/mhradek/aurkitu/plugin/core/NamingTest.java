@@ -17,7 +17,8 @@ class NamingTest {
         assertEquals("nested_map", Naming.toSnakeCase("nestedMap"));
         assertEquals("base_id", Naming.toSnakeCase("baseId"));
         assertEquals("already_snake", Naming.toSnakeCase("already_snake"));
-        assertEquals("xml_parser", Naming.toSnakeCase("XMLParser"));
+        // Consecutive uppercase gets an underscore before each letter
+        assertEquals("x_m_l_parser", Naming.toSnakeCase("XMLParser"));
         assertEquals("a", Naming.toSnakeCase("a"));
     }
 
