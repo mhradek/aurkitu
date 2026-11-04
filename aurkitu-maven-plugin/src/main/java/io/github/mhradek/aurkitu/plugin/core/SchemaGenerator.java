@@ -219,11 +219,15 @@ public class SchemaGenerator {
 
     private boolean isStruct(ClassInfo classInfo) {
         var tableAnno = classInfo.getAnnotationInfo(FlatBufferTable.class.getName());
-        if (tableAnno == null || tableAnno.getParameterValues().get("value") == null) {
+        if (tableAnno == null) {
             return false;
         }
-        String structure = String.valueOf(tableAnno.getParameterValues().get("value").getValue());
-        return structure.contains("STRUCT");
+        var valueParam = tableAnno.getParameterValues().get("value");
+        if (valueParam == null) {
+            return false;
+        }
+        String structure = String.valueOf(valueParam.getValue());
+        return structure.toUpperCase().contains("STRUCT");
     }
 
     @SuppressWarnings("PMD")
@@ -361,12 +365,14 @@ public class SchemaGenerator {
             Object fl = options.getParameterValues().get("fixedLength").getValue();
             if (fl instanceof Number ln && ln.intValue() > 0) {
                 int n = ln.intValue();
+                String before = typeName;
                 if (typeName.startsWith("[") && typeName.endsWith("]") && !typeName.contains(":")) {
                     // [T] -> [T:N]
                     typeName = typeName.substring(0, typeName.length() - 1) + ":" + n + "]";
                 } else if (!typeName.contains("[")) {
                     typeName = "[" + typeName + ":" + n + "]";
                 }
+                log.debug("fixedLength rewrite on {}.{}: {} -> {}", owner.getSimpleName(), name, before, typeName);
             }
         }
 
