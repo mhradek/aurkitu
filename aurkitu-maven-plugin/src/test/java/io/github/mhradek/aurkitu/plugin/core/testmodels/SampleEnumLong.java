@@ -1,9 +1,9 @@
 package io.github.mhradek.aurkitu.plugin.core.testmodels;
 
 import io.github.mhradek.aurkitu.annotations.FlatBufferEnum;
-import io.github.mhradek.aurkitu.annotations.types.FieldType;
+import io.github.mhradek.aurkitu.annotations.types.EnumType;
 
-@FlatBufferEnum(enumType = FieldType.LONG)
+@FlatBufferEnum(enumType = EnumType.LONG)
 public enum SampleEnumLong {
     A, B, C
 }
