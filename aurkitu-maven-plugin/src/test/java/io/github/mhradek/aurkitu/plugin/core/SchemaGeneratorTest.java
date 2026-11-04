@@ -49,7 +49,6 @@ class SchemaGeneratorTest {
         assertTrue(content.contains("name:string;"));
         assertTrue(content.contains("active:bool;"));
         assertTrue(content.contains("level:int = 42") || content.contains("level:int=42"));
-        // Look for the field, not the word in a validation comment
         assertFalse(content.contains("ignored:") && !content.contains("// - "));
         assertTrue(content.contains("tags:[string]") || content.contains("tags:[String]"));
         assertTrue(content.contains("scores:[MapValueSet_SampleRootTable_scores]"));
@@ -79,6 +78,116 @@ class SchemaGeneratorTest {
     }
 
     @Test
+    void emitsEnumUnderlyingTypes() throws Exception {
+        SchemaGenerator generator = new SchemaGenerator(
+                null,
+                List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
+                true);
+        File out = tempDir.toFile();
+        generator.generate("enums", "test.enums", out);
+
+        String content = Files.readString(out.toPath().resolve("enums.fbs"));
+        assertTrue(content.contains("enum SampleEnumShort : short {"));
+        assertTrue(content.contains("enum SampleEnumInt : int {"));
+        assertTrue(content.contains("enum SampleEnumLong : long {"));
+        assertTrue(content.contains("// A commented enum"));
+        assertTrue(content.contains("enum SampleEnumWithComment : byte {"));
+    }
+
+    @Test
+    void emitsCommonTypesAndWrappers() throws Exception {
+        SchemaGenerator generator = new SchemaGenerator(
+                null,
+                List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
+                true);
+        File out = tempDir.toFile();
+        generator.generate("common", "test.common", out);
+
+        String content = Files.readString(out.toPath().resolve("common.fbs"));
+        assertTrue(content.contains("table SampleWithCommonTypes {"));
+        assertTrue(content.contains("created:string"));
+        assertTrue(content.contains("link:string"));
+        assertTrue(content.contains("amount:string"));
+        assertTrue(content.contains("flag:bool"));
+        assertTrue(content.contains("count:int"));
+        assertTrue(content.contains("tags:[string]"));
+        assertTrue(content.contains("numbers:[int]"));
+        assertTrue(content.contains("bytes:[ubyte]") || content.contains("bytes:[byte]"));
+    }
+
+    @Test
+    void emitsFieldIdsWhenAllFieldsHaveThem() throws Exception {
+        SchemaGenerator generator = new SchemaGenerator(
+                null,
+                List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
+                true);
+        File out = tempDir.toFile();
+        generator.generate("ids", "test.ids", out);
+
+        String content = Files.readString(out.toPath().resolve("ids.fbs"));
+        assertTrue(content.contains("table SampleWithAllIds {"));
+        assertTrue(content.contains("id:string (id: 0)") || content.contains("(id: 0)"));
+        assertTrue(content.contains("version:int (id: 1)") || content.contains("(id: 1)"));
+    }
+
+    @Test
+    void omitsPartialFieldIdsAndReportsIssue() throws Exception {
+        SchemaGenerator generator = new SchemaGenerator(
+                null,
+                List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
+                true);
+        File out = tempDir.toFile();
+        generator.generate("partial", "test.partial", out);
+
+        String content = Files.readString(out.toPath().resolve("partial.fbs"));
+        assertTrue(content.contains("table SampleWithPartialIds {"));
+        assertTrue(content.contains("Partial field ids") || content.contains("ids omitted"));
+        // ids should be omitted when partial
+        assertFalse(content.contains("id:string (id:"));
+    }
+
+    @Test
+    void reportsNonScalarStructField() throws Exception {
+        SchemaGenerator generator = new SchemaGenerator(
+                null,
+                List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
+                true);
+        File out = tempDir.toFile();
+        generator.generate("struct", "test.struct", out);
+
+        String content = Files.readString(out.toPath().resolve("struct.fbs"));
+        assertTrue(content.contains("struct SampleStructWithString {"));
+        assertTrue(content.contains("non-scalar") || content.contains("SampleStructWithString"));
+    }
+
+    @Test
+    void emitsPerTypeNamespaceOverride() throws Exception {
+        SchemaGenerator generator = new SchemaGenerator(
+                null,
+                List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
+                true);
+        File out = tempDir.toFile();
+        generator.generate("ns", "test.ns", out);
+
+        String content = Files.readString(out.toPath().resolve("ns.fbs"));
+        assertTrue(content.contains("namespace other.ns;"));
+        assertTrue(content.contains("table SampleWithNamespace {"));
+    }
+
+    @Test
+    void reportsUnsupportedFieldType() throws Exception {
+        SchemaGenerator generator = new SchemaGenerator(
+                null,
+                List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
+                true);
+        File out = tempDir.toFile();
+        generator.generate("unsup", "test.unsup", out);
+
+        String content = Files.readString(out.toPath().resolve("unsup.fbs"));
+        assertTrue(content.contains("Unsupported field type") || content.contains("SampleWithUnsupported"));
+    }
+
+    @Test
     void emitsFieldAttributesAndFixedArray() throws Exception {
         SchemaGenerator generator = new SchemaGenerator(
                 null,
@@ -88,17 +197,13 @@ class SchemaGeneratorTest {
         generator.generate("attrs", "test.attrs", out);
 
         String content = Files.readString(out.toPath().resolve("attrs.fbs"));
-        System.out.println("=== attrs schema ===\n" + content + "=== end ===");
         assertTrue(content.contains("table SampleWithAttributes {"));
-        // Partial ids are omitted; other attributes remain
         assertTrue(content.contains("key"));
         assertTrue(content.contains("hash: \"fnv1_32\""));
-        // nested_flatbuffer and flexbuffer only on [ubyte]
         assertTrue(content.contains("nested:[ubyte]") || content.contains("[ubyte]"));
         assertTrue(content.contains("nested_flatbuffer: \"Nested\""));
         assertTrue(content.contains("flex:[ubyte]") || content.contains("flexbuffer"));
         assertTrue(content.contains("force_align: 8"));
-        // fixedLength is applied on structs
         assertTrue(content.contains("struct FixedStruct {"), "Schema was:\n" + content);
         assertTrue(content.contains("values:[int:4]"), "Expected fixed array. Schema was:\n" + content);
     }
