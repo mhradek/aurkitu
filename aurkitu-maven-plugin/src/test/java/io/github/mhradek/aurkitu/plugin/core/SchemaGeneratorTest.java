@@ -98,8 +98,9 @@ class SchemaGeneratorTest {
         assertTrue(content.contains("flex:[ubyte]") || content.contains("flexbuffer"));
         assertTrue(content.contains("force_align: 8"));
         // fixedLength is only applied on structs
-        assertTrue(content.contains("struct FixedStruct {"));
-        assertTrue(content.contains("values:[int:4]") || content.contains("[int:4]"));
+        assertTrue(content.contains("struct FixedStruct {"), "Schema was:\n" + content);
+        assertTrue(content.contains("values:[int:4]") || content.contains("[int:4]"),
+                "Expected fixed array. Schema was:\n" + content);
     }
 
     @Test
