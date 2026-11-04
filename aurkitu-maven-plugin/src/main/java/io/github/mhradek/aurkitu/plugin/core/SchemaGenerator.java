@@ -226,8 +226,16 @@ public class SchemaGenerator {
         if (valueParam == null) {
             return false;
         }
-        String structure = String.valueOf(valueParam.getValue());
-        return structure.toUpperCase().contains("STRUCT");
+        Object raw = valueParam.getValue();
+        if (raw == null) {
+            return false;
+        }
+        // ClassGraph may return the enum constant or a string like
+        // "...TableStructureType.STRUCT". Match the constant name exactly.
+        String s = String.valueOf(raw);
+        int dot = s.lastIndexOf('.');
+        String name = (dot >= 0 ? s.substring(dot + 1) : s).toUpperCase();
+        return "STRUCT".equals(name);
     }
 
     @SuppressWarnings("PMD")
@@ -557,7 +565,8 @@ public class SchemaGenerator {
     }
 
     private boolean isNonScalarField(String fieldLine) {
-        // Rough check: if the type after the colon contains [ or is not a primitive/scalar
+        // Fixed-size arrays of scalars are legal in structs ([T:N]).
+        // Variable-length arrays, strings, and tables are not.
         int colon = fieldLine.indexOf(':');
         if (colon < 0) return false;
         String type = fieldLine.substring(colon + 1);
@@ -565,6 +574,10 @@ public class SchemaGenerator {
         if (space > 0) type = type.substring(0, space);
         int paren = type.indexOf('(');
         if (paren > 0) type = type.substring(0, paren);
+        // [T:N] is a fixed array (legal in structs)
+        if (type.matches("\\[[a-z]+:\\d+\\]")) {
+            return false;
+        }
         return type.contains("[") || type.contains("string") || type.contains("table");
     }
 
@@ -575,8 +588,13 @@ public class SchemaGenerator {
         String underlying = "byte";
         if (enumAnno != null) {
             Object val = enumAnno.getParameterValues().get("value").getValue();
-            if (val != null && String.valueOf(val).toUpperCase().contains("UNION")) {
-                isUnion = true;
+            if (val != null) {
+                String s = String.valueOf(val);
+                int dot = s.lastIndexOf('.');
+                String name = (dot >= 0 ? s.substring(dot + 1) : s).toUpperCase();
+                if ("UNION".equals(name)) {
+                    isUnion = true;
+                }
             }
             Object et = enumAnno.getParameterValues().get("enumType").getValue();
             if (et != null) {
