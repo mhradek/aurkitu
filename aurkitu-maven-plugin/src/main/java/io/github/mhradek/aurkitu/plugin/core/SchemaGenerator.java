@@ -297,6 +297,7 @@ public class SchemaGenerator {
     private String buildField(FieldInfo field, ClassInfo owner, boolean isStruct) {
         String name = field.getName();
         String typeName = mapType(field.getTypeSignatureOrTypeDescriptor(), owner, field.getName(), field);
+        boolean isArray = typeName != null && typeName.startsWith("[") && typeName.endsWith("]");
 
         // Honour explicit fieldType override when present
         if (field.hasAnnotation(FlatBufferFieldOptions.class.getName())) {
@@ -306,9 +307,15 @@ public class SchemaGenerator {
                 String ftStr = ft.toString();
                 // Only override for concrete scalar / string types; leave MAP/ARRAY/IDENT to signature logic
                 if (!ftStr.contains("MAP") && !ftStr.contains("ARRAY") && !ftStr.contains("IDENT")) {
-                    typeName = ftStr.toLowerCase().replace("fieldtype.", "");
-                    if (typeName.contains(".")) {
-                        typeName = typeName.substring(typeName.lastIndexOf('.') + 1).toLowerCase();
+                    String override = ftStr.toLowerCase().replace("fieldtype.", "");
+                    if (override.contains(".")) {
+                        override = override.substring(override.lastIndexOf('.') + 1).toLowerCase();
+                    }
+                    // Preserve array form when the field is an array and the override is a scalar
+                    if (isArray && !override.contains("[")) {
+                        typeName = "[" + override + "]";
+                    } else {
+                        typeName = override;
                     }
                 }
                 // Unsigned types are valid in the schema; note only in debug
@@ -393,12 +400,18 @@ public class SchemaGenerator {
                 if ("[ubyte]".equals(typeName) || "[byte]".equals(typeName)) {
                     attrs.add("nested_flatbuffer: \"" + nfb + "\"");
                 } else if (config.validate) {
-                    validationIssues.add("nested_flatbuffer on " + owner.getSimpleName() + "." + name + " ignored: type must be [ubyte]");
-                    log.warn("nested_flatbuffer on {}.{} ignored (type is {}, must be [ubyte])", owner.getSimpleName(), name, typeName);
+                    validationIssues.add("nested_flatbuffer on " + owner.getSimpleName() + "." + name + " skipped: type must be [ubyte]");
+                    log.warn("nested_flatbuffer on {}.{} skipped (type is {}, must be [ubyte])", owner.getSimpleName(), name, typeName);
                 }
             }
             if (Boolean.TRUE.equals(options.getParameterValues().get("flexbuffer").getValue())) {
-                attrs.add("flexbuffer");
+                // flexbuffer is only legal on [ubyte]
+                if ("[ubyte]".equals(typeName) || "[byte]".equals(typeName)) {
+                    attrs.add("flexbuffer");
+                } else if (config.validate) {
+                    validationIssues.add("flexbuffer on " + owner.getSimpleName() + "." + name + " skipped: type must be [ubyte]");
+                    log.warn("flexbuffer on {}.{} skipped (type is {}, must be [ubyte])", owner.getSimpleName(), name, typeName);
+                }
             }
             Object fa = options.getParameterValues().get("forceAlign").getValue();
             if (fa instanceof Number fn && fn.intValue() > 0) {
