@@ -28,7 +28,7 @@ This is the **modernised 1.0.0** release:
 
 ## Coverage
 
-JaCoCo is the **single source of truth**. `mvn verify` fails if line coverage drops below 50% on either module (see `jacoco.line.coverage.minimum` in the parent POM). Raise the threshold as tests improve.
+JaCoCo is the **single source of truth**. `mvn verify` fails if any class drops below **80% line coverage** (see `jacoco.line.coverage.minimum` in the parent POM).
 
 External badges (Codecov, Coveralls, Codacy) are mirrors. They require these repository secrets:
 
@@ -315,8 +315,8 @@ mvn clean verify
 
 | Priority | Item | Why it matters | Status |
 |----------|------|----------------|--------|
-| **Done** | Coverage baseline (JaCoCo check + hardened uploads) | Reliable coverage numbers | 50% line minimum; uploads fail the job |
-| **Medium** | Raise coverage threshold and expand SchemaGenerator tests | Higher confidence | See issues |
+| **Done** | Coverage baseline (JaCoCo check + hardened uploads) | Reliable coverage numbers | 80% line minimum per class; uploads fail the job |
+| **Done** | Raise coverage threshold and expand SchemaGenerator tests | Higher confidence | 80% per class |
 | **Medium** | Published Javadoc site | Consumer docs beyond the README | Jars are attached on Central |
 | **Low** | True multi-namespace schema splitting | Advanced use case | Per-type `namespace` line only |
 | **Low** | Schema include resolution | Cross-schema types | Includes are emitted only |
@@ -329,7 +329,7 @@ mvn clean verify
 
 ### Done in 1.0.0 (summary)
 
-Java 17, ClassGraph scanner, field processing (primitives, lists, nested maps, enums, unions, structs, inheritance), field options (type override, required, deprecated, defaults, comments, useFullName, fieldId), common type mapping, snake_case (default on), generateVersion, content-aware cache, failOnValidationIssues, optional flatc validation + CI binary, pure JUnit 5 + flatc test, Mojo config tests, JaCoCo, migration guide, Codacy issues addressed.
+Java 17, ClassGraph scanner, field processing (primitives, lists, nested maps, enums, unions, structs, inheritance), field options (type override, required, deprecated, defaults, comments, useFullName, fieldId), common type mapping, snake_case (default on), generateVersion, content-aware cache, failOnValidationIssues, optional flatc validation + CI binary, pure JUnit 5 + flatc test, Mojo config tests, JaCoCo (80% per class), migration guide, Codacy issues addressed.
 
 ## FlatBuffers schema compatibility
 
