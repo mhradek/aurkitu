@@ -331,8 +331,14 @@ public class SchemaGenerator {
         if (isStruct && field.hasAnnotation(FlatBufferFieldOptions.class.getName())) {
             var options = field.getAnnotationInfo(FlatBufferFieldOptions.class.getName());
             Object fl = options.getParameterValues().get("fixedLength").getValue();
-            if (fl instanceof Number ln && ln.intValue() > 0 && !typeName.contains("[")) {
-                typeName = "[" + typeName + ":" + ln.intValue() + "]";
+            if (fl instanceof Number ln && ln.intValue() > 0) {
+                int n = ln.intValue();
+                if (typeName.startsWith("[") && typeName.endsWith("]") && !typeName.contains(":")) {
+                    // [T] -> [T:N]
+                    typeName = typeName.substring(0, typeName.length() - 1) + ":" + n + "]";
+                } else if (!typeName.contains("[")) {
+                    typeName = "[" + typeName + ":" + n + "]";
+                }
             }
         }
 
@@ -361,35 +367,40 @@ public class SchemaGenerator {
             if (!defaultValue.isBlank()) {
                 line.append(" = ").append(defaultValue);
             }
+
+            // Collect attributes into a single parenthesized group
+            List<String> attrs = new ArrayList<>();
             if (Boolean.TRUE.equals(options.getParameterValues().get("required").getValue())) {
-                line.append(" (required)");
+                attrs.add("required");
             }
             if (Boolean.TRUE.equals(options.getParameterValues().get("deprecated").getValue())) {
-                line.append(" (deprecated)");
+                attrs.add("deprecated");
             }
             Object fid = options.getParameterValues().get("fieldId").getValue();
             if (fid instanceof Number n && n.intValue() >= 0) {
-                line.append(" (id: ").append(n.intValue()).append(")");
+                attrs.add("id: " + n.intValue());
             }
             if (Boolean.TRUE.equals(options.getParameterValues().get("key").getValue())) {
-                line.append(" (key)");
+                attrs.add("key");
             }
             Object hash = options.getParameterValues().get("hash").getValue();
             if (hash != null && !String.valueOf(hash).isBlank()) {
-                line.append(" (hash: \"").append(hash).append("\")");
+                attrs.add("hash: \"" + hash + "\"");
             }
             Object nfb = options.getParameterValues().get("nestedFlatbuffer").getValue();
             if (nfb != null && !String.valueOf(nfb).isBlank()) {
-                line.append(" (nested_flatbuffer: \"").append(nfb).append("\")");
+                attrs.add("nested_flatbuffer: \"" + nfb + "\"");
             }
             if (Boolean.TRUE.equals(options.getParameterValues().get("flexbuffer").getValue())) {
-                line.append(" (flexbuffer)");
+                attrs.add("flexbuffer");
             }
             Object fa = options.getParameterValues().get("forceAlign").getValue();
             if (fa instanceof Number fn && fn.intValue() > 0) {
-                line.append(" (force_align: ").append(fn.intValue()).append(")");
+                attrs.add("force_align: " + fn.intValue());
             }
-            // fixedLength is already applied to typeName above (structs only)
+            if (!attrs.isEmpty()) {
+                line.append(" (").append(String.join(", ", attrs)).append(")");
+            }
         }
 
         return line.toString();
