@@ -423,9 +423,10 @@ public class SchemaGenerator {
 
             // Maps
             if ("java.util.Map".equals(className) || className.endsWith(".Map")) {
-                List<TypeSignature> typeArgs = classRef.getTypeArguments();
+                List<TypeArgument> typeArgs = classRef.getTypeArguments();
                 if (typeArgs.size() == 2) {
-                    String valueType = mapType(typeArgs.get(1), owner, contextName, field);
+                    TypeSignature valueSig = typeArgs.get(1).getTypeSignature();
+                    String valueType = mapType(valueSig, owner, contextName, field);
                     if (valueType != null) {
                         String mapTableName = "MapValueSet_" + owner.getSimpleName() + "_" + toSnakeCase(contextName);
                         String mapTable = "table " + mapTableName + " {\n  key:string;\n  value:" + valueType + ";\n}\n\n";
@@ -438,9 +439,10 @@ public class SchemaGenerator {
 
             // Lists / Collections
             if (className.endsWith("List") || className.endsWith("Set") || className.endsWith("Collection")) {
-                List<TypeSignature> typeArgs = classRef.getTypeArguments();
+                List<TypeArgument> typeArgs = classRef.getTypeArguments();
                 if (!typeArgs.isEmpty()) {
-                    String element = mapType(typeArgs.get(0), owner, contextName, field);
+                    TypeSignature elementSig = typeArgs.get(0).getTypeSignature();
+                    String element = mapType(elementSig, owner, contextName, field);
                     return element == null ? null : "[" + element + "]";
                 }
                 return null;
