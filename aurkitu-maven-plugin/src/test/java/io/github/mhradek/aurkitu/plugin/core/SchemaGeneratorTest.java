@@ -92,6 +92,8 @@ class SchemaGeneratorTest {
         assertTrue(content.contains("(id: 0, key)") || content.contains("(id: 0)"));
         assertTrue(content.contains("key"));
         assertTrue(content.contains("hash: \"fnv1_32\""));
+        // nested_flatbuffer only on [ubyte]
+        assertTrue(content.contains("nested:[ubyte]") || content.contains("[ubyte]"));
         assertTrue(content.contains("nested_flatbuffer: \"Nested\""));
         assertTrue(content.contains("flexbuffer"));
         assertTrue(content.contains("force_align: 8"));
