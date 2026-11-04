@@ -56,12 +56,13 @@ jobs:
           verbose: true
 
       - name: Upload coverage to Coveralls
-        env:
-          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
-        run: |
-          mvn -B coveralls:report \
-            -DrepoToken="${COVERALLS_REPO_TOKEN}" \
-            -Dcoveralls.jacocoReportPath="aurkitu-maven-plugin/target/site/jacoco/jacoco.xml"
+        uses: coverallsapp/github-action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          file: aurkitu-maven-plugin/target/site/jacoco/jacoco.xml
+          format: jacoco
+          # Optional: also send the annotations report if desired
+          # parallel: true
 
       - name: Upload coverage to Codacy
         continue-on-error: true
