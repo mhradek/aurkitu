@@ -94,8 +94,9 @@ class SchemaGeneratorTest {
         assertTrue(content.contains("(nested_flatbuffer: \"Nested\")"));
         assertTrue(content.contains("(flexbuffer)"));
         assertTrue(content.contains("(force_align: 8)"));
-        // fixedLength rewrites the type as a fixed array
-        assertTrue(content.contains("fixed:[int:4]") || content.contains("[int:4]"));
+        // fixedLength is only applied on structs
+        assertTrue(content.contains("struct FixedStruct {"));
+        assertTrue(content.contains("values:[int:4]") || content.contains("[int:4]"));
     }
 
     @Test
