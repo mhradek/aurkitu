@@ -39,9 +39,11 @@ jobs:
           echo "=== Token presence (values not printed) ==="
           if [ -n "$CODECOV_TOKEN" ]; then echo "CODECOV_TOKEN: set"; else echo "CODECOV_TOKEN: missing"; fi
           if [ -n "$COVERALLS_REPO_TOKEN" ]; then echo "COVERALLS_REPO_TOKEN: set"; else echo "COVERALLS_REPO_TOKEN: missing"; fi
+          if [ -n "$CODACY_PROJECT_TOKEN" ]; then echo "CODACY_PROJECT_TOKEN: set"; else echo "CODACY_PROJECT_TOKEN: missing"; fi
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+          CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
