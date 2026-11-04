@@ -78,11 +78,28 @@ class AurkituMojoIntegrationTest {
     }
 
     @Test
+    void executeFailsWhenFlatcPathIsInvalid() throws Exception {
+        AurkituMojo mojo = new AurkituMojo();
+        set(mojo, "schemaName", "badflatc");
+        set(mojo, "schemaNamespace", "test");
+        set(mojo, "outputDirectory", tempDir.toFile());
+        set(mojo, "specifiedPackages", List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"));
+        set(mojo, "validate", true);
+        set(mojo, "ignoreStaticMembers", true);
+        set(mojo, "mapCommonTypes", true);
+        set(mojo, "snakeCaseFields", true);
+        set(mojo, "generateVersion", false);
+        set(mojo, "failOnValidationIssues", false);
+        set(mojo, "cacheEnabled", false);
+        set(mojo, "flatcPath", "/nonexistent/flatc");
+
+        assertThrows(MojoExecutionException.class, mojo::execute);
+    }
+
+    @Test
     void pluginDescriptorHasCorrectCoordinatesAndGoal() throws Exception {
-        // After compile, plugin.xml is generated under target/classes
         Path pluginXml = Path.of("target/classes/META-INF/maven/plugin.xml");
         if (!Files.exists(pluginXml)) {
-            // Fallback for when tests run from a different working directory
             pluginXml = Path.of("aurkitu-maven-plugin/target/classes/META-INF/maven/plugin.xml");
         }
         assertTrue(Files.exists(pluginXml), "plugin.xml should exist after compile: " + pluginXml.toAbsolutePath());
