@@ -41,58 +41,33 @@ class SchemaGeneratorTest {
         assertTrue(Files.exists(schemaPath));
         String content = Files.readString(schemaPath);
 
-        // Header and namespace
         assertTrue(content.contains("namespace test.models;"));
         assertTrue(content.contains("// Aurkitu 1.0.0"));
-
-        // Root table
         assertTrue(content.contains("table SampleRootTable {"));
         assertTrue(content.contains("root_type SampleRootTable;"));
-
-        // Primitives
         assertTrue(content.contains("id:long;"));
         assertTrue(content.contains("name:string;"));
         assertTrue(content.contains("active:bool;"));
-
-        // Field options default
         assertTrue(content.contains("level:int = 42") || content.contains("level:int=42"));
-
-        // Ignore
         assertFalse(content.contains("ignored:"));
-
-        // List
         assertTrue(content.contains("tags:[string]") || content.contains("tags:[String]"));
-
-        // Simple map
         assertTrue(content.contains("scores:[MapValueSet_SampleRootTable_scores]"));
         assertTrue(content.contains("table MapValueSet_SampleRootTable_scores {"));
-
-        // Nested map
         assertTrue(content.contains("nested_map:[MapValueSet_SampleRootTable_nested_map]"));
         assertTrue(content.contains("table MapValueSet_SampleRootTable_nested_map {"));
-
-        // Enum
         assertTrue(content.contains("enum SampleEnum : byte {"));
         assertTrue(content.contains("ALPHA"));
         assertTrue(content.contains("BETA"));
         assertTrue(content.contains("GAMMA"));
-
-        // Unsigned
         assertTrue(content.contains("table SampleUnsigned {"));
         assertTrue(content.contains("flags:ubyte"));
         assertTrue(content.contains("port:ushort"));
         assertTrue(content.contains("count:uint"));
         assertTrue(content.contains("id:ulong") || content.contains(":ulong"));
-
-        // Struct
         assertTrue(content.contains("struct SampleStruct {"));
         assertTrue(content.contains("x:float"));
-
-        // Union
         assertTrue(content.contains("union SampleUnion {"));
         assertTrue(content.contains("SampleRootTable"));
-
-        // Required / deprecated / comments / inheritance
         assertTrue(content.contains("table SampleWithOptions {"));
         assertTrue(content.contains("// A table with various field options"));
         assertTrue(content.contains("// Required identifier"));
@@ -100,6 +75,27 @@ class SchemaGeneratorTest {
         assertTrue(content.contains("legacy_value:int = 0 (deprecated)") || content.contains("legacy_value:int=0 (deprecated)"));
         assertTrue(content.contains("base_id:long"));
         assertTrue(content.contains("base_name:string"));
+    }
+
+    @Test
+    void emitsFieldAttributesAndFixedArray() throws Exception {
+        SchemaGenerator generator = new SchemaGenerator(
+                null,
+                List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
+                true);
+        File out = tempDir.toFile();
+        generator.generate("attrs", "test.attrs", out);
+
+        String content = Files.readString(out.toPath().resolve("attrs.fbs"));
+        assertTrue(content.contains("table SampleWithAttributes {"));
+        assertTrue(content.contains("(id: 0)"));
+        assertTrue(content.contains("(key)"));
+        assertTrue(content.contains("(hash: \"fnv1_32\")"));
+        assertTrue(content.contains("(nested_flatbuffer: \"Nested\")"));
+        assertTrue(content.contains("(flexbuffer)"));
+        assertTrue(content.contains("(force_align: 8)"));
+        // fixedLength rewrites the type as a fixed array
+        assertTrue(content.contains("fixed:[int:4]") || content.contains("[int:4]"));
     }
 
     @Test
@@ -165,6 +161,16 @@ class SchemaGeneratorTest {
     }
 
     @Test
+    void emptyPackageListStillGeneratesHeader() throws Exception {
+        SchemaGenerator generator = new SchemaGenerator(null, List.of(), true);
+        File out = tempDir.toFile();
+        generator.generate("blank", "ns.blank", out);
+        String content = Files.readString(out.toPath().resolve("blank.fbs"));
+        assertTrue(content.contains("namespace ns.blank;"));
+        assertTrue(content.contains("// Aurkitu 1.0.0"));
+    }
+
+    @Test
     void failOnValidationIssuesThrowsWhenIssuesExist() {
         SchemaGenerator.Config config = new SchemaGenerator.Config(
                 null,
@@ -177,7 +183,7 @@ class SchemaGeneratorTest {
                 false,
                 true,
                 false,
-                true,   // failOnValidationIssues
+                true,
                 null);
         SchemaGenerator generator = new SchemaGenerator(config);
         File out = tempDir.toFile();
@@ -198,7 +204,7 @@ class SchemaGeneratorTest {
                 List.of(),
                 true,
                 false,
-                false,  // snakeCaseFields = false
+                false,
                 false,
                 false,
                 null);
@@ -207,7 +213,6 @@ class SchemaGeneratorTest {
         generator.generate("nosnake", "test.nosnake", out);
 
         String content = Files.readString(out.toPath().resolve("nosnake.fbs"));
-        // With snake_case off, nestedMap stays nestedMap (not nested_map)
         assertTrue(content.contains("nestedMap:") || content.contains("nestedMap"));
         assertFalse(content.contains("nested_map:"));
     }
@@ -224,7 +229,7 @@ class SchemaGeneratorTest {
                 true,
                 false,
                 true,
-                true,   // generateVersion
+                true,
                 false,
                 null);
         SchemaGenerator generator = new SchemaGenerator(config);
@@ -233,7 +238,6 @@ class SchemaGeneratorTest {
 
         String content = Files.readString(out.toPath().resolve("versioned.fbs"));
         assertTrue(content.contains("// @version: "));
-        // Second run with same inputs should produce the same version hash
         generator.generate("versioned2", "test.versioned", out);
         String content2 = Files.readString(out.toPath().resolve("versioned2.fbs"));
         String v1 = extractVersion(content);
@@ -251,7 +255,7 @@ class SchemaGeneratorTest {
                 null,
                 List.of(),
                 true,
-                true,   // cacheEnabled
+                true,
                 true,
                 false,
                 false,
@@ -266,13 +270,9 @@ class SchemaGeneratorTest {
         assertTrue(Files.exists(cache));
 
         String first = Files.readString(schema);
-        long firstMtime = Files.getLastModifiedTime(schema).toMillis();
-
-        // Second call should hit the cache and not rewrite
         generator.generate("cached", "test.cached", out);
         String second = Files.readString(schema);
         assertEquals(first, second);
-        // mtime may or may not change depending on filesystem resolution; content equality is the real check
     }
 
     @Test
