@@ -17,8 +17,8 @@ public class SampleWithAttributes {
     @FlatBufferFieldOptions(fieldType = FieldType.UBYTE, nestedFlatbuffer = "Nested")
     private byte[] nested;
 
-    @FlatBufferFieldOptions(fieldType = FieldType.STRING, flexbuffer = true)
-    private String flex;
+    @FlatBufferFieldOptions(fieldType = FieldType.UBYTE, flexbuffer = true)
+    private byte[] flex;
 
     @FlatBufferFieldOptions(fieldType = FieldType.INT, forceAlign = 8)
     private int aligned;
