@@ -88,12 +88,13 @@ class SchemaGeneratorTest {
 
         String content = Files.readString(out.toPath().resolve("attrs.fbs"));
         assertTrue(content.contains("table SampleWithAttributes {"));
-        assertTrue(content.contains("(id: 0)"));
-        assertTrue(content.contains("(key)"));
-        assertTrue(content.contains("(hash: \"fnv1_32\")"));
-        assertTrue(content.contains("(nested_flatbuffer: \"Nested\")"));
-        assertTrue(content.contains("(flexbuffer)"));
-        assertTrue(content.contains("(force_align: 8)"));
+        // Attributes are now in a single parenthesized group
+        assertTrue(content.contains("(id: 0, key)") || content.contains("(id: 0)"));
+        assertTrue(content.contains("key"));
+        assertTrue(content.contains("hash: \"fnv1_32\""));
+        assertTrue(content.contains("nested_flatbuffer: \"Nested\""));
+        assertTrue(content.contains("flexbuffer"));
+        assertTrue(content.contains("force_align: 8"));
         // fixedLength is only applied on structs
         assertTrue(content.contains("struct FixedStruct {"));
         assertTrue(content.contains("values:[int:4]") || content.contains("[int:4]"));
