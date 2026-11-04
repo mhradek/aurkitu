@@ -252,6 +252,7 @@ public class SchemaGenerator {
         sb.append(isStruct ? "struct " : "table ").append(classInfo.getSimpleName()).append(" {\n");
 
         // Collect fields from this class and all superclasses (avoiding duplicates)
+        List<FieldInfo> fields = new ArrayList<>();
         Set<String> seen = new HashSet<>();
         ClassInfo current = classInfo;
         while (current != null) {
@@ -268,19 +269,7 @@ public class SchemaGenerator {
                 if (config.ignoreStaticMembers && java.lang.reflect.Modifier.isStatic(field.getModifiers())) {
                     continue;
                 }
-
-                String fieldLine = buildField(field, current, isStruct);
-                if (fieldLine != null) {
-                    if (isStruct && isNonScalarField(fieldLine)) {
-                        if (config.validate) {
-                            validationIssues.add("Struct " + classInfo.getSimpleName() + " field " + field.getName() + " is non-scalar; structs may only contain scalars or other structs");
-                        }
-                        if (config.failOnValidationIssues) {
-                            continue;
-                        }
-                    }
-                    sb.append("  ").append(fieldLine).append(";\n");
-                }
+                fields.add(field);
             }
             current = current.getSuperclass();
             // Stop at Object
@@ -289,12 +278,44 @@ public class SchemaGenerator {
             }
         }
 
+        // FlatBuffers: either all fields or no fields may have an id
+        long withId = fields.stream().filter(this::hasFieldId).count();
+        boolean emitIds = withId == 0 || withId == fields.size();
+        if (withId > 0 && withId < fields.size() && config.validate) {
+            validationIssues.add("Partial field ids on " + classInfo.getSimpleName() + "; ids omitted (all fields or none must have an id)");
+            log.warn("Partial field ids on {}; omitting id attributes", classInfo.getSimpleName());
+        }
+
+        for (FieldInfo field : fields) {
+            String fieldLine = buildField(field, classInfo, isStruct, emitIds);
+            if (fieldLine != null) {
+                if (isStruct && isNonScalarField(fieldLine)) {
+                    if (config.validate) {
+                        validationIssues.add("Struct " + classInfo.getSimpleName() + " field " + field.getName() + " is non-scalar; structs may only contain scalars or other structs");
+                    }
+                    if (config.failOnValidationIssues) {
+                        continue;
+                    }
+                }
+                sb.append("  ").append(fieldLine).append(";\n");
+            }
+        }
+
         sb.append("}\n\n");
         return sb.toString();
     }
 
+    private boolean hasFieldId(FieldInfo field) {
+        if (!field.hasAnnotation(FlatBufferFieldOptions.class.getName())) {
+            return false;
+        }
+        var options = field.getAnnotationInfo(FlatBufferFieldOptions.class.getName());
+        Object fid = options.getParameterValues().get("fieldId").getValue();
+        return fid instanceof Number n && n.intValue() >= 0;
+    }
+
     @SuppressWarnings("PMD")
-    private String buildField(FieldInfo field, ClassInfo owner, boolean isStruct) {
+    private String buildField(FieldInfo field, ClassInfo owner, boolean isStruct, boolean emitIds) {
         String name = field.getName();
         String typeName = mapType(field.getTypeSignatureOrTypeDescriptor(), owner, field.getName(), field);
         boolean isArray = typeName != null && typeName.startsWith("[") && typeName.endsWith("]");
@@ -383,9 +404,11 @@ public class SchemaGenerator {
             if (Boolean.TRUE.equals(options.getParameterValues().get("deprecated").getValue())) {
                 attrs.add("deprecated");
             }
-            Object fid = options.getParameterValues().get("fieldId").getValue();
-            if (fid instanceof Number n && n.intValue() >= 0) {
-                attrs.add("id: " + n.intValue());
+            if (emitIds) {
+                Object fid = options.getParameterValues().get("fieldId").getValue();
+                if (fid instanceof Number n && n.intValue() >= 0) {
+                    attrs.add("id: " + n.intValue());
+                }
             }
             if (Boolean.TRUE.equals(options.getParameterValues().get("key").getValue())) {
                 attrs.add("key");
@@ -542,12 +565,20 @@ public class SchemaGenerator {
     private String buildEnum(ClassInfo classInfo) {
         StringBuilder sb = new StringBuilder();
         var enumAnno = classInfo.getAnnotationInfo(FlatBufferEnum.class.getName());
+        boolean isUnion = false;
         String underlying = "byte";
-        if (enumAnno != null && enumAnno.getParameterValues().get("enumType") != null) {
-            String et = String.valueOf(enumAnno.getParameterValues().get("enumType").getValue());
-            if (et.contains("SHORT")) underlying = "short";
-            else if (et.contains("INT")) underlying = "int";
-            else if (et.contains("LONG")) underlying = "long";
+        if (enumAnno != null) {
+            Object val = enumAnno.getParameterValues().get("value").getValue();
+            if (val != null && String.valueOf(val).toUpperCase().contains("UNION")) {
+                isUnion = true;
+            }
+            Object et = enumAnno.getParameterValues().get("enumType").getValue();
+            if (et != null) {
+                String etStr = String.valueOf(et);
+                if (etStr.contains("SHORT")) underlying = "short";
+                else if (etStr.contains("INT")) underlying = "int";
+                else if (etStr.contains("LONG")) underlying = "long";
+            }
         }
 
         if (classInfo.hasAnnotation(FlatBufferComment.class.getName())) {
@@ -558,15 +589,21 @@ public class SchemaGenerator {
             }
         }
 
-        sb.append("enum ").append(classInfo.getSimpleName()).append(" : ").append(underlying).append(" {\n");
+        if (isUnion) {
+            sb.append("union ").append(classInfo.getSimpleName()).append(" {\n");
+        } else {
+            sb.append("enum ").append(classInfo.getSimpleName()).append(" : ").append(underlying).append(" {\n");
+        }
 
         // Enum constants
         for (FieldInfo field : classInfo.getDeclaredFieldInfo()) {
             if (java.lang.reflect.Modifier.isStatic(field.getModifiers()) && field.isEnum()) {
                 sb.append("  ").append(field.getName());
-                Object constant = field.getConstantInitializerValue();
-                if (constant != null) {
-                    sb.append(" = ").append(constant);
+                if (!isUnion) {
+                    Object constant = field.getConstantInitializerValue();
+                    if (constant != null) {
+                        sb.append(" = ").append(constant);
+                    }
                 }
                 sb.append(",\n");
             }
