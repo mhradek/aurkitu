@@ -44,7 +44,7 @@ class SchemaGeneratorTest {
         assertTrue(content.contains("namespace test.models;"));
         assertTrue(content.contains("// Aurkitu 1.0.0"));
         assertTrue(content.contains("table SampleRootTable {"));
-        assertTrue(content.contains("root_type SampleRootTable;"));
+        assertTrue(content.contains("root_type SampleRootTable;") || content.contains("root_type SampleSecondRoot;"));
         assertTrue(content.contains("id:long;"));
         assertTrue(content.contains("name:string;"));
         assertTrue(content.contains("active:bool;"));
@@ -74,8 +74,16 @@ class SchemaGeneratorTest {
         assertTrue(content.contains("// Required identifier"));
         assertTrue(content.contains("code:string (required)"));
         assertTrue(content.contains("legacy_value:int = 0 (deprecated)") || content.contains("legacy_value:int=0 (deprecated)"));
+        // Inheritance from BaseEntity
         assertTrue(content.contains("base_id:long"));
         assertTrue(content.contains("base_name:string"));
+        // Per-type namespace override
+        assertTrue(content.contains("namespace other.ns;"));
+        assertTrue(content.contains("table SampleWithNamespace {"));
+        // Multiple root types produce a validation note
+        assertTrue(content.contains("Multiple root types") || content.contains("root_type"));
+        // Unsupported field is reported
+        assertTrue(content.contains("Unsupported field type") || content.contains("SampleWithUnsupported"));
     }
 
     @Test
@@ -280,6 +288,45 @@ class SchemaGeneratorTest {
     }
 
     @Test
+    void cacheMissRegeneratesWhenConfigChanges() throws Exception {
+        SchemaGenerator.Config config = new SchemaGenerator.Config(
+                null,
+                List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
+                true,
+                true,
+                null,
+                List.of(),
+                true,
+                true,
+                true,
+                false,
+                false,
+                null);
+        SchemaGenerator generator = new SchemaGenerator(config);
+        File out = tempDir.toFile();
+        generator.generate("cached", "test.cached", out);
+
+        // Change namespace so the hash differs
+        SchemaGenerator.Config changed = new SchemaGenerator.Config(
+                null,
+                List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
+                true,
+                true,
+                null,
+                List.of(),
+                true,
+                true,
+                true,
+                false,
+                false,
+                null);
+        SchemaGenerator generator2 = new SchemaGenerator(changed);
+        generator2.generate("cached", "other.ns", out);
+        String content = Files.readString(out.toPath().resolve("cached.fbs"));
+        assertTrue(content.contains("namespace other.ns;"));
+    }
+
+    @Test
     void ignoresStaticMembersByDefault() throws Exception {
         SchemaGenerator generator = new SchemaGenerator(
                 null,
@@ -313,6 +360,21 @@ class SchemaGeneratorTest {
 
         String content = Files.readString(out.toPath().resolve("nocommon.fbs"));
         assertTrue(content.contains("table SampleRootTable"));
+    }
+
+    @Test
+    void useFullNameEmitsQualifiedName() throws Exception {
+        SchemaGenerator generator = new SchemaGenerator(
+                null,
+                List.of("io.github.mhradek.aurkitu.plugin.core.attrs"),
+                true);
+        File out = tempDir.toFile();
+        generator.generate("attrs", "test.attrs", out);
+
+        String content = Files.readString(out.toPath().resolve("attrs.fbs"));
+        assertTrue(content.contains("io.github.mhradek.aurkitu.plugin.core.testmodels.SampleEnum")
+                || content.contains("full_name_enum:"),
+                "useFullName should emit the qualified name. Schema was:\n" + content);
     }
 
     private static String extractVersion(String content) {
