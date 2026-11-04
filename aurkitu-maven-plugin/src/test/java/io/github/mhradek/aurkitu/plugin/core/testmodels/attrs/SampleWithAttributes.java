@@ -14,8 +14,8 @@ public class SampleWithAttributes {
     @FlatBufferFieldOptions(fieldType = FieldType.INT, fieldId = 1, hash = "fnv1_32")
     private int hashField;
 
-    @FlatBufferFieldOptions(fieldType = FieldType.STRING, nestedFlatbuffer = "Nested")
-    private String nested;
+    @FlatBufferFieldOptions(fieldType = FieldType.UBYTE, nestedFlatbuffer = "Nested")
+    private byte[] nested;
 
     @FlatBufferFieldOptions(fieldType = FieldType.STRING, flexbuffer = true)
     private String flex;
