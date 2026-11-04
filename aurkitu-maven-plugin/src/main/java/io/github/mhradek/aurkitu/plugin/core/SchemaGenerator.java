@@ -389,7 +389,13 @@ public class SchemaGenerator {
             }
             Object nfb = options.getParameterValues().get("nestedFlatbuffer").getValue();
             if (nfb != null && !String.valueOf(nfb).isBlank()) {
-                attrs.add("nested_flatbuffer: \"" + nfb + "\"");
+                // nested_flatbuffer is only legal on [ubyte]
+                if ("[ubyte]".equals(typeName) || "[byte]".equals(typeName)) {
+                    attrs.add("nested_flatbuffer: \"" + nfb + "\"");
+                } else if (config.validate) {
+                    validationIssues.add("nested_flatbuffer on " + owner.getSimpleName() + "." + name + " ignored: type must be [ubyte]");
+                    log.warn("nested_flatbuffer on {}.{} ignored (type is {}, must be [ubyte])", owner.getSimpleName(), name, typeName);
+                }
             }
             if (Boolean.TRUE.equals(options.getParameterValues().get("flexbuffer").getValue())) {
                 attrs.add("flexbuffer");
