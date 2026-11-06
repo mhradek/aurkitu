@@ -25,7 +25,7 @@ class SchemaGeneratorTest {
         assertTrue(Files.exists(schema), "Schema file should be written");
         String content = Files.readString(schema);
         assertTrue(content.contains("namespace generated.flatbuffers"), "Namespace should be present");
-        assertTrue(content.contains("// Aurkitu 1.0.0"), "Header should be present");
+        assertTrue(content.startsWith(AurkituVersion.schemaHeader()), "Header should be present");
     }
 
     @Test
@@ -42,7 +42,7 @@ class SchemaGeneratorTest {
         String content = Files.readString(schemaPath);
 
         assertTrue(content.contains("namespace test.models;"));
-        assertTrue(content.contains("// Aurkitu 1.0.0"));
+        assertTrue(content.startsWith(AurkituVersion.schemaHeader()));
         assertTrue(content.contains("table SampleRootTable {"));
         assertTrue(content.contains("root_type SampleRootTable;"));
         assertTrue(content.contains("id:long;"));
@@ -112,7 +112,7 @@ class SchemaGeneratorTest {
         assertTrue(content.contains("count:int"));
         assertTrue(content.contains("tags:[string]"));
         assertTrue(content.contains("numbers:[int]"));
-        assertTrue(content.contains("bytes:[ubyte]") || content.contains("bytes:[byte]"));
+        assertTrue(content.contains("bytes:[ubyte];"), content);
     }
 
     @Test
@@ -204,10 +204,12 @@ class SchemaGeneratorTest {
         assertTrue(content.contains("table SampleWithAttributes {"));
         assertTrue(content.contains("key"));
         assertTrue(content.contains("hash: \"fnv1_32\""));
-        assertTrue(content.contains("nested:[ubyte]") || content.contains("[ubyte]"));
-        assertTrue(content.contains("nested_flatbuffer: \"Nested\""));
-        assertTrue(content.contains("flex:[ubyte]") || content.contains("flexbuffer"));
-        assertTrue(content.contains("force_align: 8"));
+        assertTrue(content.contains("nested:[ubyte] (nested_flatbuffer: \"Nested\")"), content);
+        assertTrue(content.contains("flex:[ubyte] (flexbuffer)"), content);
+        // force_align is only valid on vectors: skipped (and reported) on a scalar.
+        assertTrue(content.contains("aligned:int;"), content);
+        assertTrue(content.contains("force_align on SampleWithAttributes.aligned skipped"), content);
+        assertTrue(content.contains("aligned_bytes:[ubyte] (force_align: 16)"), content);
         assertTrue(content.contains("struct FixedStruct {"), "Schema was:\n" + content);
         assertTrue(content.contains("values:[int:4]"), "Expected fixed array. Schema was:\n" + content);
     }
@@ -281,7 +283,7 @@ class SchemaGeneratorTest {
         generator.generate("blank", "ns.blank", out);
         String content = Files.readString(out.toPath().resolve("blank.fbs"));
         assertTrue(content.contains("namespace ns.blank;"));
-        assertTrue(content.contains("// Aurkitu 1.0.0"));
+        assertTrue(content.startsWith(AurkituVersion.schemaHeader()));
     }
 
     @Test
@@ -379,9 +381,7 @@ class SchemaGeneratorTest {
 
         generator.generate("cached", "test.cached", out);
         Path schema = out.toPath().resolve("cached.fbs");
-        Path cache = out.toPath().resolve("cached.fbs.cache");
         assertTrue(Files.exists(schema));
-        assertTrue(Files.exists(cache));
 
         String first = Files.readString(schema);
         generator.generate("cached", "test.cached", out);

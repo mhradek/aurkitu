@@ -1,0 +1,24 @@
+// Aurkitu @VERSION@ automatically generated FlatBuffer schema
+// @version: bb5af90a
+namespace com.example.variants;
+
+table Settings {
+  schemaRevision:int;
+  displayName:string;
+  plainText:string;
+  withId:int;
+  withoutId:int;
+  featureFlags:[MapValueSet_Settings_featureFlags];
+}
+
+table MapValueSet_Settings_featureFlags {
+  key:string;
+  value:bool;
+}
+
+root_type Settings;
+
+// Validation issues:
+// - Partial field ids on Settings; ids omitted (all fields or none must have an id)
+// - Unsupported field type: Settings.externalId
+// - Unsupported field type: Settings.initial

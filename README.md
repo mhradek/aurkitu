@@ -1,4 +1,4 @@
-# Aurkitu 1.0.0
+# Aurkitu 1.0.1
 
 [![Latest release](https://img.shields.io/github/release/mhradek/aurkitu.svg)](https://github.com/mhradek/aurkitu/releases/latest)
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.mhradek/aurkitu-maven-plugin.svg?label=plugin)](https://central.sonatype.com/artifact/io.github.mhradek/aurkitu-maven-plugin)
@@ -13,36 +13,23 @@
 
 **Aurkitu** (Basque for “to find”) generates FlatBuffers IDL (`.fbs`) schemas from annotated Java models. This keeps your server-side models as the single source of truth — especially useful when models carry storage annotations (e.g. DynamoDB) that must remain authoritative.
 
-This is the **modernised 1.0.0** release:
+The 1.0 line:
 
 - Targets **Java 17**
-- Uses **ClassGraph** for reliable classpath scanning (replaces the old custom Reflections fork and fragile classloader logic)
-- Simplified architecture with clearer separation of concerns
-- Updated dependencies and Maven plugin toolchain
-- Oriented toward current FlatBuffers (25.x series)
-- **New coordinates**: `io.github.mhradek` (migrated from `com.michaelhradek`)
+- Uses **ClassGraph** to scan the project's compile classpath (replaces the old custom Reflections fork and classloader logic)
+- Builds a typed schema model, validates it, and lets each element write its own schema syntax
+- Is tested end to end against real consumer builds, and the generated schemas are compiled with `flatc` 25.x in CI
+- **Coordinates**: `io.github.mhradek` (migrated from `com.michaelhradek`)
 
-**1.0.0 is published** to Maven Central under `io.github.mhradek`. It generates schemas for tables, structs, enums, unions, maps, inheritance, and field options, and can optionally validate them with `flatc`. See [Changes from 0.0.x](#changes-from-00x-to-100) if you are upgrading.
+It generates schemas for tables, structs, enums, unions, maps, inheritance and field options, validates them, and can optionally check them with `flatc`.
 
----
-
-## Coverage
-
-JaCoCo is the **single source of truth**. `mvn verify` fails if line coverage drops below 50% on either module (see `jacoco.line.coverage.minimum` in the parent POM). Raise the threshold as tests improve.
-
-External badges (Codecov, Coveralls, Codacy) are mirrors. They require these repository secrets:
-
-| Secret | Tool | Required |
-|--------|------|----------|
-| `CODECOV_TOKEN` | Codecov | Yes (upload fails the job) |
-| `COVERALLS_REPO_TOKEN` | Coveralls | Yes (upload fails the job) |
-| `CODACY_PROJECT_TOKEN` | Codacy Coverage Reporter | Optional (step is skipped if absent) |
-
-Codacy’s quality-grade badge is independent of coverage; coverage appears only after a successful Codacy Coverage Reporter upload.
+> **Upgrading from 1.0.0?** 1.0.0 scanned the plugin's own classpath instead of your project's, so it generated an empty schema in real builds. Use 1.0.1. See [What's new in 1.0.1](#whats-new-in-101).
+>
+> **Upgrading from 0.0.x?** See [Migration from 0.0.x](#migration-from-00x).
 
 ---
 
-## Quick Start
+## Quick start
 
 ### Annotations
 
@@ -50,29 +37,27 @@ Codacy’s quality-grade badge is independent of coverage; coverage appears only
 <dependency>
     <groupId>io.github.mhradek</groupId>
     <artifactId>aurkitu-annotations</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
 </dependency>
 ```
 
-### Maven Plugin
+### Maven plugin
 
 ```xml
 <plugin>
     <groupId>io.github.mhradek</groupId>
     <artifactId>aurkitu-maven-plugin</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
     <configuration>
         <schemaName>user</schemaName>
         <schemaNamespace>com.example.flatbuffers</schemaNamespace>
-        <!-- Optional but strongly recommended for speed -->
+        <!-- Optional but recommended: limits scanning to your model packages -->
         <specifiedPackages>
             <specifiedPackage>com.example.models</specifiedPackage>
         </specifiedPackages>
-        <validate>true</validate>
     </configuration>
     <executions>
         <execution>
-            <phase>process-classes</phase>
             <goals>
                 <goal>build-schema</goal>
             </goals>
@@ -80,6 +65,8 @@ Codacy’s quality-grade badge is independent of coverage; coverage appears only
     </executions>
 </plugin>
 ```
+
+The `build-schema` goal runs in the `process-classes` phase by default, after your classes are compiled.
 
 ### Annotate models
 
@@ -90,350 +77,306 @@ import io.github.mhradek.aurkitu.annotations.FlatBufferTable;
 public class User {
     private long id;
     private String name;
-    // ...
 }
 ```
 
-Run `mvn process-classes` (or a later phase) to generate `target/aurkitu/schemas/user.fbs`.
+Run `mvn process-classes` (or any later phase, such as `mvn package`) to generate `target/aurkitu/schemas/user.fbs`.
 
 ---
 
 ## Configuration options
 
-| Parameter | Required | Default | Description |
+| Parameter | Property | Default | Description |
 |-----------|----------|---------|-------------|
-| `schemaName` | Yes | — | Output filename stem (produces `schemaName.fbs`) |
-| `schemaNamespace` | No | `generated.flatbuffers` | FlatBuffers namespace |
-| `outputDir` | No | `${project.build.directory}/aurkitu/schemas` | Destination directory |
-| `specifiedPackages` | No | all packages | Limit ClassGraph scanning for performance |
-| `validate` | No | `true` | Enable basic schema validation reporting |
-| `ignoreStaticMembers` | No | `true` | Skip static fields when generating tables |
-| `fileIdentifier` | No | — | Optional 4-character file identifier |
-| `includes` | No | — | List of schema files to `include` |
-| `mapCommonTypes` | No | `true` | Map `Date`, `URL`, `BigDecimal`, `UUID`, etc. to `string` |
-| `snakeCaseFields` | No | `true` | Convert Java field names to snake_case in the schema |
-| `generateVersion` | No | `false` | Emit a content hash of the schema (excluding validation comments) as `// @version: <hash>` |
-| `failOnValidationIssues` | No | `false` | Fail the build when validation issues are found |
-| `fileExtension` | No | — | Emit `file_extension "..."` |
+| `schemaName` | `aurkitu.schemaName` | — (required) | Output file name stem (`<schemaName>.fbs`) |
+| `schemaNamespace` | `aurkitu.schemaNamespace` | `generated.flatbuffers` | Default FlatBuffers namespace |
+| `outputDirectory` | `aurkitu.outputDir` | `${project.build.directory}/aurkitu/schemas` | Destination directory |
+| `specifiedPackages` | `aurkitu.specifiedPackages` | all packages | Packages to scan (and their subpackages) |
+| `validate` | `aurkitu.validate` | `true` | Report [validation](#validation) issues as comments at the end of the schema |
+| `failOnValidationIssues` | `aurkitu.failOnValidationIssues` | `false` | Fail the build when there are validation issues |
+| `ignoreStaticMembers` | `aurkitu.ignoreStaticMembers` | `true` | Skip static fields |
+| `snakeCaseFields` | `aurkitu.snakeCaseFields` | `true` | Write field names in snake_case (`displayName` → `display_name`) |
+| `mapCommonTypes` | `aurkitu.mapCommonTypes` | `true` | Map `Date`, `UUID`, `URL`, `URI`, `BigDecimal`, `BigInteger` and `java.time` types (`Instant`, `LocalDate`, `LocalDateTime`, `LocalTime`, `OffsetDateTime`, `ZonedDateTime`, `Duration`) to `string`. `String` is always mapped. |
+| `fileIdentifier` | `aurkitu.fileIdentifier` | — | Emit `file_identifier "..."` (must be 4 characters) |
+| `fileExtension` | `aurkitu.fileExtension` | — | Emit `file_extension "..."` |
+| `includes` | `aurkitu.includes` | — | Schema files to `include` |
+| `generateVersion` | `aurkitu.generateVersion` | `false` | Emit `// @version: <hash>`, a hash of the schema body. The header and validation comments are excluded, so it changes only when the schema does. |
+| `flatcPath` | `aurkitu.flatcPath` | — | Path to a `flatc` binary. When set (and `validate` is on), the schema is checked with `flatc --binary --schema` and the build fails if `flatc` rejects it. |
+| `cacheEnabled` | `aurkitu.cacheEnabled` | `false` | Only rewrite the schema file when its content changes, keeping its timestamp for downstream steps. The schema is still generated and validated every time. |
+
+The plugin scans the project's compile classpath (its compiled classes plus compile-scope dependencies), so annotated models can live in the project itself or in a dependency jar.
 
 ---
 
-### Unsigned types
+## Usage
 
-Java has no unsigned primitives. Use `fieldType` to emit unsigned FlatBuffers types:
-
-```java
-@FlatBufferFieldOptions(fieldType = FieldType.UBYTE)
-private byte flags;    // → flags:ubyte;
-
-@FlatBufferFieldOptions(fieldType = FieldType.USHORT)
-private short port;    // → port:ushort;
-
-@FlatBufferFieldOptions(fieldType = FieldType.UINT)
-private int count;     // → count:uint;
-
-@FlatBufferFieldOptions(fieldType = FieldType.ULONG)
-private long id;       // → id:ulong;
-```
-
-### Binary data and field ids
-
-`byte[]` fields are mapped to `[ubyte]` (the common FlatBuffers binary vector convention):
-
-```java
-@FlatBufferTable
-public class Blob {
-    private byte[] payload;   // → payload:[ubyte];
-}
-```
-
-Optional explicit field ids can be set with `fieldId` (use `-1` to omit):
-
-```java
-@FlatBufferFieldOptions(fieldId = 0, required = true)
-private String id;
-
-@FlatBufferFieldOptions(fieldId = 1)
-private int version;
-```
-
-emits:
-
-```idl
-id:string (required) (id: 0);
-version:int (id: 1);
-```
-
-## Usage examples
-
-### Root type
+### Tables, structs and the root type
 
 ```java
 @FlatBufferTable(rootType = true)
-public class SampleClassTable {
-    // fields...
-}
-```
+public class Account { ... }
 
-### Struct vs table
-
-```java
 @FlatBufferTable(value = FlatBufferTable.TableStructureType.STRUCT)
-public class SampleClassStruct {
+public class Point {
     private float x;
     private float y;
     private float z;
 }
 ```
 
-### Enums
-
-```java
-@FlatBufferEnum(enumType = FieldType.BYTE)
-public enum SampleEnumByte {
-    @FlatBufferEnumTypeField
-    byte id;
-    String description;
-    // ...
+```idl
+struct Point {
+  x:float;
+  y:float;
+  z:float;
 }
 ```
 
-### Ignore fields
+Superclass fields are included after the class's own fields. Structs may only contain scalars, enums, other structs and fixed-length arrays of those (`@FlatBufferFieldOptions(fieldType = FieldType.ARRAY, fixedLength = 4) float[] rotation` → `rotation:[float:4]`).
+
+### Field options
+
+`@FlatBufferFieldOptions` requires `fieldType`. Use the scalar or `STRING` types to override the mapped type, or `IDENT`, `ARRAY` or `MAP` to keep it.
+
+Unsigned types (Java has no unsigned primitives):
 
 ```java
-@FlatBufferIgnore
-protected String ignore;
+@FlatBufferFieldOptions(fieldType = FieldType.UBYTE)
+private byte flags;
+@FlatBufferFieldOptions(fieldType = FieldType.USHORT)
+private short port;
+@FlatBufferFieldOptions(fieldType = FieldType.UINT)
+private int count;
+@FlatBufferFieldOptions(fieldType = FieldType.ULONG)
+private long id;
 ```
 
-### Field options (type overrides, defaults, full name, etc.)
+```idl
+  flags:ubyte;
+  port:ushort;
+  count:uint;
+  id:ulong;
+```
+
+Binary data: `byte[]` maps to `[ubyte]`; `fieldType = FieldType.BYTE` gives `[byte]`:
 
 ```java
-@FlatBufferFieldOptions(fieldType = FieldType.IDENT, defaultValue = "SHORT_SWORD")
-protected SampleClassTableInnerEnumInt innerEnum;
+private byte[] payload;
+@FlatBufferFieldOptions(fieldType = FieldType.BYTE)
+private byte[] signedPayload;
 ```
 
----
+```idl
+  payload:[ubyte];
+  signed_payload:[byte];
+```
 
-## Limitations
+Attributes and field ids:
 
-- **Unsigned types**: Java has no unsigned primitives. Use `fieldType` (`UBYTE`, `USHORT`, `UINT`, `ULONG`) to emit them.
-- **Maps**: FlatBuffers has no map type. Aurkitu emits `MapValueSet_<Owner>_<field>` tables. Clients still need a small translation layer.
-- **Partial `fieldId`**: If any field in a table has `fieldId`, every field should. Partial ids can make `flatc` reject the schema.
-- **Structs**: Non-scalar fields are flagged. Set `failOnValidationIssues` to skip them instead of emitting an invalid struct.
-- **Includes**: `include` lines are emitted only. Cross-schema types are not resolved.
-- **Scanning**: Prefer `specifiedPackages` so ClassGraph does not scan the whole classpath.
-- **Not generated**: `rpc_service` and `///` doc comments.
+```java
+@FlatBufferFieldOptions(fieldType = FieldType.STRING, fieldId = 0, required = true)
+private String id;
+@FlatBufferFieldOptions(fieldType = FieldType.INT, fieldId = 1)
+private int version;
+```
+
+```idl
+  id:string (required, id: 0);
+  version:int (id: 1);
+```
+
+Other options: `defaultValue`, `deprecated`, `key`, `hash` (e.g. `"fnv1a_32"`), `nestedFlatbuffer` and `flexbuffer` (on `[ubyte]` fields), `forceAlign` (on vectors), `fixedLength` (in structs), and `useFullName` (reference a type by its fully qualified Java name). Ids are written only when every field in the table has one. Comments come from `@FlatBufferComment(comment = "...")` on classes and fields.
+
+### Enums
+
+Without a value field, constants are written in declaration order with implicit values. `enumType` sets the underlying type (`BYTE` by default):
+
+```java
+@FlatBufferEnum(enumType = EnumType.UINT)
+public enum Color { RED, GREEN, BLUE }
+```
+
+```idl
+enum Color : uint {
+  RED,
+  GREEN,
+  BLUE,
+}
+```
+
+For explicit values, mark one integral field with `@FlatBufferEnumTypeField`. Values are written in ascending order (unsigned types reinterpret Java's signed values, e.g. `(byte) 0xFF` is `255` for `UBYTE`):
+
+```java
+@FlatBufferEnum(enumType = EnumType.SHORT)
+public enum Priority {
+    HIGH((short) 30), LOW((short) 10);
+
+    @FlatBufferEnumTypeField
+    private final short weight;
+
+    Priority(short weight) { this.weight = weight; }
+}
+```
+
+```idl
+enum Priority : short {
+  LOW = 10,
+  HIGH = 30,
+}
+```
+
+A table field of enum type defaults to `0`. If the enum has no value `0`, as `Priority` here, give the field a default that is one of its constants, or `flatc` rejects the schema:
+
+```java
+@FlatBufferFieldOptions(fieldType = FieldType.IDENT, defaultValue = "LOW")
+private Priority priority;
+```
+
+Unions use `@FlatBufferEnum(FlatBufferEnum.EnumStructureType.UNION)`; each constant names a table.
+
+### Nested types
+
+Classes and enums nested directly in an annotated table or struct are declared automatically, without their own annotation:
+
+```java
+@FlatBufferTable(rootType = true)
+public class Knight {
+    @FlatBufferFieldOptions(fieldType = FieldType.IDENT, defaultValue = "SHORT_SWORD")
+    private Weapon weapon;
+
+    @FlatBufferIgnore
+    private String sessionToken;
+
+    public enum Weapon { SHORT_SWORD, LONG_SWORD }
+}
+```
+
+```idl
+enum Weapon : byte {
+  SHORT_SWORD,
+  LONG_SWORD,
+}
+
+table Knight {
+  weapon:Weapon = SHORT_SWORD;
+}
+
+root_type Knight;
+```
+
+Types are declared by their simple name (`Knight.Weapon` becomes `Weapon`). Mark a nested type `@FlatBufferIgnore` to leave it out; types nested more than one level deep are not declared automatically.
+
+### Ignoring fields
+
+`@FlatBufferIgnore` on a field leaves it out of the schema (`sessionToken` above).
+
+### Namespaces
+
+`@FlatBufferTable(namespace = "...")` and `@FlatBufferEnum(namespace = "...")` place one type in another namespace. The default namespace is restored straight after it, and references across namespaces (including `root_type`) are fully qualified.
+
+### Maps
+
+FlatBuffers has no map type. A `Map<K, V>` field becomes a vector of a generated table named `MapValueSet_<Owner>_<field>`, with the key written as `string`:
+
+```idl
+  scores:[MapValueSet_Account_scores];
+
+table MapValueSet_Account_scores {
+  key:string;
+  value:int;
+}
+```
 
 ---
 
 ## Sample output
 
+From an annotated `Account` table and `Status` enum, with `fileIdentifier = ACCT` and `generateVersion = true`:
+
 ```idl
-// Aurkitu 1.0.0 automatically generated FlatBuffer schema
-// @version: 447551ba
+// Aurkitu 1.0.1 automatically generated FlatBuffer schema
+// @version: 3de77678
 namespace com.example;
 
-file_identifier "AB12";
+file_identifier "ACCT";
 
-enum SampleEnum : byte {
-  ALPHA = 0,
-  BETA = 1,
-  GAMMA = 2
+// Account state
+enum Status : byte {
+  ACTIVE,
+  SUSPENDED,
+  CLOSED,
 }
 
-table SampleRootTable {
+table Account {
   id:long;
-  name:string;
+  display_name:string (required);
   level:int = 42;
   tags:[string];
-  status:SampleEnum;
+  status:Status;
+  scores:[MapValueSet_Account_scores];
 }
 
-root_type SampleRootTable;
+table MapValueSet_Account_scores {
+  key:string;
+  value:int;
+}
+
+root_type Account;
 ```
+
+Declarations are written as `include`s first, then the namespace, file identifier and extension, enums and unions, structs (each after the structs it contains), tables, generated map tables and `root_type`.
 
 ---
 
 ## Validation
 
-When `validate` is enabled, issues are appended as comments (unsupported fields, non-scalar struct fields, missing root type). Set `failOnValidationIssues` to fail the build instead. Optional `flatcPath` runs `flatc --java` on the generated schema.
+With `validate` on (the default), problems are listed as comments at the end of the schema and logged as warnings. Set `failOnValidationIssues` to fail the build instead. Reported:
+
+- Unsupported field types: `char`, nested vectors (`int[][]`, `List<List<T>>`), and JDK types that are not mapped. These fields are left out.
+- References to types the schema does not declare. This is not checked when `includes` are set, since included schemas are not read.
+- Struct fields that are not scalars, enums, structs or fixed-length arrays of those. They are left out when `failOnValidationIssues` is set.
+- A struct marked as the root type (`root_type` must be a table); no root type; more than one root type.
+- Ids on only some fields of a table (all ids are then left out).
+- Attributes on fields of the wrong type: `nested_flatbuffer` and `flexbuffer` need `[ubyte]`, `force_align` needs a vector. The attribute is left out.
+- Enum problems: no values, duplicate or out-of-range values, more than one `@FlatBufferEnumTypeField`, a value field that cannot be read, and table enum fields whose default is not an enum value.
+- Union members that are enums or unions, or (without `includes`) are not declared.
+- Namespaces that are not dot-separated identifiers, two types with the same name in one namespace, and a `file_identifier` that is not 4 characters.
+
+`flatcPath` adds a full check by `flatc` itself.
+
+---
+
+## Limitations
+
+- **Maps** need a small translation layer in clients (`MapValueSet_*` tables).
+- **Includes** are written but not read, so types from included schemas are not resolved or validated.
+- **One schema file** per execution; per-type namespaces are written into that file.
+- **Not generated**: `rpc_service` and `///` documentation comments (`@FlatBufferComment` writes `//` comments).
+- **Scanning** without `specifiedPackages` scans the whole compile classpath, which is slower.
 
 ---
 
 ## Compiling schemas with flatc
 
-Download or build `flatc` from the [FlatBuffers](https://github.com/google/flatbuffers) project (current 25.x series recommended).
+Download or build `flatc` from the [FlatBuffers](https://github.com/google/flatbuffers) project (25.x recommended):
 
 ```bash
-# Example
 flatc --java --gen-mutable -o target/aurkitu/output/java target/aurkitu/schemas/*.fbs
 flatc --cpp -o target/aurkitu/output/cpp target/aurkitu/schemas/*.fbs
 ```
 
-This can be automated further via the Maven exec plugin or a dedicated FlatBuffers Maven plugin.
+### Checking schemas with flatc
 
----
-
-## Building Aurkitu itself
-
-Requires JDK 17+.
-
-```bash
-mvn clean verify
-```
-
----
-
-## Changes from 0.0.x to 1.0.0
-
-| Area | 0.0.x | 1.0.0 | Documentation |
-|------|-------|-------|---------------|
-| **Coordinates** | `com.michaelhradek` | `io.github.mhradek` | [Migration](#migration-from-00x-to-100) |
-| **Java baseline** | 8 | 17 | [Building](#building-aurkitu-itself) |
-| **Scanning** | Custom Reflections fork | ClassGraph | [Quick Start](#quick-start) |
-| **Field names** | camelCase (as-is) | snake_case by default | [Migration](#migration-from-00x-to-100), [Configuration](#configuration-options) |
-| **Maps** | `MapValueSet_<type>_<field>` | Same pattern (snake_case aware) | [Limitations](#limitations) |
-| **required / deprecated** | Planned | Implemented | [Configuration](#configuration-options) |
-| **Unions** | Limited | Implemented | — |
-| **Inheritance** | Not supported | Superclass fields included | — |
-| **Common types** | Not implemented | Date, URL, BigDecimal, UUID, … → string | [Configuration](#configuration-options) |
-| **byte[]** | Not special-cased | Mapped to `[ubyte]` | — |
-| **fieldId** | Not present | Optional `id: N` | [Configuration](#configuration-options) |
-| **generateVersion** | Supported | Supported (`// @version: <hash>`) | [Configuration](#configuration-options) |
-| **schema caching** | Skip if file exists | Content-aware hash (types + config) | [Configuration](#configuration-options) |
-| **failOnValidationIssues** | Not present | Optional fail-the-build | [Configuration](#configuration-options) |
-| **specifiedDependencies** | Artifact-level | `specifiedPackages` (package-level) | [Configuration](#configuration-options) |
-| **consolidatedSchemas** | Supported | Removed (single schema) | — |
-| **namespaceOverrideMap** | Supported | Per-type `namespace` line | [Configuration](#configuration-options) |
-| **flatc validation** | Manual / script | Optional `flatcPath` + CI binary | [Optional flatc validation](#optional-flatc-validation) |
-| **Tests** | Mixed | Pure JUnit 5 + flatc test | — |
-| **CI** | Basic | JDK 17 + official flatc download | [Optional flatc validation](#optional-flatc-validation) |
-
-## Roadmap
-
-1.0.0 is published to Maven Central. Remaining work:
-
-| Priority | Item | Why it matters | Status |
-|----------|------|----------------|--------|
-| **Done** | Coverage baseline (JaCoCo check + hardened uploads) | Reliable coverage numbers | 50% line minimum; uploads fail the job |
-| **Medium** | Raise coverage threshold and expand SchemaGenerator tests | Higher confidence | See issues |
-| **Medium** | Published Javadoc site | Consumer docs beyond the README | Jars are attached on Central |
-| **Low** | True multi-namespace schema splitting | Advanced use case | Per-type `namespace` line only |
-| **Low** | Schema include resolution | Cross-schema types | Includes are emitted only |
-| **Low** | Configurable binary vector (`[byte]` vs `[ubyte]`) | Flexibility | Fixed to `[ubyte]` |
-| **Low** | `rpc_service` and `///` doc comments | Official schema completeness | Not generated |
-| **Done** | Maven Central publishing | 1.0.0 is live | Done |
-| **Done** | `plugin.xml` descriptor | Installable plugin | Done |
-| **Done** | Mojo integration tests | Parameter binding | Done |
-| **Done** | Field attributes (`key`, `hash`, `nested_flatbuffer`, `flexbuffer`, `force_align`, `id`) | Schema completeness | Done |
-
-### Done in 1.0.0 (summary)
-
-Java 17, ClassGraph scanner, field processing (primitives, lists, nested maps, enums, unions, structs, inheritance), field options (type override, required, deprecated, defaults, comments, useFullName, fieldId), common type mapping, snake_case (default on), generateVersion, content-aware cache, failOnValidationIssues, optional flatc validation + CI binary, pure JUnit 5 + flatc test, Mojo config tests, JaCoCo, migration guide, Codacy issues addressed.
-
-## FlatBuffers schema compatibility
-
-Comparison of Aurkitu 1.0.0 output against the [official FlatBuffers schema documentation](https://flatbuffers.dev/schema/).
-
-| Feature | Aurkitu 1.0.0 | Official schema | Notes |
-|---------|---------------|-----------------|-------|
-| `namespace` | Yes | Yes | Match; per-type override emits a new `namespace` line |
-| `file_identifier` | Yes | Yes | Match |
-| `file_extension` | Yes | Yes | Match |
-| `include` | Yes | Yes | Match (emitted only; not resolved) |
-| `root_type` | Yes | Yes | Match |
-| `table` / `struct` | Yes | Yes | Match |
-| Struct constraints | Warned | Scalars/structs only | Non-scalar fields in structs produce a validation issue |
-| `enum` | Yes | Yes | Match; explicit values emitted |
-| `union` | Yes | Yes | Match; `NONE` added by `flatc` |
-| Field defaults | Yes | Scalars only | Match for scalars |
-| `(required)` / `(deprecated)` | Yes | Yes | Match |
-| `(id: N)` | Yes | Yes | Partial use can invalidate schema; use on all fields or none |
-| `(key)` | Yes | Yes | Match |
-| `(hash: "...")` | Yes | Yes | Match |
-| `(nested_flatbuffer)` | Yes | Yes | Match |
-| `(flexbuffer)` | Yes | Yes | Match |
-| `(force_align: N)` | Yes | Yes | Match |
-| Fixed-size arrays `[type:N]` | Yes | Yes | Via `fixedLength` |
-| `byte[]` → `[ubyte]` | Yes | Valid | Match |
-| snake_case fields | Default on | Recommended | Match |
-| `///` doc comments | No | Supported | Minor gap |
-| `rpc_service` | No | Supported | Not implemented |
-| Unsigned types | Via `fieldType` | Full set | Supported |
-| Multiple namespaces | Per-type `namespace` line | Supported | Basic support |
-| Map workaround | `MapValueSet_*` | No native map | Standard workaround |
-
-### Remaining discrepancies
-
-- Partial `fieldId` use (some fields only) can produce schemas `flatc` rejects.
-- Structs with non-scalar fields are flagged but still emitted unless `failOnValidationIssues` is true.
-- `rpc_service` and `///` documentation comments are not generated.
-- Unsigned types are supported via `fieldType` (`UBYTE`, `USHORT`, `UINT`, `ULONG`).
-
-## License
-
-MIT
-
----
-
-## Migration from 0.0.x to 1.0.0
-
-### Coordinates
-
-| | 0.0.x | 1.0.0 |
-|---|-------|-------|
-| groupId | `com.michaelhradek` | `io.github.mhradek` |
-| Java packages | `com.michaelhradek.aurkitu.*` | `io.github.mhradek.aurkitu.*` |
-
-### Key changes
-
-- **Java baseline**: 8 → 17
-- **Scanning**: Custom Reflections fork → ClassGraph
-- **Architecture**: Monolithic `Processor` → simplified `SchemaGenerator` + Mojo
-- **Tests**: Mixed → pure JUnit 5
-- **Maps**: Still use generated `MapValueSet_*` tables (workaround unchanged)
-- **Field names (breaking)**: 0.0.x emitted Java field names as-is (camelCase). 1.0.0 converts them to snake_case by default (`nestedMap` → `nested_map`) to follow modern FlatBuffers style. Set `<snakeCaseFields>false</snakeCaseFields>` to preserve the old behaviour.
-- **New options**: `ignoreStaticMembers`, `fileIdentifier`, `includes`, `mapCommonTypes`, `snakeCaseFields` (default `true`)
-
-### Migration steps
-
-1. Update dependency/plugin coordinates to `io.github.mhradek`.
-2. Change imports from `com.michaelhradek.aurkitu.*` to `io.github.mhradek.aurkitu.*`.
-3. Rebuild and re-generate schemas.
-4. Review any custom translation code that relies on the old `MapValueSet` naming (names are similar but not guaranteed identical).
-5. Prefer `specifiedPackages` for faster scans.
-
----
-
-## Optional flatc validation
-
-### CI setup
-
-GitHub Actions (`.github/workflows/main.yml`) automatically downloads the official `flatc` 25.12.19 Linux binary and makes it available for the build:
-
-- The binary is placed on `PATH` and exported as `FLATC_PATH`.
-- `mvn verify` runs `FlatcValidationTest`, which generates a representative schema and invokes `flatc --java` against it.
-- The test is skipped automatically when `flatc` is not present (so local builds without it still pass).
-
-To run the validation test locally, install `flatc` or set `FLATC_PATH` to the binary, then run:
-
-```bash
-mvn -B clean verify
-```
-
-### Via the plugin
-
-Set `flatcPath` to the location of the `flatc` binary. When `validate` is true the generated schema is checked:
+Set `flatcPath` and the plugin runs `flatc --binary --schema` on the generated schema, failing the build if `flatc` rejects it:
 
 ```xml
 <configuration>
     <schemaName>user</schemaName>
     <flatcPath>/usr/local/bin/flatc</flatcPath>
-    <validate>true</validate>
 </configuration>
 ```
 
-### Via the Maven exec plugin (alternative)
+Or with the exec plugin:
 
 ```xml
 <plugin>
@@ -442,13 +385,16 @@ Set `flatcPath` to the location of the `flatc` binary. When `validate` is true t
     <version>3.1.0</version>
     <executions>
         <execution>
-            <id>validate-schema</id>
+            <id>check-schema</id>
             <phase>verify</phase>
             <goals><goal>exec</goal></goals>
             <configuration>
                 <executable>flatc</executable>
                 <arguments>
+                    <argument>--binary</argument>
                     <argument>--schema</argument>
+                    <argument>-o</argument>
+                    <argument>${project.build.directory}/aurkitu/bfbs</argument>
                     <argument>${project.build.directory}/aurkitu/schemas/user.fbs</argument>
                 </arguments>
             </configuration>
@@ -456,3 +402,129 @@ Set `flatcPath` to the location of the `flatc` binary. When `validate` is true t
     </executions>
 </plugin>
 ```
+
+---
+
+## Building Aurkitu
+
+Requires JDK 17+.
+
+```bash
+mvn clean verify
+```
+
+`verify` runs the unit tests, then the end-to-end tests in `aurkitu-maven-plugin/src/it`. Each directory there is a real consumer project, built with [maven-invoker-plugin](https://maven.apache.org/plugins/maven-invoker-plugin/) against the freshly built plugin:
+
+| Project | Covers |
+|---------|--------|
+| `kitchen-sink` | Every supported annotation and field attribute, enums, unions, structs, inheritance, nested types, maps, common types, includes, a per-type namespace |
+| `settings-variants` | `snakeCaseFields=false`, `mapCommonTypes=false`, `ignoreStaticMembers=false`, `generateVersion`, validation comments |
+| `fail-on-validation` | `failOnValidationIssues=true` fails the build |
+| `flatc-path` | The `flatcPath` option (runs only when `FLATC_PATH` is set) |
+| `dependency-models` | Annotated models in a dependency jar (two-module build) |
+
+Each `verify.groovy` compares the generated schema with `expected/*.fbs` and, when `FLATC_PATH` points to a `flatc` binary, compiles it with `flatc --cpp --java`. Without `FLATC_PATH` that step is skipped locally; in CI (`CI=true`) it fails the build instead. If you change the output on purpose, update the expected file in the same commit. Use `-Dinvoker.skip` to skip these tests.
+
+CI (`.github/workflows/main.yml`) downloads the official `flatc` binary (version in `FLATC_VERSION`), puts it on `PATH` and sets `FLATC_PATH`, so the end-to-end projects and the `FlatcValidationTest` unit test compile generated schemas with it.
+
+### Coverage
+
+JaCoCo is the single source of truth. `mvn verify` fails if **any class** drops below **80% line coverage or 80% branch coverage** (`jacoco.line.coverage.minimum` and `jacoco.branch.coverage.minimum` in the parent POM). The check is per class, so a well-tested module cannot hide an untested class.
+
+Codecov, Coveralls and Codacy are mirrors and need these repository secrets:
+
+| Secret | Tool | Without it |
+|--------|------|------------|
+| `CODECOV_TOKEN` | Codecov | The upload fails the job |
+| `COVERALLS_REPO_TOKEN` | Coveralls | The upload fails the job |
+| `CODACY_PROJECT_TOKEN` | Codacy Coverage Reporter | The step fails without failing the job (`continue-on-error`) |
+
+Codacy's quality-grade badge comes from its static analysis and is independent of coverage.
+
+### Publishing
+
+Publishing a GitHub release runs `.github/workflows/publish.yml`, which builds the release tag and deploys both artifacts and the parent POM to Maven Central (signed, with sources and Javadoc). It needs the `MAVEN_USERNAME`, `MAVEN_PASSWORD`, `GPG_PRIVATE_KEY` and `GPG_PASSPHRASE` secrets. The workflow can also be run manually on a tag. If the version is already on Maven Central, the run does nothing, so publishing the release page after a manual run is safe.
+
+---
+
+## What's new in 1.0.1
+
+1.0.0 generated an empty schema in real builds. 1.0.1 fixes that and corrects the generated output in many places, checked by end-to-end builds and `flatc`:
+
+- **Classpath**: the project's compile classpath is scanned (1.0.0 scanned only the plugin's own).
+- **Enums**: unsigned underlying types are kept (`UINT` was written as `int`); `@FlatBufferEnumTypeField` values are written (they were ignored).
+- **Types**: `String` maps even with `mapCommonTypes=false`; more common types are mapped; `byte[]` maps to `[ubyte]` (it was `[byte]`); collections and maps are recognised by their real type, so a class named like `PlayerList` is no longer dropped.
+- **Names and namespaces**: nested types are referenced by the name they are declared with; a per-type namespace no longer leaks into the declarations after it; `$` in comments and defaults is no longer rewritten.
+- **Layout**: `include`s come first and structs are declared before their users, as `flatc` requires.
+- **Restored from 0.0.x**: unannotated nested types of annotated tables are declared again, and the 0.0.x validation checks are back (see [Validation](#validation)).
+- **`cacheEnabled`** compares the generated content: field changes are detected and validation always runs (1.0.0 hashed type names only and skipped validation on a hit). No `.fbs.cache` file is written.
+- **`flatcPath`** runs `flatc --binary --schema` (1.0.0 ran `flatc --schema`, which names no output).
+- **`@FlatBufferOptions`** is deprecated. It has never had an effect.
+
+Output changes to expect when upgrading from 1.0.0: explicit enum values are written in ascending order; `byte[]` becomes `[ubyte]`; `@version` hashes change once (they no longer depend on the plugin version); new validation issues may be reported, and fail the build with `failOnValidationIssues`.
+
+---
+
+## Migration from 0.0.x
+
+### Coordinates and packages
+
+| | 0.0.x | 1.0.x |
+|---|-------|-------|
+| groupId | `com.michaelhradek` | `io.github.mhradek` |
+| Java packages | `com.michaelhradek.aurkitu.*` | `io.github.mhradek.aurkitu.*` |
+| Java baseline | 8 | 17 |
+| Command-line properties | `aurkitu-maven-plugin.*` | `aurkitu.*` |
+
+### Plugin parameters
+
+| 0.0.x | 1.0.x |
+|-------|-------|
+| `schemaName`, `schemaNamespace`, `outputDirectory`, `fileExtension`, `generateVersion`, `ignoreStaticMembers` | Unchanged |
+| `schemaFileIdentifier` | `fileIdentifier` |
+| `schemaIncludes` | `includes` |
+| `validateSchema` | `validate` |
+| `useSchemaCaching` (skip if the file exists) | `cacheEnabled` (rewrite only when the content changes) |
+| `specifiedDependencies` (artifacts) | `specifiedPackages` (packages); dependencies on the compile classpath are scanned |
+| `namespaceOverrideMap` | Removed; use `namespace` on `@FlatBufferTable` / `@FlatBufferEnum` |
+| `consolidatedSchemas` | Removed; one schema per execution |
+| — | New: `snakeCaseFields`, `mapCommonTypes`, `failOnValidationIssues`, `flatcPath` |
+
+### Behaviour
+
+| Area | 0.0.x | 1.0.x |
+|------|-------|-------|
+| Field names | As declared (camelCase) | snake_case by default; `snakeCaseFields=false` keeps them as declared |
+| Map tables | `MapValueSet_<Owner>_<field>` | Same; the field part follows `snakeCaseFields` |
+| Inheritance | Superclass fields included | Same |
+| Nested types | Declared automatically | Same (1.0.0 dropped this; restored in 1.0.1) |
+| Unions | Supported | Supported |
+| `required`, `deprecated`, `fieldId`, `key`, `hash`, `nested_flatbuffer`, `flexbuffer`, `force_align`, `fixedLength` | Not available | Available on `@FlatBufferFieldOptions` |
+| Common JDK types (`Date`, `UUID`, …) | Not mapped | Mapped to `string` (`mapCommonTypes`) |
+| `byte[]` | `[byte]` | `[ubyte]` |
+| Validation | Comments in the schema | Comments plus warnings; optional `failOnValidationIssues` and `flatcPath` |
+| `@FlatBufferOptions` | No effect | Deprecated, no effect |
+
+### Steps
+
+1. Update the dependency and plugin coordinates to `io.github.mhradek` and version `1.0.1`.
+2. Change imports from `com.michaelhradek.aurkitu.*` to `io.github.mhradek.aurkitu.*`.
+3. Rename plugin parameters as above.
+4. Set `<snakeCaseFields>false</snakeCaseFields>` if clients depend on camelCase field names.
+5. Regenerate the schemas and review the validation comments.
+
+---
+
+## Roadmap
+
+| Priority | Item | Status |
+|----------|------|--------|
+| Medium | Published Javadoc site | Javadoc jars are on Maven Central |
+| Low | Schema include resolution | Includes are written, not read |
+| Low | Multiple schema files (one per namespace) | One file per execution |
+| Low | `rpc_service` and `///` doc comments | Not generated |
+| Low | Remove deprecated `@FlatBufferOptions` | Planned for 2.0 |
+
+## License
+
+MIT

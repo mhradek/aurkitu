@@ -1,0 +1,143 @@
+// Aurkitu @VERSION@ automatically generated FlatBuffer schema
+include "shared.fbs";
+
+namespace com.example.kitchensink;
+
+file_identifier "KTCH";
+
+file_extension "ktch";
+
+// Primary colours
+enum Color : byte {
+  RED,
+  GREEN,
+  BLUE,
+}
+
+enum Priority : short {
+  LOW = 10,
+  MEDIUM = 20,
+  HIGH = 30,
+}
+
+union Shape {
+  Circle,
+  Square,
+}
+
+enum Status : uint {
+  ACTIVE = 1,
+  SUSPENDED = 5,
+  CLOSED = 10,
+}
+
+enum Mood : byte {
+  CALM,
+  ANGRY,
+}
+
+struct Vec3 {
+  x:float;
+  y:float;
+  z:float;
+}
+
+// Position, rotation quaternion and render layer
+struct Transform {
+  position:Vec3;
+  rotation:[float:4];
+  layer:ubyte;
+}
+
+namespace com.example.kitchensink.audit;
+
+table AuditEntry {
+  action:string;
+  at:long;
+  color:com.example.kitchensink.Color;
+}
+
+namespace com.example.kitchensink;
+
+table Circle {
+  radius:float;
+}
+
+table Item {
+  name:string (key);
+  quantity:int;
+}
+
+// A player profile; balances are in $
+table Player {
+  active:bool;
+  mood:byte;
+  floor:short;
+  lives:int;
+  xp:long;
+  speed:float;
+  ratio:double;
+  verified:bool;
+  rank:int;
+  rating:double;
+  name:string (required);
+  // Starting health
+  health:int = 100;
+  level:ubyte;
+  port:ushort;
+  name_hash:uint (hash: "fnv1a_32");
+  score:ulong;
+  legacy_rank:int (deprecated);
+  favourite_color:Color = GREEN;
+  status:Status = ACTIVE;
+  priority:Priority = LOW;
+  avatar:Shape;
+  temper:Mood;
+  spawn:Vec3;
+  transform:Transform;
+  friends:PlayerList;
+  meta:SharedMeta;
+  last_audit:com.example.kitchensink.audit.AuditEntry;
+  main_hand:com.example.kitchensink.Item;
+  tags:[string];
+  badges:[int];
+  aliases:[string];
+  inventory:[Item];
+  achievements:[Achievement];
+  stats:[MapValueSet_Player_stats];
+  thumbnail:[ubyte];
+  featured_item:[ubyte] (nested_flatbuffer: "Item");
+  extras:[ubyte] (flexbuffer);
+  aligned:[ubyte] (force_align: 16);
+  external_id:string;
+  last_login:string;
+  balance:string;
+  joined_at:string;
+  id:long;
+  created_by:string;
+}
+
+table Achievement {
+  title:string;
+  unlocked_at:long;
+}
+
+table PlayerList {
+  count:int;
+}
+
+table Square {
+  side:float;
+}
+
+table Versioned {
+  label:string (id: 1);
+  revision:int (id: 0);
+}
+
+table MapValueSet_Player_stats {
+  key:string;
+  value:int;
+}
+
+root_type Player;
