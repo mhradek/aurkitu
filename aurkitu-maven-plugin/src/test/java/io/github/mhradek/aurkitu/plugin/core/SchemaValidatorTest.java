@@ -138,6 +138,34 @@ class SchemaValidatorTest {
     }
 
     @Test
+    void tableEnumFieldsNeedADefaultThatIsAnEnumValue() {
+        EnumDeclaration implicit = new EnumDeclaration(name("Color"), "Color", "", ScalarKind.BYTE,
+                List.of(new EnumDeclaration.Value("RED", null), new EnumDeclaration.Value("GREEN", null)), null);
+        EnumDeclaration noZero = new EnumDeclaration(name("Status"), "Status", "", ScalarKind.UINT,
+                List.of(new EnumDeclaration.Value("ACTIVE", 1L), new EnumDeclaration.Value("CLOSED", 10L)), null);
+        Reference color = new Reference(name("Color"));
+        Reference status = new Reference(name("Status"));
+        var result = validate(false, implicit, noZero, table("Root", true,
+                field("a", color),                                         // implicit values include 0: ok
+                new Field("b", "b", color, "GREEN", "", List.of()),          // by name: ok
+                new Field("c", "c", status, "10", "", List.of()),            // by value: ok
+                field("d", status),                                         // no 0, no default
+                new Field("e", "e", color, "PURPLE", "", List.of()),         // not a member
+                field("f", new Vector(status))));                           // vectors have no default: ok
+        assertEquals(List.of(
+                "Field Root.d needs a defaultValue: enum Status has no value 0, which is the default otherwise",
+                "Field Root.e default PURPLE is not a value of enum Color"), result.issues());
+    }
+
+    @Test
+    void structEnumFieldsNeedNoDefault() {
+        EnumDeclaration noZero = new EnumDeclaration(name("Status"), "Status", "", ScalarKind.UINT,
+                List.of(new EnumDeclaration.Value("ACTIVE", 1L)), null);
+        var result = validate(false, noZero, struct("S", field("s", new Reference(name("Status")))), table("Root", true));
+        assertEquals(List.of(), result.issues());
+    }
+
+    @Test
     void enumValueProblemsAreReported() {
         EnumDeclaration bad = new EnumDeclaration(name("E"), "E", "", ScalarKind.BYTE, List.of(
                 new EnumDeclaration.Value("A", 1L), new EnumDeclaration.Value("B", 1L), new EnumDeclaration.Value("C", 500L)), null);

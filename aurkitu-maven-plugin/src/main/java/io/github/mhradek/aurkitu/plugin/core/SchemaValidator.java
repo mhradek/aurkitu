@@ -13,6 +13,7 @@ import io.github.mhradek.aurkitu.plugin.core.model.SchemaType.Scalar;
 import io.github.mhradek.aurkitu.plugin.core.model.SchemaType.Unsupported;
 import io.github.mhradek.aurkitu.plugin.core.model.SchemaType.Vector;
 import io.github.mhradek.aurkitu.plugin.core.model.StructDeclaration;
+import io.github.mhradek.aurkitu.plugin.core.model.TableDeclaration;
 import io.github.mhradek.aurkitu.plugin.core.model.TypeName;
 
 import java.math.BigInteger;
@@ -108,6 +109,9 @@ final class SchemaValidator {
                 continue;
             }
             Field checked = field.withAttributes(validAttributes(field, owner, partialIds, issues));
+            if (composite instanceof TableDeclaration) {
+                checkEnumDefault(checked, owner, declared, issues);
+            }
             if (composite instanceof StructDeclaration && !isStructCompatible(checked.type(), declared)) {
                 issues.add("Struct " + owner + " field " + field.javaName()
                         + " is non-scalar; structs may only contain scalars or other structs");
@@ -118,6 +122,45 @@ final class SchemaValidator {
             valid.add(checked);
         }
         return composite.withFields(valid);
+    }
+
+    /**
+     * A table field of enum type defaults to 0 unless a default is given, and flatc rejects a
+     * default that is not one of the enum's values. Reported rather than guessed, since picking
+     * a default would change what an absent field means.
+     */
+    private static void checkEnumDefault(Field field, String owner, Map<TypeName, Declaration> declared, List<String> issues) {
+        if (!(field.type() instanceof Reference reference)
+                || !(declared.get(reference.target()) instanceof EnumDeclaration enumDeclaration)
+                || enumDeclaration.values().isEmpty()) {
+            return;
+        }
+        Set<String> names = new HashSet<>();
+        Set<Long> values = new HashSet<>();
+        List<EnumDeclaration.Value> constants = enumDeclaration.values();
+        for (int i = 0; i < constants.size(); i++) {
+            names.add(constants.get(i).name());
+            values.add(constants.get(i).value() != null ? constants.get(i).value() : i); // implicit: 0, 1, 2...
+        }
+        String enumName = enumDeclaration.name().name();
+        String where = owner + "." + field.javaName();
+        String defaultValue = field.defaultValue().trim();
+        if (defaultValue.isEmpty()) {
+            if (!values.contains(0L)) {
+                issues.add("Field " + where + " needs a defaultValue: enum " + enumName
+                        + " has no value 0, which is the default otherwise");
+            }
+        } else if (!names.contains(defaultValue) && !values.contains(parseLong(defaultValue))) {
+            issues.add("Field " + where + " default " + defaultValue + " is not a value of enum " + enumName);
+        }
+    }
+
+    private static Long parseLong(String text) {
+        try {
+            return Long.parseLong(text);
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     private static List<FieldAttribute> validAttributes(Field field, String owner, boolean dropIds, List<String> issues) {

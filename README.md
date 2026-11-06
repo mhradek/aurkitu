@@ -214,6 +214,8 @@ public enum Priority {
 // enum Priority : short { LOW = 10, HIGH = 30, }
 ```
 
+A table field of enum type defaults to `0`. If the enum has no value `0`, set a default that is one of its constants, e.g. `@FlatBufferFieldOptions(fieldType = FieldType.IDENT, defaultValue = "LOW")`; otherwise `flatc` rejects the schema, so this is reported as a validation issue.
+
 Unions use `@FlatBufferEnum(FlatBufferEnum.EnumStructureType.UNION)`; each constant names a table.
 
 ### Namespaces

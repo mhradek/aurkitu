@@ -84,8 +84,8 @@ table Player {
   score:ulong;
   legacy_rank:int (deprecated);
   favourite_color:Color = GREEN;
-  status:Status;
-  priority:Priority;
+  status:Status = ACTIVE;
+  priority:Priority = LOW;
   avatar:Shape;
   spawn:Vec3;
   transform:Transform;

@@ -63,7 +63,11 @@ public class Player extends Entity {
     // Enums, unions, structs and tables
     @FlatBufferFieldOptions(fieldType = FieldType.IDENT, defaultValue = "GREEN")
     private Color favouriteColor;
+    // Status and Priority have no value 0 (the implicit default), so a default is required.
+    @FlatBufferFieldOptions(fieldType = FieldType.IDENT, defaultValue = "ACTIVE")
     private Status status;
+
+    @FlatBufferFieldOptions(fieldType = FieldType.IDENT, defaultValue = "LOW")
     private Priority priority;
     private Shape avatar;
     private Vec3 spawn;
