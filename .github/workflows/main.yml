@@ -2,9 +2,9 @@ name: Build
 
 on:
   push:
-    branches: [ master, main, v1.0.0-modern ]
+    branches: [ master, main ]
   pull_request:
-    branches: [ master, main, v1.0.0-modern ]
+    branches: [ master, main ]
 
 env:
   FLATC_VERSION: 25.12.19

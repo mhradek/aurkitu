@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 
+@SuppressWarnings("removal") // covers a deprecated annotation
 public class FlatBufferOptionsTest {
 
     @Test
