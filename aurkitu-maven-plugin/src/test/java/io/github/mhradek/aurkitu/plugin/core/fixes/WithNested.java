@@ -14,9 +14,17 @@ public class WithNested {
     public static class Detail {
         private int level;
 
+        public int getLevel() {
+            return level;
+        }
+
         /** Two levels below WithNested (Detail is not annotated): not declared. */
         public static class Deeper {
             private int depth;
+
+            public int getDepth() {
+                return depth;
+            }
         }
     }
 
