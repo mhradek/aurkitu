@@ -119,6 +119,25 @@ class SchemaValidatorTest {
     }
 
     @Test
+    void structFieldsReferencingTablesOrUnionsAreNonScalar() {
+        var result = validate(false,
+                new io.github.mhradek.aurkitu.plugin.core.model.UnionDeclaration(name("Any"), "Any", "", List.of("Root")),
+                struct("S", field("table", new Reference(name("Root"))), field("union", new Reference(name("Any")))),
+                table("Root", true));
+        assertEquals(List.of(
+                "Struct S field table is non-scalar; structs may only contain scalars or other structs",
+                "Struct S field union is non-scalar; structs may only contain scalars or other structs"), result.issues());
+    }
+
+    @Test
+    void rootTypeMustBeATable() {
+        StructDeclaration root = new StructDeclaration(name("S"), "java.S", "", List.of(field("x", INT)), true);
+        var result = validate(false, root);
+        assertEquals(List.of("Root type S is a struct; root_type must be a table"), result.issues());
+        assertTrue(result.schema().root().isEmpty(), "struct root is not written");
+    }
+
+    @Test
     void enumValueProblemsAreReported() {
         EnumDeclaration bad = new EnumDeclaration(name("E"), "E", "", ScalarKind.BYTE, List.of(
                 new EnumDeclaration.Value("A", 1L), new EnumDeclaration.Value("B", 1L), new EnumDeclaration.Value("C", 500L)), null);

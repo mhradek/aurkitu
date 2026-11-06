@@ -29,7 +29,8 @@ import java.util.Set;
  *
  * <p>Corrections: unsupported fields are dropped; ids are dropped from a table where only
  * some fields have one; attributes on fields of the wrong type are dropped; non-scalar
- * struct fields are dropped when {@code dropInvalidStructFields} is set.</p>
+ * struct fields are dropped when {@code dropInvalidStructFields} is set; a struct marked as
+ * root loses the mark (flatc only accepts a table as root).</p>
  */
 final class SchemaValidator {
 
@@ -53,6 +54,11 @@ final class SchemaValidator {
         List<Declaration> valid = new ArrayList<>();
         boolean rootSeen = false;
         for (Declaration declaration : schema.declarations()) {
+            if (declaration instanceof StructDeclaration struct && struct.root()) {
+                issues.add("Root type " + struct.name().name() + " is a struct; root_type must be a table");
+                declaration = new StructDeclaration(struct.name(), struct.source(), struct.comment(), struct.fields(), false);
+                rootSeen = true; // reported above; not also "No root type defined"
+            }
             if (declaration instanceof CompositeDeclaration composite) {
                 valid.add(validate(composite, declared, issues));
                 if (composite.root()) {

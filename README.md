@@ -241,7 +241,7 @@ protected SampleClassTableInnerEnumInt innerEnum;
 - **Unsigned types**: Java has no unsigned primitives. Use `fieldType` (`UBYTE`, `USHORT`, `UINT`, `ULONG`) to emit them.
 - **Maps**: FlatBuffers has no map type. Aurkitu emits `MapValueSet_<Owner>_<field>` tables. Clients still need a small translation layer.
 - **Partial `fieldId`**: If any field in a table has `fieldId`, every field should. Partial ids can make `flatc` reject the schema.
-- **Structs**: Non-scalar fields are flagged. Set `failOnValidationIssues` to skip them instead of emitting an invalid struct. Structs are declared before the structs and tables that use them.
+- **Structs**: Fields that are not scalars, enums, structs or fixed-length arrays of those (e.g. strings, vectors, tables, unions) are flagged. Set `failOnValidationIssues` to skip them instead of emitting an invalid struct. Structs are declared before the structs and tables that use them. A struct cannot be the root type.
 - **Type names**: Types are declared by their simple Java name (nested `Outer.Inner` becomes `Inner`). Two types with the same simple name in one namespace are reported as a validation issue.
 - **Unsupported types**: `char`, nested vectors (`int[][]`, `List<List<T>>`) and JDK types outside the common-type list are skipped and reported.
 - **Includes**: `include` lines are emitted only. Cross-schema types are not resolved.
@@ -280,7 +280,7 @@ root_type SampleRootTable;
 
 ## Validation
 
-When `validate` is enabled, issues are appended as comments (unsupported fields, non-scalar struct fields, partial field ids, enum value problems, duplicate type names, missing root type). Set `failOnValidationIssues` to fail the build instead. Optional `flatcPath` checks the generated schema with `flatc --binary --schema`.
+When `validate` is enabled, issues are appended as comments (unsupported fields, non-scalar struct fields, partial field ids, misplaced field attributes, enum value problems, duplicate type names, a missing or non-table root type). Set `failOnValidationIssues` to fail the build instead. Optional `flatcPath` checks the generated schema with `flatc --binary --schema`.
 
 ---
 

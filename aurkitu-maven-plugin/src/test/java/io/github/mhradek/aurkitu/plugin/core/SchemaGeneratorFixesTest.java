@@ -110,6 +110,11 @@ class SchemaGeneratorFixesTest {
     }
 
     @Test
+    void structFieldReferencingATableIsReported() {
+        assertTrue(schema.contains("Struct StructWithTable field players is non-scalar"), schema);
+    }
+
+    @Test
     void includesComeBeforeAllOtherDeclarations() {
         int include = schema.indexOf("include \"other.fbs\";");
         assertTrue(include > 0, schema);
