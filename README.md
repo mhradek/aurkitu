@@ -443,7 +443,7 @@ Codacy's quality-grade badge comes from its static analysis and is independent o
 
 ### Publishing
 
-Publishing a GitHub release runs `.github/workflows/publish.yml`, which builds the release tag and deploys both artifacts and the parent POM to Maven Central (signed, with sources and Javadoc). It needs the `MAVEN_USERNAME`, `MAVEN_PASSWORD`, `GPG_PRIVATE_KEY` and `GPG_PASSPHRASE` secrets. The workflow can also be run manually on a tag.
+Publishing a GitHub release runs `.github/workflows/publish.yml`, which builds the release tag and deploys both artifacts and the parent POM to Maven Central (signed, with sources and Javadoc). It needs the `MAVEN_USERNAME`, `MAVEN_PASSWORD`, `GPG_PRIVATE_KEY` and `GPG_PASSPHRASE` secrets. The workflow can also be run manually on a tag. If the version is already on Maven Central, the run does nothing, so publishing the release page after a manual run is safe.
 
 ---
 

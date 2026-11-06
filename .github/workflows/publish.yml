@@ -5,6 +5,10 @@ on:
   release:
     types: [published]
 
+env:
+  # Same flatc as the build workflow: the end-to-end tests require it in CI.
+  FLATC_VERSION: 25.12.19
+
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -25,7 +29,21 @@ jobs:
           server-id: central
           server-username: MAVEN_USERNAME
           server-password: MAVEN_PASSWORD
+      # Makes re-runs safe: e.g. creating the GitHub release after a manual publish of the same tag.
+      - name: Check whether this version is already on Maven Central
+        id: central
+        run: |
+          VERSION=$(mvn -B -q help:evaluate -Dexpression=project.version -DforceStdout)
+          URL="https://repo1.maven.org/maven2/io/github/mhradek/aurkitu-maven-plugin/${VERSION}/aurkitu-maven-plugin-${VERSION}.pom"
+          if curl -sfI "$URL" > /dev/null; then
+            echo "::notice::${VERSION} is already on Maven Central; nothing to publish."
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Publishing ${VERSION}."
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Check Central credentials
+        if: steps.central.outputs.published != 'true'
         run: |
           python3 - << 'PY2'
           from pathlib import Path
@@ -39,6 +57,7 @@ jobs:
           print("settings username empty:", "<username></username>" in text or "<username/>" in text)
           PY2
       - name: Import GPG key
+        if: steps.central.outputs.published != 'true'
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
@@ -64,9 +83,20 @@ jobs:
           echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
           gpg-connect-agent reloadagent /bye || true
           echo "KEY_ID=${KEY_ID}" >> "$GITHUB_ENV"
+      - name: Download flatc
+        if: steps.central.outputs.published != 'true'
+        run: |
+          curl -sL -o flatc.zip https://github.com/google/flatbuffers/releases/download/v${FLATC_VERSION}/Linux.flatc.binary.g++-13.zip
+          unzip -o flatc.zip -d /tmp/flatc-bin
+          chmod +x /tmp/flatc-bin/flatc
+          /tmp/flatc-bin/flatc --version
       - name: Build
+        if: steps.central.outputs.published != 'true'
         run: mvn -B clean verify
+        env:
+          FLATC_PATH: /tmp/flatc-bin/flatc
       - name: Publish to Maven Central
+        if: steps.central.outputs.published != 'true'
         env:
           MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
