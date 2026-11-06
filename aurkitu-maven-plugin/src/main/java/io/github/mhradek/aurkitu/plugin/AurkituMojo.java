@@ -17,7 +17,11 @@ import org.apache.maven.project.MavenProject;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * Aurkitu Maven Mojo.
@@ -138,11 +142,18 @@ public class AurkituMojo extends AbstractMojo {
         }
     }
 
+    /**
+     * Validates the schema by compiling it to a binary schema ({@code flatc --binary --schema}),
+     * which parses and checks it fully without targeting a language. Output is discarded.
+     */
     private void runFlatcValidation(File schemaFile) throws MojoExecutionException {
-        ProcessBuilder pb = new ProcessBuilder(flatcPath, "--schema", schemaFile.getAbsolutePath());
-        pb.directory(schemaFile.getParentFile());
-        pb.redirectErrorStream(true);
+        Path scratch = null;
         try {
+            scratch = Files.createTempDirectory("aurkitu-flatc");
+            ProcessBuilder pb = new ProcessBuilder(flatcPath, "--binary", "--schema",
+                    "-o", scratch.toString(), schemaFile.getAbsolutePath());
+            pb.directory(schemaFile.getParentFile());
+            pb.redirectErrorStream(true);
             Process process = pb.start();
             // Drain output before waiting so a full pipe cannot block flatc.
             String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
@@ -156,6 +167,19 @@ public class AurkituMojo extends AbstractMojo {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new MojoExecutionException("Interrupted while running flatc", e);
+        } finally {
+            deleteQuietly(scratch);
+        }
+    }
+
+    private static void deleteQuietly(Path dir) {
+        if (dir == null) {
+            return;
+        }
+        try (Stream<Path> paths = Files.walk(dir)) {
+            paths.sorted(Comparator.reverseOrder()).forEach(p -> p.toFile().delete());
+        } catch (IOException ignored) {
+            // best effort
         }
     }
 }
