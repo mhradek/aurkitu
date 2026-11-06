@@ -1,5 +1,5 @@
 // Aurkitu @VERSION@ automatically generated FlatBuffer schema
-// @version: f67be409
+// @version: bb5af90a
 namespace com.example.variants;
 
 table Settings {
@@ -8,6 +8,12 @@ table Settings {
   plainText:string;
   withId:int;
   withoutId:int;
+  featureFlags:[MapValueSet_Settings_featureFlags];
+}
+
+table MapValueSet_Settings_featureFlags {
+  key:string;
+  value:bool;
 }
 
 root_type Settings;

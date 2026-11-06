@@ -53,7 +53,7 @@ final class SchemaReader {
     SchemaReader(SchemaGenerator.Config config, TypeRegistry registry) {
         this.config = config;
         this.registry = registry;
-        this.typeMapper = new TypeMapper(config.mapCommonTypes, registry, mapTables);
+        this.typeMapper = new TypeMapper(config.mapCommonTypes, config.snakeCaseFields, registry, mapTables);
         this.enumReader = new EnumReader(registry);
     }
 

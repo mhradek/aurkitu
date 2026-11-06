@@ -4,6 +4,7 @@ import io.github.mhradek.aurkitu.annotations.FlatBufferFieldOptions;
 import io.github.mhradek.aurkitu.annotations.FlatBufferTable;
 import io.github.mhradek.aurkitu.annotations.types.FieldType;
 
+import java.util.Map;
 import java.util.UUID;
 
 @FlatBufferTable(rootType = true)
@@ -28,4 +29,7 @@ public class Settings {
     private int withId;
 
     private int withoutId;
+
+    /** Map table keeps the field name as written: MapValueSet_Settings_featureFlags (as in 0.0.x). */
+    private Map<String, Boolean> featureFlags;
 }

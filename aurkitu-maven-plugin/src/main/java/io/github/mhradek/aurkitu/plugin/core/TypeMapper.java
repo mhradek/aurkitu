@@ -66,14 +66,16 @@ final class TypeMapper {
             "java.lang.Double", ScalarKind.DOUBLE);
 
     private final boolean mapCommonTypes;
+    private final boolean snakeCaseFields;
     private final TypeRegistry registry;
     private final Map<String, TableDeclaration> mapTables;
 
     /**
      * @param mapTables receives a generated table for every {@code Map} field, keyed by name
      */
-    TypeMapper(boolean mapCommonTypes, TypeRegistry registry, Map<String, TableDeclaration> mapTables) {
+    TypeMapper(boolean mapCommonTypes, boolean snakeCaseFields, TypeRegistry registry, Map<String, TableDeclaration> mapTables) {
         this.mapCommonTypes = mapCommonTypes;
+        this.snakeCaseFields = snakeCaseFields;
         this.registry = registry;
         this.mapTables = mapTables;
     }
@@ -123,7 +125,8 @@ final class TypeMapper {
     }
 
     /**
-     * A {@code Map} becomes a vector of a generated {@code key:string; value:T} table,
+     * A {@code Map} becomes a vector of a generated {@code key:string; value:T} table named
+     * {@code MapValueSet_<Owner>_<field>} (the field name as written in the schema),
      * written at the end of the schema in the default namespace.
      */
     private SchemaType mapTable(TypeSignature valueSig, ClassInfo owner, String fieldName, boolean useFullName) {
@@ -132,7 +135,7 @@ final class TypeMapper {
             return null;
         }
         TypeName mapTable = new TypeName(registry.defaultNamespace(),
-                MAP_TABLE_PREFIX + Naming.typeName(owner.getName()) + "_" + Naming.toSnakeCase(fieldName));
+                MAP_TABLE_PREFIX + Naming.typeName(owner.getName()) + "_" + Naming.fieldName(fieldName, snakeCaseFields));
         mapTables.put(mapTable.name(), new TableDeclaration(mapTable, owner.getName(), "",
                 List.of(Field.of("key", StringType.INSTANCE), Field.of("value", valueType)), false));
         return new Vector(new Reference(mapTable));
