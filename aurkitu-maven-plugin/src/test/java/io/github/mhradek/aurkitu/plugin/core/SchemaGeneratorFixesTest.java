@@ -124,6 +124,13 @@ class SchemaGeneratorFixesTest {
     }
 
     @Test
+    void onlyOneEnumValueFieldIsAllowed() {
+        assertTrue(schema.contains("enum TwoValueFields : int {\n  A,\n}"), schema);
+        assertTrue(schema.contains("Enum TwoValueFields: has 2 @FlatBufferEnumTypeField fields (first, second);"
+                + " only one is allowed; values are implicit"), schema);
+    }
+
+    @Test
     void includesComeBeforeAllOtherDeclarations() {
         int include = schema.indexOf("include \"other.fbs\";");
         assertTrue(include > 0, schema);

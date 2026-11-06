@@ -48,16 +48,22 @@ final class EnumReader {
         ScalarKind underlying = underlying(annotation);
         List<Value> implicit = constants.stream().map(c -> new Value(c, null)).toList();
 
-        FieldInfo valueField = classInfo.getDeclaredFieldInfo().stream()
+        List<String> valueFields = classInfo.getDeclaredFieldInfo().stream()
                 .filter(f -> f.hasAnnotation(FlatBufferEnumTypeField.class.getName()))
-                .findFirst().orElse(null);
-        if (valueField == null) {
+                .map(FieldInfo::getName).toList();
+        if (valueFields.isEmpty()) {
             return new EnumDeclaration(name, classInfo.getName(), comment, underlying, implicit, null);
         }
+        if (valueFields.size() > 1) {
+            return new EnumDeclaration(name, classInfo.getName(), comment, underlying, implicit,
+                    "has " + valueFields.size() + " @FlatBufferEnumTypeField fields (" + String.join(", ", valueFields)
+                            + "); only one is allowed");
+        }
 
-        List<Value> explicit = readValues(classInfo, valueField.getName(), underlying);
+        List<Value> explicit = readValues(classInfo, valueFields.get(0), underlying);
         if (explicit == null) {
-            return new EnumDeclaration(name, classInfo.getName(), comment, underlying, implicit, valueField.getName());
+            return new EnumDeclaration(name, classInfo.getName(), comment, underlying, implicit,
+                    "could not read @FlatBufferEnumTypeField " + valueFields.get(0));
         }
         Comparator<Long> order = underlying == ScalarKind.ULONG ? Long::compareUnsigned : Long::compare;
         explicit.sort(Comparator.comparing(Value::value, order));

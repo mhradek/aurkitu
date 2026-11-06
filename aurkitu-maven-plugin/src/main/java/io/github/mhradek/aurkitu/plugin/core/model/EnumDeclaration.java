@@ -6,11 +6,11 @@ import java.util.List;
  * {@code enum Name : underlying { ... }}.
  *
  * @param values             constants in the order they are written
- * @param unreadValueField   name of a {@code @FlatBufferEnumTypeField} whose values could not
- *                           be read (values are then implicit), or null
+ * @param valuesProblem      why explicit {@code @FlatBufferEnumTypeField} values could not be
+ *                           used (values are then implicit), or null
  */
 public record EnumDeclaration(TypeName name, String source, String comment, ScalarKind underlying,
-                              List<Value> values, String unreadValueField) implements Declaration {
+                              List<Value> values, String valuesProblem) implements Declaration {
 
     public EnumDeclaration {
         values = List.copyOf(values);

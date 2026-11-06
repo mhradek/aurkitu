@@ -15,14 +15,17 @@ import io.github.mhradek.aurkitu.plugin.core.model.SchemaType.Vector;
 import io.github.mhradek.aurkitu.plugin.core.model.StructDeclaration;
 import io.github.mhradek.aurkitu.plugin.core.model.TableDeclaration;
 import io.github.mhradek.aurkitu.plugin.core.model.TypeName;
+import io.github.mhradek.aurkitu.plugin.core.model.UnionDeclaration;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * Checks a schema against FlatBuffers rules. A pure function: it returns a copy with
@@ -36,6 +39,8 @@ import java.util.Set;
 final class SchemaValidator {
 
     record Result(Schema schema, List<String> issues) {}
+
+    private static final Pattern NAMESPACE = Pattern.compile("[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*");
 
     private final boolean dropInvalidStructFields;
 
@@ -52,6 +57,9 @@ final class SchemaValidator {
             issues.add("file_identifier \"" + id + "\" must be exactly 4 characters");
         }
 
+        checkNamespaces(schema, issues);
+        boolean checkReferences = schema.includes().isEmpty(); // included types cannot be resolved here
+
         List<Declaration> valid = new ArrayList<>();
         boolean rootSeen = false;
         for (Declaration declaration : schema.declarations()) {
@@ -61,7 +69,7 @@ final class SchemaValidator {
                 rootSeen = true; // reported above; not also "No root type defined"
             }
             if (declaration instanceof CompositeDeclaration composite) {
-                valid.add(validate(composite, declared, issues));
+                valid.add(validate(composite, declared, checkReferences, issues));
                 if (composite.root()) {
                     if (rootSeen) {
                         issues.add("Multiple root types; last used: " + composite.name().name());
@@ -71,6 +79,8 @@ final class SchemaValidator {
             } else {
                 if (declaration instanceof EnumDeclaration enumDeclaration) {
                     validate(enumDeclaration, issues);
+                } else if (declaration instanceof UnionDeclaration union) {
+                    validate(union, declared, checkReferences, issues);
                 }
                 valid.add(declaration);
             }
@@ -94,7 +104,8 @@ final class SchemaValidator {
         return declared;
     }
 
-    private CompositeDeclaration validate(CompositeDeclaration composite, Map<TypeName, Declaration> declared, List<String> issues) {
+    private CompositeDeclaration validate(CompositeDeclaration composite, Map<TypeName, Declaration> declared,
+                                          boolean checkReferences, List<String> issues) {
         String owner = composite.name().name();
         long withId = composite.fields().stream().filter(f -> f.has(FieldAttribute.Id.class)).count();
         boolean partialIds = withId > 0 && withId < composite.fields().size();
@@ -111,6 +122,9 @@ final class SchemaValidator {
             Field checked = field.withAttributes(validAttributes(field, owner, partialIds, issues));
             if (composite instanceof TableDeclaration) {
                 checkEnumDefault(checked, owner, declared, issues);
+            }
+            if (checkReferences) {
+                checkReferenceDeclared(checked, owner, declared, issues);
             }
             if (composite instanceof StructDeclaration && !isStructCompatible(checked.type(), declared)) {
                 issues.add("Struct " + owner + " field " + field.javaName()
@@ -152,6 +166,52 @@ final class SchemaValidator {
             }
         } else if (!names.contains(defaultValue) && !values.contains(parseLong(defaultValue))) {
             issues.add("Field " + where + " default " + defaultValue + " is not a value of enum " + enumName);
+        }
+    }
+
+    /** A referenced type must be declared in this schema (unless it may come from an include). */
+    private static void checkReferenceDeclared(Field field, String owner, Map<TypeName, Declaration> declared, List<String> issues) {
+        SchemaType type = field.type();
+        if (type instanceof Vector vector) {
+            type = vector.element();
+        } else if (type instanceof FixedArray array) {
+            type = array.element();
+        }
+        if (type instanceof Reference reference && !declared.containsKey(reference.target())) {
+            issues.add("Field " + owner + "." + field.javaName() + " references " + reference.target().qualified()
+                    + ", which is not declared in this schema; annotate it, or include the schema that declares it");
+        }
+    }
+
+    /**
+     * Union members name tables (flatc also accepts structs), resolved in the union's namespace.
+     * An enum or union can never be a member.
+     */
+    private static void validate(UnionDeclaration union, Map<TypeName, Declaration> declared, boolean checkReferences,
+                                 List<String> issues) {
+        String name = union.name().name();
+        if (union.members().isEmpty()) {
+            issues.add("Union " + name + " has no members");
+        }
+        for (String member : union.members()) {
+            Declaration target = declared.get(new TypeName(union.name().namespace(), member));
+            if (target == null && checkReferences) {
+                issues.add("Union " + name + " member " + member + " is not declared in this schema");
+            } else if (target instanceof EnumDeclaration || target instanceof UnionDeclaration) {
+                issues.add("Union " + name + " member " + member + " is not a table");
+            }
+        }
+    }
+
+    /** Namespaces are dot-separated identifiers. */
+    private static void checkNamespaces(Schema schema, List<String> issues) {
+        Set<String> namespaces = new LinkedHashSet<>();
+        namespaces.add(schema.namespace());
+        schema.declarations().forEach(d -> namespaces.add(d.name().namespace()));
+        for (String namespace : namespaces) {
+            if (!NAMESPACE.matcher(namespace).matches()) {
+                issues.add("Namespace \"" + namespace + "\" is not valid: use dot-separated identifiers (letters, digits, _)");
+            }
         }
     }
 
@@ -208,9 +268,11 @@ final class SchemaValidator {
 
     private static void validate(EnumDeclaration enumDeclaration, List<String> issues) {
         String name = enumDeclaration.name().name();
-        if (enumDeclaration.unreadValueField() != null) {
-            issues.add("Enum " + name + ": could not read @FlatBufferEnumTypeField "
-                    + enumDeclaration.unreadValueField() + "; values are implicit");
+        if (enumDeclaration.values().isEmpty()) {
+            issues.add("Enum " + name + " has no values");
+        }
+        if (enumDeclaration.valuesProblem() != null) {
+            issues.add("Enum " + name + ": " + enumDeclaration.valuesProblem() + "; values are implicit");
         }
         Set<Long> seen = new HashSet<>();
         for (EnumDeclaration.Value value : enumDeclaration.values()) {

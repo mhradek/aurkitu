@@ -50,6 +50,11 @@ class SchemaValidatorTest {
         return new SchemaValidator(drop).validate(new Schema("app", List.of(), null, null, List.of(declarations)));
     }
 
+    /** With an include, references to undeclared types are assumed to come from it. */
+    private static SchemaValidator.Result validateWithInclude(Declaration... declarations) {
+        return new SchemaValidator(false).validate(new Schema("app", List.of("other.fbs"), null, null, List.of(declarations)));
+    }
+
     private static List<Field> fieldsOf(SchemaValidator.Result result, String n) {
         return result.schema().declarations().stream()
                 .filter(d -> d.name().equals(name(n))).map(d -> ((CompositeDeclaration) d).fields())
@@ -93,8 +98,9 @@ class SchemaValidatorTest {
 
     @Test
     void structsAcceptScalarsEnumsStructsAndFixedArrays() {
-        EnumDeclaration color = new EnumDeclaration(name("Color"), "Color", "", ScalarKind.BYTE, List.of(), null);
-        var result = validate(false, color, struct("Inner", field("x", INT)),
+        EnumDeclaration color = new EnumDeclaration(name("Color"), "Color", "", ScalarKind.BYTE,
+                List.of(new EnumDeclaration.Value("RED", null)), null);
+        var result = validateWithInclude(color, struct("Inner", field("x", INT)),
                 struct("Outer",
                         field("x", INT),
                         field("color", new Reference(name("Color"))),
@@ -167,11 +173,52 @@ class SchemaValidatorTest {
     }
 
     @Test
+    void referencesToUndeclaredTypesAreReportedWithoutIncludes() {
+        Field dangling = field("other", new Vector(new Reference(name("Missing"))));
+        assertEquals(List.of("Field Root.other references app.Missing, which is not declared in this schema;"
+                        + " annotate it, or include the schema that declares it"),
+                validate(false, table("Root", true, dangling)).issues());
+        assertEquals(List.of(), validateWithInclude(table("Root", true, dangling)).issues());
+    }
+
+    @Test
+    void unionMembersMustBeDeclaredTablesOrStructs() {
+        EnumDeclaration color = new EnumDeclaration(name("Color"), "Color", "", ScalarKind.BYTE,
+                List.of(new EnumDeclaration.Value("RED", null)), null);
+        UnionDeclaration union = new UnionDeclaration(name("Any"), "Any", "", List.of("Root", "S", "Color", "Gone"));
+        Declaration[] declarations = {color, union, struct("S", field("x", INT)), table("Root", true)};
+        assertEquals(List.of(
+                "Union Any member Color is not a table",
+                "Union Any member Gone is not declared in this schema"),
+                validate(false, declarations).issues());
+        assertEquals(List.of("Union Any member Color is not a table"), validateWithInclude(declarations).issues());
+        assertEquals(List.of("Union None has no members"),
+                validate(false, new UnionDeclaration(name("None"), "None", "", List.of()), table("Root", true)).issues());
+    }
+
+    @Test
+    void emptyEnumsAreReported() {
+        EnumDeclaration empty = new EnumDeclaration(name("E"), "E", "", ScalarKind.BYTE, List.of(), null);
+        assertEquals(List.of("Enum E has no values"), validate(false, empty, table("Root", true)).issues());
+    }
+
+    @Test
+    void namespacesMustBeDottedIdentifiers() {
+        TableDeclaration bad = new TableDeclaration(new TypeName("audit-log", "A"), "A", "", List.of(), false);
+        var result = new SchemaValidator(false).validate(new Schema("my.app2", List.of(), null, null,
+                List.of(table("Root", true), bad)));
+        assertEquals(List.of("Namespace \"audit-log\" is not valid: use dot-separated identifiers (letters, digits, _)"),
+                result.issues());
+        assertEquals(1, new SchemaValidator(false).validate(new Schema("2fast", List.of(), null, null,
+                List.of(new TableDeclaration(new TypeName("2fast", "R"), "R", "", List.of(), true)))).issues().size());
+    }
+
+    @Test
     void enumValueProblemsAreReported() {
         EnumDeclaration bad = new EnumDeclaration(name("E"), "E", "", ScalarKind.BYTE, List.of(
                 new EnumDeclaration.Value("A", 1L), new EnumDeclaration.Value("B", 1L), new EnumDeclaration.Value("C", 500L)), null);
         EnumDeclaration unread = new EnumDeclaration(name("U"), "U", "", ScalarKind.BYTE,
-                List.of(new EnumDeclaration.Value("X", null)), "code");
+                List.of(new EnumDeclaration.Value("X", null)), "could not read @FlatBufferEnumTypeField code");
         var result = validate(false, bad, unread, table("Root", true));
         assertEquals(List.of(
                 "Enum E has duplicate value 1 (B)",
