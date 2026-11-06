@@ -1,5 +1,6 @@
 package io.github.mhradek.aurkitu.plugin.core;
 
+import io.github.mhradek.aurkitu.plugin.core.model.Schema;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -139,10 +140,17 @@ class SchemaGeneratorFixesTest {
     }
 
     @Test
-    void contentVersionIgnoresHeaderAndValidationComments() {
-        String a = "// Aurkitu 1.0.0 header\ntable A {}\n\n// Validation issues:\n// - x\n";
-        String b = "// Aurkitu 9.9.9 header\ntable A {}\n";
-        assertEquals(SchemaGenerator.contentVersion(a), SchemaGenerator.contentVersion(b));
-        assertNotEquals(SchemaGenerator.contentVersion(b), SchemaGenerator.contentVersion("// h\ntable B {}\n"));
+    void versionHashIgnoresHeaderAndValidationComments() {
+        Schema schema = new Schema("v.ns", List.of(), null, null, List.of());
+        String a = schema.write("// Aurkitu 1.0.0 header", true, List.of("an issue"));
+        String b = schema.write("// Aurkitu 9.9.9 header", true, List.of());
+        assertEquals(versionLine(a), versionLine(b));
+
+        Schema other = new Schema("other.ns", List.of(), null, null, List.of());
+        assertNotEquals(versionLine(b), versionLine(other.write("// Aurkitu 9.9.9 header", true, List.of())));
+    }
+
+    private static String versionLine(String schema) {
+        return schema.lines().filter(l -> l.startsWith("// @version: ")).findFirst().orElseThrow();
     }
 }

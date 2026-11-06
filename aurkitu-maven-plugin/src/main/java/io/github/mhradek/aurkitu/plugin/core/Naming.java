@@ -27,6 +27,18 @@ final class Naming {
         return sb.toString();
     }
 
+    /** Schema name of a type: the simple Java name, without any outer class. */
+    static String typeName(String className) {
+        String simple = className.substring(className.lastIndexOf('.') + 1);
+        return simple.substring(simple.lastIndexOf('$') + 1);
+    }
+
+    /** Schema name of a field: '$' (not valid in schema identifiers) becomes '_', then optional snake_case. */
+    static String fieldName(String javaName, boolean snakeCase) {
+        String name = javaName.replace('$', '_');
+        return snakeCase ? toSnakeCase(name) : name;
+    }
+
     /** Extract the constant name from a ClassGraph enum value ("...Type.STRUCT" -> "STRUCT"). */
     static String enumConstantName(Object raw) {
         if (raw == null) return "";

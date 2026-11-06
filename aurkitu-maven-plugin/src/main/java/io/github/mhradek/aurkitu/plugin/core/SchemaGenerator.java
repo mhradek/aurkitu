@@ -1,31 +1,25 @@
 package io.github.mhradek.aurkitu.plugin.core;
 
 import io.github.classgraph.ClassGraph;
-import io.github.classgraph.ClassInfo;
 import io.github.classgraph.ScanResult;
-import io.github.mhradek.aurkitu.annotations.FlatBufferEnum;
-import io.github.mhradek.aurkitu.annotations.FlatBufferTable;
+import io.github.mhradek.aurkitu.plugin.core.model.Schema;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.maven.project.MavenProject;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
- * Orchestrates schema generation. Scanning, type mapping, field/table/enum
- * emission, and caching are delegated to focused classes in this package.
+ * Orchestrates schema generation: scan the classpath, read the annotated classes into
+ * a {@link Schema} model ({@link SchemaReader}), validate it ({@link SchemaValidator}),
+ * then let the model write itself.
  */
 @Slf4j
 public class SchemaGenerator {
 
     private final Config config;
-    private final Map<String, String> generatedMapTables = new LinkedHashMap<>();
-    private final List<String> validationIssues = new ArrayList<>();
 
     public static class Config {
         public final MavenProject project;
@@ -94,9 +88,6 @@ public class SchemaGenerator {
     }
 
     public void generate(String schemaName, String namespace, File outputDir) {
-        generatedMapTables.clear();
-        validationIssues.clear();
-
         File outFile = new File(outputDir, schemaName + ".fbs");
         File cacheFile = new File(outputDir, schemaName + ".fbs.cache");
 
@@ -121,76 +112,11 @@ public class SchemaGenerator {
                 return;
             }
 
-            TypeRegistry registry = TypeRegistry.build(scanResult, namespace, config.validate, validationIssues);
-            TypeMapper typeMapper = new TypeMapper(config, generatedMapTables, registry);
-            FieldEmitter fieldEmitter = new FieldEmitter(config, typeMapper, validationIssues);
-            TableEmitter tableEmitter = new TableEmitter(config, fieldEmitter, validationIssues);
-            EnumEmitter enumEmitter = new EnumEmitter(config.validate, validationIssues);
+            Schema schema = new SchemaReader(config, TypeRegistry.build(scanResult, namespace)).read(scanResult);
+            SchemaValidator.Result validation = new SchemaValidator(config.failOnValidationIssues).validate(schema);
+            List<String> issues = config.validate ? validation.issues() : List.of();
 
-            StringBuilder schema = new StringBuilder();
-            schema.append(AurkituVersion.schemaHeader());
-
-            // flatc requires includes before any other declaration.
-            for (String include : config.includes) {
-                schema.append("include \"").append(include).append("\";\n");
-            }
-            if (!config.includes.isEmpty()) {
-                schema.append("\n");
-            }
-
-            schema.append("namespace ").append(namespace).append(";\n\n");
-
-            if (config.fileIdentifier != null && !config.fileIdentifier.isBlank()) {
-                if (config.fileIdentifier.length() != 4 && config.validate) {
-                    validationIssues.add("file_identifier \"" + config.fileIdentifier + "\" must be exactly 4 characters");
-                }
-                schema.append("file_identifier \"").append(config.fileIdentifier).append("\";\n\n");
-            }
-            if (config.fileExtension != null && !config.fileExtension.isBlank()) {
-                schema.append("file_extension \"").append(config.fileExtension).append("\";\n\n");
-            }
-
-            for (ClassInfo classInfo : scanResult.getClassesWithAnnotation(FlatBufferEnum.class.getName())) {
-                appendInNamespace(schema, registry, classInfo, enumEmitter.buildEnum(classInfo));
-            }
-
-            ClassInfo rootType = null;
-            for (ClassInfo classInfo : TableEmitter.declarationOrder(scanResult.getClassesWithAnnotation(FlatBufferTable.class.getName()))) {
-                appendInNamespace(schema, registry, classInfo, tableEmitter.buildTable(classInfo));
-                if (TableEmitter.isRootType(classInfo)) {
-                    if (rootType != null) {
-                        log.warn("Multiple root types detected; using last one: {}", classInfo.getName());
-                        if (config.validate) {
-                            validationIssues.add("Multiple root types; last used: " + TypeRegistry.typeName(classInfo.getName()));
-                        }
-                    }
-                    rootType = classInfo;
-                }
-            }
-
-            for (String mapTable : generatedMapTables.values()) {
-                schema.append(mapTable);
-            }
-
-            if (rootType != null) {
-                schema.append("root_type ").append(registry.reference(rootType.getName(), namespace)).append(";\n");
-            } else if (config.validate) {
-                validationIssues.add("No root type defined");
-            }
-
-            if (config.validate && !validationIssues.isEmpty()) {
-                schema.append("\n// Validation issues:\n");
-                for (String issue : validationIssues) {
-                    schema.append("// - ").append(issue).append("\n");
-                }
-            }
-
-            String output = schema.toString();
-            if (config.generateVersion) {
-                String header = AurkituVersion.schemaHeader();
-                output = output.replace(header, header + "// @version: " + contentVersion(output) + "\n");
-            }
-
+            String output = validation.schema().write(AurkituVersion.schemaHeader(), config.generateVersion, issues);
             Files.writeString(outFile.toPath(), output);
             if (config.cacheEnabled) {
                 SchemaCache.write(cacheFile, inputHash);
@@ -198,45 +124,18 @@ public class SchemaGenerator {
             log.info("Wrote schema to {}", outFile.getAbsolutePath());
 
             if (config.validate) {
-                if (validationIssues.isEmpty()) {
+                if (issues.isEmpty()) {
                     log.info("Basic validation complete. No issues found.");
                 } else {
-                    log.warn("Validation issues found ({}). See schema comments.", validationIssues.size());
+                    issues.forEach(issue -> log.warn("Validation issue: {}", issue));
+                    log.warn("Validation issues found ({}). See schema comments.", issues.size());
                     if (config.failOnValidationIssues) {
-                        throw new SchemaGenerationException("Schema validation failed with " + validationIssues.size() + " issue(s). See schema comments.");
+                        throw new SchemaGenerationException("Schema validation failed with " + issues.size() + " issue(s). See schema comments.");
                     }
                 }
             }
         } catch (IOException e) {
             throw new SchemaGenerationException("Failed to generate schema", e);
         }
-    }
-
-    /**
-     * Places a type declaration in its namespace. A {@code namespace} line applies to every
-     * declaration after it, so the default namespace is restored straight after an override.
-     */
-    private static void appendInNamespace(StringBuilder schema, TypeRegistry registry, ClassInfo classInfo, String declaration) {
-        String ns = registry.namespaceOf(classInfo.getName());
-        if (ns.equals(registry.defaultNamespace())) {
-            schema.append(declaration);
-        } else {
-            schema.append("namespace ").append(ns).append(";\n\n")
-                    .append(declaration)
-                    .append("namespace ").append(registry.defaultNamespace()).append(";\n\n");
-        }
-    }
-
-    /**
-     * Hash of the schema body only: the header line (which carries the plugin version) and the
-     * trailing validation comments are excluded, so the version changes only when the schema does.
-     */
-    static String contentVersion(String schema) {
-        String body = schema.substring(schema.indexOf('\n') + 1);
-        int validation = body.indexOf("\n// Validation issues:");
-        if (validation >= 0) {
-            body = body.substring(0, validation);
-        }
-        return Integer.toHexString(body.hashCode());
     }
 }

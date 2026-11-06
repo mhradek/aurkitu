@@ -31,8 +31,8 @@ public final class AurkituVersion {
         }
     }
 
-    /** First line of every generated schema. */
+    /** First line of every generated schema (without a line break). */
     static String schemaHeader() {
-        return "// Aurkitu " + VERSION + " automatically generated FlatBuffer schema\n";
+        return "// Aurkitu " + VERSION + " automatically generated FlatBuffer schema";
     }
 }
