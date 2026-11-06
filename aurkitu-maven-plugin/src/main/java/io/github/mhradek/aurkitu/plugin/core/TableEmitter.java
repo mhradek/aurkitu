@@ -1,6 +1,7 @@
 package io.github.mhradek.aurkitu.plugin.core;
 
 import io.github.classgraph.ClassInfo;
+import io.github.classgraph.ClassRefTypeSignature;
 import io.github.classgraph.FieldInfo;
 import io.github.mhradek.aurkitu.annotations.FlatBufferComment;
 import io.github.mhradek.aurkitu.annotations.FlatBufferIgnore;
@@ -9,7 +10,9 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -96,6 +99,44 @@ final class TableEmitter {
             }
         }
         return fields;
+    }
+
+    /**
+     * Structs first, each after the structs it contains (flatc needs a struct's size when
+     * it parses it), then tables, which may reference anything. Otherwise scan order is kept.
+     */
+    static List<ClassInfo> declarationOrder(List<ClassInfo> types) {
+        Map<String, ClassInfo> structs = new LinkedHashMap<>();
+        List<ClassInfo> tables = new ArrayList<>();
+        for (ClassInfo type : types) {
+            if (isStruct(type)) {
+                structs.put(type.getName(), type);
+            } else {
+                tables.add(type);
+            }
+        }
+        List<ClassInfo> ordered = new ArrayList<>();
+        Set<String> visited = new HashSet<>();
+        for (ClassInfo struct : structs.values()) {
+            visitStruct(struct, structs, visited, ordered);
+        }
+        ordered.addAll(tables);
+        return ordered;
+    }
+
+    private static void visitStruct(ClassInfo struct, Map<String, ClassInfo> structs, Set<String> visited, List<ClassInfo> ordered) {
+        if (!visited.add(struct.getName())) {
+            return; // done, or a cycle (which flatc will report)
+        }
+        for (FieldInfo field : struct.getDeclaredFieldInfo()) {
+            if (field.getTypeSignatureOrTypeDescriptor() instanceof ClassRefTypeSignature ref) {
+                ClassInfo dependency = structs.get(ref.getFullyQualifiedClassName());
+                if (dependency != null) {
+                    visitStruct(dependency, structs, visited, ordered);
+                }
+            }
+        }
+        ordered.add(struct);
     }
 
     static boolean isStruct(ClassInfo classInfo) {

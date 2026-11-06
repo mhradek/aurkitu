@@ -101,6 +101,14 @@ class SchemaGeneratorFixesTest {
     }
 
     @Test
+    void structsAreDeclaredBeforeTheStructsAndTablesThatUseThem() {
+        int z = schema.indexOf("struct ZStruct {");
+        int a = schema.indexOf("struct AStruct {");
+        assertTrue(z >= 0 && a > z, schema);
+        assertTrue(a < schema.indexOf("table "), "structs precede tables:\n" + schema);
+    }
+
+    @Test
     void includesComeBeforeAllOtherDeclarations() {
         int include = schema.indexOf("include \"other.fbs\";");
         assertTrue(include > 0, schema);

@@ -155,7 +155,7 @@ public class SchemaGenerator {
             }
 
             ClassInfo rootType = null;
-            for (ClassInfo classInfo : scanResult.getClassesWithAnnotation(FlatBufferTable.class.getName())) {
+            for (ClassInfo classInfo : TableEmitter.declarationOrder(scanResult.getClassesWithAnnotation(FlatBufferTable.class.getName()))) {
                 appendInNamespace(schema, registry, classInfo, tableEmitter.buildTable(classInfo));
                 if (TableEmitter.isRootType(classInfo)) {
                     if (rootType != null) {
