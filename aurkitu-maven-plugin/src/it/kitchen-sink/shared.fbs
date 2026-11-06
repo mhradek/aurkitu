@@ -1,0 +1,6 @@
+// Stands in for a schema owned by another team; included by kitchen.fbs.
+namespace com.example.kitchensink;
+
+table SharedMeta {
+  note:string;
+}
