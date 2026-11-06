@@ -8,7 +8,6 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * Emits a single field line, including type overrides, fixed-array rewrite,
@@ -34,7 +33,7 @@ final class FieldEmitter {
 
         if (field.hasAnnotation(FlatBufferFieldOptions.class.getName())) {
             var options = field.getAnnotationInfo(FlatBufferFieldOptions.class.getName());
-            Object ft = options.getParameterValues().get("fieldType").getValue();
+            Object ft = Naming.param(options, "fieldType");
             if (ft != null) {
                 String ftStr = ft.toString();
                 if (!ftStr.contains("MAP") && !ftStr.contains("ARRAY") && !ftStr.contains("IDENT")) {
@@ -64,7 +63,7 @@ final class FieldEmitter {
 
         if (isStruct && field.hasAnnotation(FlatBufferFieldOptions.class.getName())) {
             var options = field.getAnnotationInfo(FlatBufferFieldOptions.class.getName());
-            Object fl = options.getParameterValues().get("fixedLength").getValue();
+            Object fl = Naming.param(options, "fixedLength");
             if (fl instanceof Number ln && ln.intValue() > 0) {
                 int n = ln.intValue();
                 String before = typeName;
@@ -81,7 +80,7 @@ final class FieldEmitter {
 
         if (field.hasAnnotation(FlatBufferComment.class.getName())) {
             var commentAnno = field.getAnnotationInfo(FlatBufferComment.class.getName());
-            String comment = String.valueOf(commentAnno.getParameterValues().get("comment").getValue());
+            String comment = Naming.stringParam(commentAnno, "comment");
             if (!comment.isBlank()) {
                 line.append("// ").append(comment).append("\n  ");
             }
@@ -95,34 +94,32 @@ final class FieldEmitter {
 
         if (field.hasAnnotation(FlatBufferFieldOptions.class.getName())) {
             var options = field.getAnnotationInfo(FlatBufferFieldOptions.class.getName());
-            String defaultValue = Optional.ofNullable(options.getParameterValues().get("defaultValue"))
-                    .map(p -> String.valueOf(p.getValue()))
-                    .orElse("");
+            String defaultValue = Naming.stringParam(options, "defaultValue");
             if (!defaultValue.isBlank()) {
                 line.append(" = ").append(defaultValue);
             }
 
             List<String> attrs = new ArrayList<>();
-            if (Boolean.TRUE.equals(options.getParameterValues().get("required").getValue())) {
+            if (Boolean.TRUE.equals(Naming.param(options, "required"))) {
                 attrs.add("required");
             }
-            if (Boolean.TRUE.equals(options.getParameterValues().get("deprecated").getValue())) {
+            if (Boolean.TRUE.equals(Naming.param(options, "deprecated"))) {
                 attrs.add("deprecated");
             }
             if (emitIds) {
-                Object fid = options.getParameterValues().get("fieldId").getValue();
+                Object fid = Naming.param(options, "fieldId");
                 if (fid instanceof Number n && n.intValue() >= 0) {
                     attrs.add("id: " + n.intValue());
                 }
             }
-            if (Boolean.TRUE.equals(options.getParameterValues().get("key").getValue())) {
+            if (Boolean.TRUE.equals(Naming.param(options, "key"))) {
                 attrs.add("key");
             }
-            Object hash = options.getParameterValues().get("hash").getValue();
+            Object hash = Naming.param(options, "hash");
             if (hash != null && !String.valueOf(hash).isBlank()) {
                 attrs.add("hash: \"" + hash + "\"");
             }
-            Object nfb = options.getParameterValues().get("nestedFlatbuffer").getValue();
+            Object nfb = Naming.param(options, "nestedFlatbuffer");
             if (nfb != null && !String.valueOf(nfb).isBlank()) {
                 if ("[ubyte]".equals(typeName) || "[byte]".equals(typeName)) {
                     attrs.add("nested_flatbuffer: \"" + nfb + "\"");
@@ -131,7 +128,7 @@ final class FieldEmitter {
                     log.warn("nested_flatbuffer on {}.{} skipped (type is {}, must be [ubyte])", owner.getSimpleName(), name, typeName);
                 }
             }
-            if (Boolean.TRUE.equals(options.getParameterValues().get("flexbuffer").getValue())) {
+            if (Boolean.TRUE.equals(Naming.param(options, "flexbuffer"))) {
                 if ("[ubyte]".equals(typeName) || "[byte]".equals(typeName)) {
                     attrs.add("flexbuffer");
                 } else if (config.validate) {
@@ -139,7 +136,7 @@ final class FieldEmitter {
                     log.warn("flexbuffer on {}.{} skipped (type is {}, must be [ubyte])", owner.getSimpleName(), name, typeName);
                 }
             }
-            Object fa = options.getParameterValues().get("forceAlign").getValue();
+            Object fa = Naming.param(options, "forceAlign");
             if (fa instanceof Number fn && fn.intValue() > 0) {
                 attrs.add("force_align: " + fn.intValue());
             }
@@ -156,7 +153,7 @@ final class FieldEmitter {
             return false;
         }
         var options = field.getAnnotationInfo(FlatBufferFieldOptions.class.getName());
-        Object fid = options.getParameterValues().get("fieldId").getValue();
+        Object fid = Naming.param(options, "fieldId");
         return fid instanceof Number n && n.intValue() >= 0;
     }
 }

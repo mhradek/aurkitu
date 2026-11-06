@@ -2,11 +2,13 @@ package io.github.mhradek.aurkitu.plugin;
 
 import io.github.mhradek.aurkitu.plugin.core.SchemaGenerator;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
 
 import java.io.File;
@@ -18,7 +20,8 @@ import java.util.List;
  * Generates FlatBuffer schemas from annotated Java classes using ClassGraph.
  */
 @Slf4j
-@Mojo(name = "build-schema", defaultPhase = LifecyclePhase.PROCESS_CLASSES, threadSafe = true)
+@Mojo(name = "build-schema", defaultPhase = LifecyclePhase.PROCESS_CLASSES,
+        requiresDependencyResolution = ResolutionScope.COMPILE, threadSafe = true)
 public class AurkituMojo extends AbstractMojo {
 
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
@@ -97,7 +100,8 @@ public class AurkituMojo extends AbstractMojo {
         }
 
         SchemaGenerator.Config config = new SchemaGenerator.Config(
-                project, specifiedPackages, validate, ignoreStaticMembers, fileIdentifier, includes, mapCommonTypes, cacheEnabled, snakeCaseFields, generateVersion, failOnValidationIssues, fileExtension);
+                project, specifiedPackages, validate, ignoreStaticMembers, fileIdentifier, includes, mapCommonTypes, cacheEnabled, snakeCaseFields, generateVersion, failOnValidationIssues, fileExtension,
+                resolveClasspath());
         SchemaGenerator generator = new SchemaGenerator(config);
         generator.generate(schemaName, schemaNamespace, outputDirectory);
 
@@ -105,6 +109,23 @@ public class AurkituMojo extends AbstractMojo {
 
         if (validate && flatcPath != null && !flatcPath.isBlank()) {
             runFlatcValidation(new File(outputDirectory, schemaName + ".fbs"));
+        }
+    }
+
+    /**
+     * The project's compile classpath (its output directory plus compile-scope dependencies).
+     * Returns null when no project is bound, in which case the current classloader is scanned.
+     */
+    private List<String> resolveClasspath() throws MojoExecutionException {
+        if (project == null) {
+            return null;
+        }
+        try {
+            List<String> elements = project.getCompileClasspathElements();
+            log.debug("Scanning project compile classpath: {}", elements);
+            return elements;
+        } catch (DependencyResolutionRequiredException e) {
+            throw new MojoExecutionException("Failed to resolve project compile classpath", e);
         }
     }
 

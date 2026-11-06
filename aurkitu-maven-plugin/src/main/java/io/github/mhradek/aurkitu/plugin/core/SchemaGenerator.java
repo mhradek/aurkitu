@@ -40,12 +40,29 @@ public class SchemaGenerator {
         public final boolean generateVersion;
         public final boolean failOnValidationIssues;
         public final String fileExtension;
+        /**
+         * Classpath to scan (e.g. the project's compile classpath). When null or empty,
+         * ClassGraph falls back to the current classloader, which inside Maven is the
+         * plugin's own classpath and does not contain the project's classes.
+         */
+        public final List<String> classpathElements;
 
         @SuppressWarnings("PMD.ExcessiveParameterList")
         public Config(MavenProject project, List<String> specifiedPackages, boolean validate,
                       boolean ignoreStaticMembers, String fileIdentifier, List<String> includes,
                       boolean mapCommonTypes, boolean cacheEnabled, boolean snakeCaseFields,
                       boolean generateVersion, boolean failOnValidationIssues, String fileExtension) {
+            this(project, specifiedPackages, validate, ignoreStaticMembers, fileIdentifier, includes,
+                    mapCommonTypes, cacheEnabled, snakeCaseFields, generateVersion, failOnValidationIssues,
+                    fileExtension, null);
+        }
+
+        @SuppressWarnings("PMD.ExcessiveParameterList")
+        public Config(MavenProject project, List<String> specifiedPackages, boolean validate,
+                      boolean ignoreStaticMembers, String fileIdentifier, List<String> includes,
+                      boolean mapCommonTypes, boolean cacheEnabled, boolean snakeCaseFields,
+                      boolean generateVersion, boolean failOnValidationIssues, String fileExtension,
+                      List<String> classpathElements) {
             this.project = project;
             this.specifiedPackages = specifiedPackages;
             this.validate = validate;
@@ -58,6 +75,7 @@ public class SchemaGenerator {
             this.generateVersion = generateVersion;
             this.failOnValidationIssues = failOnValidationIssues;
             this.fileExtension = fileExtension;
+            this.classpathElements = classpathElements;
         }
 
         // Convenience constructor for tests
@@ -82,7 +100,12 @@ public class SchemaGenerator {
         File outFile = new File(outputDir, schemaName + ".fbs");
         File cacheFile = new File(outputDir, schemaName + ".fbs.cache");
 
-        try (ScanResult scanResult = new ClassGraph()
+        ClassGraph classGraph = new ClassGraph();
+        if (config.classpathElements != null && !config.classpathElements.isEmpty()) {
+            classGraph.overrideClasspath(config.classpathElements);
+        }
+
+        try (ScanResult scanResult = classGraph
                 .enableAnnotationInfo()
                 .enableClassInfo()
                 .enableFieldInfo()

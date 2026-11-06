@@ -29,7 +29,7 @@ final class TypeMapper {
         boolean useFullName = false;
         if (field != null && field.hasAnnotation(FlatBufferFieldOptions.class.getName())) {
             var options = field.getAnnotationInfo(FlatBufferFieldOptions.class.getName());
-            Object ufn = options.getParameterValues().get("useFullName").getValue();
+            Object ufn = Naming.param(options, "useFullName");
             if (Boolean.TRUE.equals(ufn)) {
                 useFullName = true;
             }

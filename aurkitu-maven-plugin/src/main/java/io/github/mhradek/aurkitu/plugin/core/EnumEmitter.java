@@ -18,11 +18,11 @@ final class EnumEmitter {
         boolean isUnion = false;
         String underlying = "byte";
         if (enumAnno != null) {
-            Object val = enumAnno.getParameterValues().get("value").getValue();
+            Object val = Naming.param(enumAnno, "value");
             if ("UNION".equals(Naming.enumConstantName(val))) {
                 isUnion = true;
             }
-            Object et = enumAnno.getParameterValues().get("enumType").getValue();
+            Object et = Naming.param(enumAnno, "enumType");
             if (et != null) {
                 String etStr = String.valueOf(et);
                 if (etStr.contains("SHORT")) underlying = "short";
@@ -33,7 +33,7 @@ final class EnumEmitter {
 
         if (classInfo.hasAnnotation(FlatBufferComment.class.getName())) {
             var commentAnno = classInfo.getAnnotationInfo(FlatBufferComment.class.getName());
-            String comment = String.valueOf(commentAnno.getParameterValues().get("comment").getValue());
+            String comment = Naming.stringParam(commentAnno, "comment");
             if (!comment.isBlank()) {
                 sb.append("// ").append(comment).append("\n");
             }
@@ -59,16 +59,12 @@ final class EnumEmitter {
         }
 
         if (sb.toString().endsWith("{\n")) {
-            try {
-                Class<?> enumClass = Class.forName(classInfo.getName());
-                if (enumClass.isEnum()) {
-                    Object[] constants = enumClass.getEnumConstants();
-                    for (Object c : constants) {
-                        sb.append("  ").append(((Enum<?>) c).name()).append(",\n");
-                    }
+            // Load through ClassGraph so the scanned classpath (not the plugin's) is used.
+            Class<?> enumClass = classInfo.loadClass(true);
+            if (enumClass != null && enumClass.isEnum()) {
+                for (Object c : enumClass.getEnumConstants()) {
+                    sb.append("  ").append(((Enum<?>) c).name()).append(",\n");
                 }
-            } catch (ClassNotFoundException ignored) {
-                // leave empty
             }
         }
 

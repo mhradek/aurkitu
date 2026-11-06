@@ -36,17 +36,15 @@ final class TableEmitter {
 
         if (classInfo.hasAnnotation(FlatBufferComment.class.getName())) {
             var commentAnno = classInfo.getAnnotationInfo(FlatBufferComment.class.getName());
-            String comment = String.valueOf(commentAnno.getParameterValues().get("comment").getValue());
+            String comment = Naming.stringParam(commentAnno, "comment");
             if (!comment.isBlank()) {
                 sb.append("// ").append(comment).append("\n");
             }
         }
 
-        if (tableAnno != null && tableAnno.getParameterValues().get("namespace") != null) {
-            String ns = String.valueOf(tableAnno.getParameterValues().get("namespace").getValue());
-            if (!ns.isBlank()) {
-                sb.append("namespace ").append(ns).append(";\n");
-            }
+        String ns = Naming.stringParam(tableAnno, "namespace");
+        if (!ns.isBlank()) {
+            sb.append("namespace ").append(ns).append(";\n");
         }
 
         sb.append(isStruct ? "struct " : "table ").append(classInfo.getSimpleName()).append(" {\n");
@@ -112,16 +110,12 @@ final class TableEmitter {
         if (tableAnno == null) {
             return false;
         }
-        var valueParam = tableAnno.getParameterValues().get("value");
-        if (valueParam == null) {
-            return false;
-        }
-        return "STRUCT".equals(Naming.enumConstantName(valueParam.getValue()));
+        return "STRUCT".equals(Naming.enumConstantName(Naming.param(tableAnno, "value")));
     }
 
     static boolean isRootType(ClassInfo classInfo) {
         var anno = classInfo.getAnnotationInfo(FlatBufferTable.class.getName());
-        return anno != null && Boolean.TRUE.equals(anno.getParameterValues().get("rootType").getValue());
+        return anno != null && Boolean.TRUE.equals(Naming.param(anno, "rootType"));
     }
 
     private static boolean isNonScalarField(String fieldLine) {
