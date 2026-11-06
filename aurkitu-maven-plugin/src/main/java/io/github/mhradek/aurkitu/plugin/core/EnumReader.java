@@ -70,15 +70,10 @@ final class EnumReader {
         return new EnumDeclaration(name, classInfo.getName(), comment, underlying, explicit, null);
     }
 
-    /** {@code enumType}, defaulting to byte. */
+    /** {@code enumType} (every EnumType is an integral ScalarKind), defaulting to byte when absent. */
     private static ScalarKind underlying(AnnotationInfo annotation) {
         String constant = Naming.enumConstantName(Naming.param(annotation, "enumType"));
-        try {
-            ScalarKind kind = ScalarKind.valueOf(constant);
-            return kind.isIntegral() ? kind : ScalarKind.BYTE;
-        } catch (IllegalArgumentException e) {
-            return ScalarKind.BYTE;
-        }
+        return constant.isEmpty() ? ScalarKind.BYTE : ScalarKind.valueOf(constant);
     }
 
     /** Constant names in declaration order. */
@@ -96,7 +91,7 @@ final class EnumReader {
     @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
     private static List<Value> readValues(ClassInfo classInfo, String fieldName, ScalarKind underlying) {
         Class<?> enumClass = classInfo.loadClass(true);
-        if (enumClass == null || !enumClass.isEnum()) {
+        if (enumClass == null) {
             return null;
         }
         try {

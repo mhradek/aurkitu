@@ -121,6 +121,24 @@ class SchemaGeneratorFixesTest {
         assertTrue(schema.contains("table WithNested {\n  mode:Mode;\n  detail:Detail;\n}"), schema);
         assertFalse(schema.contains("Hidden"), schema);
         assertFalse(schema.contains("Marker"), schema);
+        assertFalse(schema.contains("Deeper"), schema);
+        assertFalse(schema.contains("WithNested_1"), schema);
+        assertEquals(1, schema.split("table Tagged \\{", -1).length - 1, "declared once:\n" + schema);
+    }
+
+    @Test
+    void unsignedValueFieldsAreReinterpretedAtTheirWidth() {
+        assertTrue(schema.contains("enum UShortEnum : ushort {\n  MAX = 65535,\n}"), schema);
+        assertTrue(schema.contains("enum UIntEnum : uint {\n  MAX = 4294967295,\n}"), schema);
+        assertTrue(schema.contains("enum ULongEnum : ulong {\n  ONE = 1,\n  MAX = 18446744073709551615,\n}"), schema);
+    }
+
+    @Test
+    void unreadableValueFieldsFallBackToImplicitValues() {
+        assertTrue(schema.contains("enum TextCodedEnum : int {\n  A,\n}"), schema);
+        assertTrue(schema.contains("Enum TextCodedEnum: could not read @FlatBufferEnumTypeField code"), schema);
+        assertTrue(schema.contains("enum FailingEnum : int {\n  A,\n}"), schema);
+        assertTrue(schema.contains("Enum FailingEnum: could not read @FlatBufferEnumTypeField code"), schema);
     }
 
     @Test

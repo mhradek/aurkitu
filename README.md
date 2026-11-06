@@ -28,7 +28,7 @@ This is the **modernised 1.0.0** release:
 
 ## Coverage
 
-JaCoCo is the **single source of truth**. `mvn verify` fails if line coverage drops below 50% on either module (see `jacoco.line.coverage.minimum` in the parent POM). Raise the threshold as tests improve.
+JaCoCo is the **single source of truth**. `mvn verify` fails if **any class** drops below **80% line coverage or 80% branch coverage** (see `jacoco.line.coverage.minimum` and `jacoco.branch.coverage.minimum` in the parent POM). The check is per class, so a well-tested module cannot hide an untested class.
 
 External badges (Codecov, Coveralls, Codacy) are mirrors. They require these repository secrets:
 

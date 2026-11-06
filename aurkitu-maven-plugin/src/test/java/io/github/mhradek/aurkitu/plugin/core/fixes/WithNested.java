@@ -13,6 +13,11 @@ public class WithNested {
 
     public static class Detail {
         private int level;
+
+        /** Two levels below WithNested (Detail is not annotated): not declared. */
+        public static class Deeper {
+            private int depth;
+        }
     }
 
     /** Opted out. */
@@ -23,4 +28,18 @@ public class WithNested {
 
     /** Interfaces are not types. */
     public interface Marker {}
+
+    /** Annotated nested types are declared once, as annotated types. */
+    @FlatBufferTable
+    public static class Tagged {
+        private int tag;
+    }
+
+    /** Anonymous classes are not types. */
+    static final Runnable ANONYMOUS = new Runnable() {
+        @Override
+        public void run() {
+            // nothing
+        }
+    };
 }
