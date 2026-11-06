@@ -116,7 +116,7 @@ Run `mvn process-classes` (or a later phase) to generate `target/aurkitu/schemas
 | `failOnValidationIssues` | No | `false` | Fail the build when validation issues are found |
 | `fileExtension` | No | — | Emit `file_extension "..."` |
 | `flatcPath` | No | — | Path to a `flatc` binary. When set (and `validate` is on), the schema is checked with `flatc --binary --schema` and the build fails if `flatc` rejects it |
-| `cacheEnabled` | No | `false` | Skip regeneration when the output exists and the scanned type names and configuration are unchanged. Field changes are not detected yet |
+| `cacheEnabled` | No | `false` | Only rewrite the schema file when its content changes, keeping its timestamp for downstream steps. The schema is still generated and validated every time |
 
 The plugin scans the project's compile classpath (its `target/classes` plus compile-scope dependencies), so annotated models can live in the project itself or in a dependency.
 
@@ -245,8 +245,10 @@ protected SampleClassTableInnerEnumInt innerEnum;
 - **Partial `fieldId`**: If any field in a table has `fieldId`, every field should. Partial ids can make `flatc` reject the schema.
 - **Structs**: Fields that are not scalars, enums, structs or fixed-length arrays of those (e.g. strings, vectors, tables, unions) are flagged. Set `failOnValidationIssues` to skip them instead of emitting an invalid struct. Structs are declared before the structs and tables that use them. A struct cannot be the root type.
 - **Type names**: Types are declared by their simple Java name (nested `Outer.Inner` becomes `Inner`). Two types with the same simple name in one namespace are reported as a validation issue.
+- **Nested types**: Classes and enums nested directly in an annotated table or struct are declared automatically, in the outer type's namespace, even without their own annotation (as in 0.0.x). Mark a nested type `@FlatBufferIgnore` to leave it out. Deeper nesting is not followed.
+- **Referenced types**: A field (or union member) must reference a type the schema declares. Without `includes` this is checked and reported; with `includes` it is left to `flatc`, since included schemas are not resolved.
 - **Unsupported types**: `char`, nested vectors (`int[][]`, `List<List<T>>`) and JDK types outside the common-type list are skipped and reported.
-- **Includes**: `include` lines are emitted only. Cross-schema types are not resolved.
+- **Includes**: `include` lines are emitted only. Cross-schema types are not resolved (see *Referenced types*).
 - **Scanning**: Prefer `specifiedPackages` so ClassGraph does not scan the whole classpath.
 - **Not generated**: `rpc_service` and `///` doc comments.
 
@@ -282,7 +284,7 @@ root_type SampleRootTable;
 
 ## Validation
 
-When `validate` is enabled, issues are appended as comments (unsupported fields, non-scalar struct fields, partial field ids, misplaced field attributes, enum value problems, duplicate type names, a missing or non-table root type). Set `failOnValidationIssues` to fail the build instead. Optional `flatcPath` checks the generated schema with `flatc --binary --schema`.
+When `validate` is enabled, issues are appended as comments (unsupported fields, references to undeclared types, non-scalar struct fields, partial field ids, misplaced field attributes, enum problems such as missing, duplicate or out-of-range values, invalid union members, invalid namespaces, duplicate type names, a missing or non-table root type). Set `failOnValidationIssues` to fail the build instead. Optional `flatcPath` checks the generated schema with `flatc --binary --schema`.
 
 ---
 
@@ -316,8 +318,9 @@ mvn clean verify
 | `settings-variants` | `snakeCaseFields=false`, `mapCommonTypes=false`, `ignoreStaticMembers=false`, `generateVersion`, validation comments |
 | `fail-on-validation` | `failOnValidationIssues=true` fails the build |
 | `flatc-path` | The `flatcPath` option (runs only when `FLATC_PATH` is set) |
+| `dependency-models` | Annotated models in a dependency jar (two-module build), including a nested enum |
 
-Each `verify.groovy` compares the generated schema with `expected/*.fbs` and, when `FLATC_PATH` points to a `flatc` binary, compiles it with `flatc --cpp --java`. If you change the output on purpose, update the expected file in the same commit. Use `-Dinvoker.skip` to skip these tests.
+Each `verify.groovy` compares the generated schema with `expected/*.fbs` and, when `FLATC_PATH` points to a `flatc` binary, compiles it with `flatc --cpp --java`. In CI (`CI=true`) a missing `FLATC_PATH` fails the build rather than skipping the check. If you change the output on purpose, update the expected file in the same commit. Use `-Dinvoker.skip` to skip these tests.
 
 ---
 
@@ -337,7 +340,9 @@ Each `verify.groovy` compares the generated schema with `expected/*.fbs` and, wh
 | **byte[]** | Not special-cased | Mapped to `[ubyte]` | — |
 | **fieldId** | Not present | Optional `id: N` | [Configuration](#configuration-options) |
 | **generateVersion** | Supported | Supported (`// @version: <hash>`) | [Configuration](#configuration-options) |
-| **schema caching** | Skip if file exists | Content-aware hash (types + config) | [Configuration](#configuration-options) |
+| **schema caching** | Skip if file exists | Rewrite only when the generated content changes | [Configuration](#configuration-options) |
+| **Nested types** | Declared automatically | Declared automatically (restored in 1.0.1; 1.0.0 dropped them) | [Limitations](#limitations) |
+| **`@FlatBufferOptions`** | No effect | Deprecated (no effect) | — |
 | **failOnValidationIssues** | Not present | Optional fail-the-build | [Configuration](#configuration-options) |
 | **specifiedDependencies** | Artifact-level | `specifiedPackages` (package-level) | [Configuration](#configuration-options) |
 | **consolidatedSchemas** | Supported | Removed (single schema) | — |
@@ -348,17 +353,18 @@ Each `verify.groovy` compares the generated schema with `expected/*.fbs` and, wh
 
 ## Roadmap
 
-1.0.0 is published to Maven Central. Remaining work:
+1.0.0 is published to Maven Central. Remaining work (1.0.1 fixes are listed in the pull request and release notes):
 
 | Priority | Item | Why it matters | Status |
 |----------|------|----------------|--------|
-| **Done** | Coverage baseline (JaCoCo check + hardened uploads) | Reliable coverage numbers | 50% line minimum; uploads fail the job |
-| **Medium** | Raise coverage threshold and expand SchemaGenerator tests | Higher confidence | See issues |
+| **Done** | Coverage gate (JaCoCo check + hardened uploads) | Reliable coverage numbers | 80% line and branch per class; uploads fail the job |
+| **Done** | End-to-end tests | Real consumer builds, checked with `flatc` | `src/it` (invoker) |
 | **Medium** | Published Javadoc site | Consumer docs beyond the README | Jars are attached on Central |
 | **Low** | True multi-namespace schema splitting | Advanced use case | Per-type `namespace` line only |
 | **Low** | Schema include resolution | Cross-schema types | Includes are emitted only |
-| **Low** | Configurable binary vector (`[byte]` vs `[ubyte]`) | Flexibility | Fixed to `[ubyte]` |
+| **Done** | Configurable binary vector (`[byte]` vs `[ubyte]`) | Flexibility | `[ubyte]` by default; `fieldType = FieldType.BYTE` gives `[byte]` |
 | **Low** | `rpc_service` and `///` doc comments | Official schema completeness | Not generated |
+| **Low** | Remove deprecated `@FlatBufferOptions` | API hygiene | Deprecated; remove in 2.0 |
 | **Done** | Maven Central publishing | 1.0.0 is live | Done |
 | **Done** | `plugin.xml` descriptor | Installable plugin | Done |
 | **Done** | Mojo integration tests | Parameter binding | Done |
