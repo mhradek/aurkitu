@@ -78,14 +78,18 @@ class AurkituMojoExecutionTest {
             }
         });
         interrupter.start();
+        MojoExecutionException e;
+        boolean flagRestored;
         try {
-            MojoExecutionException e = assertThrows(MojoExecutionException.class, mojo::execute);
-            assertEquals("Interrupted while running flatc", e.getMessage());
-            assertTrue(Thread.currentThread().isInterrupted(), "interrupt flag is restored");
+            e = assertThrows(MojoExecutionException.class, mojo::execute);
         } finally {
+            // Read and clear the flag before join(), which would otherwise throw while it is set.
+            flagRestored = Thread.interrupted();
             interrupter.interrupt();
             interrupter.join();
         }
+        assertEquals("Interrupted while running flatc", e.getMessage());
+        assertTrue(flagRestored, "interrupt flag is restored");
     }
 
     @Test
