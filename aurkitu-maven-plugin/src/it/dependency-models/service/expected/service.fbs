@@ -1,0 +1,26 @@
+// Aurkitu @VERSION@ automatically generated FlatBuffer schema
+namespace com.example.service;
+
+enum CallType : byte {
+  LOOKUP,
+  UPDATE,
+}
+
+enum Currency : byte {
+  AED,
+  CZK,
+  EUR,
+  USD,
+}
+
+table Wallet {
+  balance:long;
+  currency:Currency;
+}
+
+table Response {
+  call:CallType;
+  wallets:[Wallet];
+}
+
+root_type Response;
