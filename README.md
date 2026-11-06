@@ -110,11 +110,15 @@ Run `mvn process-classes` (or a later phase) to generate `target/aurkitu/schemas
 | `ignoreStaticMembers` | No | `true` | Skip static fields when generating tables |
 | `fileIdentifier` | No | — | Optional 4-character file identifier |
 | `includes` | No | — | List of schema files to `include` |
-| `mapCommonTypes` | No | `true` | Map `Date`, `URL`, `BigDecimal`, `UUID`, etc. to `string` |
+| `mapCommonTypes` | No | `true` | Map `Date`, `UUID`, `URL`, `URI`, `BigDecimal`, `BigInteger` and `java.time` types (`Instant`, `LocalDate`, `LocalDateTime`, `LocalTime`, `OffsetDateTime`, `ZonedDateTime`, `Duration`) to `string`. `String` is always mapped. |
 | `snakeCaseFields` | No | `true` | Convert Java field names to snake_case in the schema |
-| `generateVersion` | No | `false` | Emit a content hash of the schema (excluding validation comments) as `// @version: <hash>` |
+| `generateVersion` | No | `false` | Emit a content hash of the schema body as `// @version: <hash>`. The header and validation comments are excluded, so the hash changes only when the schema does. |
 | `failOnValidationIssues` | No | `false` | Fail the build when validation issues are found |
 | `fileExtension` | No | — | Emit `file_extension "..."` |
+| `flatcPath` | No | — | Path to a `flatc` binary. When set (and `validate` is on), the schema is checked with `flatc --binary --schema` and the build fails if `flatc` rejects it |
+| `cacheEnabled` | No | `false` | Skip regeneration when the output exists and the scanned type names and configuration are unchanged. Field changes are not detected yet |
+
+The plugin scans the project's compile classpath (its `target/classes` plus compile-scope dependencies), so annotated models can live in the project itself or in a dependency.
 
 ---
 
@@ -138,7 +142,7 @@ private long id;       // → id:ulong;
 
 ### Binary data and field ids
 
-`byte[]` fields are mapped to `[ubyte]` (the common FlatBuffers binary vector convention):
+`byte[]` fields are mapped to `[ubyte]` (the common FlatBuffers binary vector convention). Use `@FlatBufferFieldOptions(fieldType = FieldType.BYTE)` for `[byte]`:
 
 ```java
 @FlatBufferTable
@@ -188,15 +192,33 @@ public class SampleClassStruct {
 
 ### Enums
 
+Without a value field, constants are emitted in declaration order with implicit values. `enumType` sets the underlying type (`BYTE` by default; unsigned types are supported):
+
 ```java
-@FlatBufferEnum(enumType = FieldType.BYTE)
-public enum SampleEnumByte {
-    @FlatBufferEnumTypeField
-    byte id;
-    String description;
-    // ...
-}
+@FlatBufferEnum(enumType = EnumType.UINT)
+public enum Color { RED, GREEN, BLUE }   // enum Color : uint { RED, GREEN, BLUE, }
 ```
+
+To emit explicit values, mark an integral field with `@FlatBufferEnumTypeField`. Values are emitted in ascending order; duplicates and out-of-range values are reported:
+
+```java
+@FlatBufferEnum(enumType = EnumType.SHORT)
+public enum Priority {
+    HIGH((short) 30), LOW((short) 10);
+
+    @FlatBufferEnumTypeField
+    private final short weight;
+
+    Priority(short weight) { this.weight = weight; }
+}
+// enum Priority : short { LOW = 10, HIGH = 30, }
+```
+
+Unions use `@FlatBufferEnum(FlatBufferEnum.EnumStructureType.UNION)`; each constant names a table.
+
+### Namespaces
+
+`@FlatBufferTable(namespace = "...")` and `@FlatBufferEnum(namespace = "...")` place one type in another namespace. The default namespace is restored straight after it, and references across namespaces (including `root_type`) are fully qualified.
 
 ### Ignore fields
 
@@ -219,7 +241,9 @@ protected SampleClassTableInnerEnumInt innerEnum;
 - **Unsigned types**: Java has no unsigned primitives. Use `fieldType` (`UBYTE`, `USHORT`, `UINT`, `ULONG`) to emit them.
 - **Maps**: FlatBuffers has no map type. Aurkitu emits `MapValueSet_<Owner>_<field>` tables. Clients still need a small translation layer.
 - **Partial `fieldId`**: If any field in a table has `fieldId`, every field should. Partial ids can make `flatc` reject the schema.
-- **Structs**: Non-scalar fields are flagged. Set `failOnValidationIssues` to skip them instead of emitting an invalid struct.
+- **Structs**: Non-scalar fields are flagged. Set `failOnValidationIssues` to skip them instead of emitting an invalid struct. Structs are declared before the structs and tables that use them.
+- **Type names**: Types are declared by their simple Java name (nested `Outer.Inner` becomes `Inner`). Two types with the same simple name in one namespace are reported as a validation issue.
+- **Unsupported types**: `char`, nested vectors (`int[][]`, `List<List<T>>`) and JDK types outside the common-type list are skipped and reported.
 - **Includes**: `include` lines are emitted only. Cross-schema types are not resolved.
 - **Scanning**: Prefer `specifiedPackages` so ClassGraph does not scan the whole classpath.
 - **Not generated**: `rpc_service` and `///` doc comments.
@@ -256,7 +280,7 @@ root_type SampleRootTable;
 
 ## Validation
 
-When `validate` is enabled, issues are appended as comments (unsupported fields, non-scalar struct fields, missing root type). Set `failOnValidationIssues` to fail the build instead. Optional `flatcPath` runs `flatc --java` on the generated schema.
+When `validate` is enabled, issues are appended as comments (unsupported fields, non-scalar struct fields, partial field ids, enum value problems, duplicate type names, missing root type). Set `failOnValidationIssues` to fail the build instead. Optional `flatcPath` checks the generated schema with `flatc --binary --schema`.
 
 ---
 
@@ -281,6 +305,17 @@ Requires JDK 17+.
 ```bash
 mvn clean verify
 ```
+
+`verify` runs the unit tests and then the end-to-end tests in `aurkitu-maven-plugin/src/it`. Each directory there is a real consumer project, built with [maven-invoker-plugin](https://maven.apache.org/plugins/maven-invoker-plugin/) against the freshly built plugin:
+
+| Project | Covers |
+|---------|--------|
+| `kitchen-sink` | Every annotation and field attribute, enums/unions/structs, inheritance, nested classes, maps, common types, includes, per-type namespace |
+| `settings-variants` | `snakeCaseFields=false`, `mapCommonTypes=false`, `ignoreStaticMembers=false`, `generateVersion`, validation comments |
+| `fail-on-validation` | `failOnValidationIssues=true` fails the build |
+| `flatc-path` | The `flatcPath` option (runs only when `FLATC_PATH` is set) |
+
+Each `verify.groovy` compares the generated schema with `expected/*.fbs` and, when `FLATC_PATH` points to a `flatc` binary, compiles it with `flatc --cpp --java`. If you change the output on purpose, update the expected file in the same commit. Use `-Dinvoker.skip` to skip these tests.
 
 ---
 
@@ -344,7 +379,7 @@ Comparison of Aurkitu 1.0.0 output against the [official FlatBuffers schema docu
 | `root_type` | Yes | Yes | Match |
 | `table` / `struct` | Yes | Yes | Match |
 | Struct constraints | Warned | Scalars/structs only | Non-scalar fields in structs produce a validation issue |
-| `enum` | Yes | Yes | Match; explicit values emitted |
+| `enum` | Yes | Yes | Match; explicit values via `@FlatBufferEnumTypeField` |
 | `union` | Yes | Yes | Match; `NONE` added by `flatc` |
 | Field defaults | Yes | Scalars only | Match for scalars |
 | `(required)` / `(deprecated)` | Yes | Yes | Match |
@@ -360,7 +395,7 @@ Comparison of Aurkitu 1.0.0 output against the [official FlatBuffers schema docu
 | `///` doc comments | No | Supported | Minor gap |
 | `rpc_service` | No | Supported | Not implemented |
 | Unsigned types | Via `fieldType` | Full set | Supported |
-| Multiple namespaces | Per-type `namespace` line | Supported | Basic support |
+| Multiple namespaces | Per-type `namespace` | Supported | Scoped to the type; cross-namespace references qualified |
 | Map workaround | `MapValueSet_*` | No native map | Standard workaround |
 
 ### Remaining discrepancies
