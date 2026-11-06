@@ -109,46 +109,49 @@ final class TypeMapper {
     private SchemaType mapClassRef(ClassRefTypeSignature classRef, ClassInfo owner, String fieldName, boolean useFullName) {
         String className = classRef.getFullyQualifiedClassName();
         List<TypeArgument> typeArgs = classRef.getTypeArguments();
-
         if (isJdkSubtype(className, Map.class)) {
-            if (typeArgs.size() != 2) {
-                return null;
-            }
-            SchemaType valueType = map(typeArgs.get(1).getTypeSignature(), owner, fieldName, useFullName);
-            if (valueType == null) {
-                return null;
-            }
-            // Map tables are written at the end of the schema, in the default namespace.
-            TypeName mapTable = new TypeName(registry.defaultNamespace(),
-                    MAP_TABLE_PREFIX + Naming.typeName(owner.getName()) + "_" + Naming.toSnakeCase(fieldName));
-            mapTables.put(mapTable.name(), new TableDeclaration(mapTable, owner.getName(), "",
-                    List.of(Field.of("key", StringType.INSTANCE), Field.of("value", valueType)), false));
-            return new Vector(new Reference(mapTable));
+            return typeArgs.size() == 2 ? mapTable(typeArgs.get(1).getTypeSignature(), owner, fieldName, useFullName) : null;
         }
-
         if (isJdkSubtype(className, Collection.class)) {
             return typeArgs.size() == 1 ? vectorOf(map(typeArgs.get(0).getTypeSignature(), owner, fieldName, useFullName)) : null;
         }
+        SchemaType value = valueType(className);
+        if (value != null || className.startsWith("java.") || className.startsWith("javax.")) {
+            return value; // other JDK types have no schema equivalent
+        }
+        return useFullName ? fullNameReference(className) : new Reference(registry.nameOf(className));
+    }
 
-        if ("java.lang.String".equals(className)) {
+    /**
+     * A {@code Map} becomes a vector of a generated {@code key:string; value:T} table,
+     * written at the end of the schema in the default namespace.
+     */
+    private SchemaType mapTable(TypeSignature valueSig, ClassInfo owner, String fieldName, boolean useFullName) {
+        SchemaType valueType = map(valueSig, owner, fieldName, useFullName);
+        if (valueType == null) {
+            return null;
+        }
+        TypeName mapTable = new TypeName(registry.defaultNamespace(),
+                MAP_TABLE_PREFIX + Naming.typeName(owner.getName()) + "_" + Naming.toSnakeCase(fieldName));
+        mapTables.put(mapTable.name(), new TableDeclaration(mapTable, owner.getName(), "",
+                List.of(Field.of("key", StringType.INSTANCE), Field.of("value", valueType)), false));
+        return new Vector(new Reference(mapTable));
+    }
+
+    /** String, boxed scalars and (optionally) common JDK value types; null for anything else. */
+    private SchemaType valueType(String className) {
+        if ("java.lang.String".equals(className) || mapCommonTypes && COMMON_TYPES.contains(className)) {
             return StringType.INSTANCE;
         }
         ScalarKind wrapper = WRAPPERS.get(className);
-        if (wrapper != null) {
-            return new Scalar(wrapper);
-        }
-        if (mapCommonTypes && COMMON_TYPES.contains(className)) {
-            return StringType.INSTANCE;
-        }
-        if (className.startsWith("java.") || className.startsWith("javax.")) {
-            return null;
-        }
-        if (useFullName) {
-            int dot = className.lastIndexOf('.');
-            return new Reference(new TypeName(dot < 0 ? "" : className.substring(0, dot),
-                    className.substring(dot + 1).replace('$', '_')), true);
-        }
-        return new Reference(registry.nameOf(className));
+        return wrapper == null ? null : new Scalar(wrapper);
+    }
+
+    /** {@code useFullName}: the Java package as namespace, always written qualified. */
+    private static Reference fullNameReference(String className) {
+        int dot = className.lastIndexOf('.');
+        return new Reference(new TypeName(dot < 0 ? "" : className.substring(0, dot),
+                className.substring(dot + 1).replace('$', '_')), true);
     }
 
     /** {@code [element]}; null when the element is unsupported or itself a vector (FlatBuffers has no nested vectors). */

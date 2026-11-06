@@ -12,8 +12,8 @@ def normalise = { String text ->
 def assertSchemaMatches = { File projectDir, String name ->
     File actual = new File(projectDir, "target/aurkitu/schemas/${name}.fbs")
     File expected = new File(projectDir, "expected/${name}.fbs")
-    assert actual.isFile() : "Schema not generated: ${actual}"
-    assert expected.isFile() : "Missing expected schema: ${expected}"
+    assert actual.file : "Schema not generated: ${actual}"
+    assert expected.file : "Missing expected schema: ${expected}"
     String a = normalise(actual.text)
     String e = normalise(expected.text)
     if (a != e) {
@@ -28,12 +28,15 @@ ${a}""")
     return actual
 }
 
-/** Compile the schema with flatc when FLATC_PATH is set (CI); skipped otherwise. */
+/**
+ * Compile the schema with flatc when FLATC_PATH is set. Skipped locally without it; required in CI
+ * (CI=true), so the check cannot silently stop running there.
+ */
 def runFlatc = { File projectDir, File schema, List<String> languages ->
     String flatc = System.getenv('FLATC_PATH')
     if (!flatc) {
-        println "FLATC_PATH not set; skipping flatc check of ${schema.name}"
-        return
+        assert System.getenv('CI') != 'true' : 'FLATC_PATH must be set in CI so generated schemas are compiled with flatc'
+        return false
     }
     File out = new File(projectDir, 'target/flatc-out')
     List<String> cmd = [flatc] + languages + ['-I', projectDir.absolutePath, '-o', out.absolutePath, schema.absolutePath]
@@ -41,7 +44,7 @@ def runFlatc = { File projectDir, File schema, List<String> languages ->
     def stdout = new StringBuilder(), stderr = new StringBuilder()
     proc.waitForProcessOutput(stdout, stderr)
     assert proc.exitValue() == 0 : "flatc rejected ${schema.name}:\n${stdout}${stderr}"
-    println "flatc ${languages.join(' ')} accepted ${schema.name}"
+    return true
 }
 
 return [assertSchemaMatches: assertSchemaMatches, runFlatc: runFlatc, normalise: normalise]

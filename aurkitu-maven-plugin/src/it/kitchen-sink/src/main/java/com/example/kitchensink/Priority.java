@@ -15,4 +15,8 @@ public enum Priority {
     Priority(short weight) {
         this.weight = weight;
     }
+
+    public short getWeight() {
+        return weight;
+    }
 }

@@ -34,6 +34,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Supplier;
 
 /**
  * Reads scanned classes into a {@link Schema}. The model is faithful to the annotations;
@@ -122,39 +123,34 @@ final class SchemaReader {
 
     /** Attributes in the order they are written. Applicability is checked by the validator. */
     private static List<FieldAttribute> attributes(AnnotationInfo options) {
-        List<FieldAttribute> attributes = new ArrayList<>();
         if (options == null) {
-            return attributes;
-        }
-        if (Boolean.TRUE.equals(Naming.param(options, "required"))) {
-            attributes.add(new FieldAttribute.Required());
-        }
-        if (Boolean.TRUE.equals(Naming.param(options, "deprecated"))) {
-            attributes.add(new FieldAttribute.Deprecated());
+            return List.of();
         }
         Object fieldId = Naming.param(options, "fieldId");
-        if (fieldId instanceof Number id && id.intValue() >= 0) {
-            attributes.add(new FieldAttribute.Id(id.intValue()));
-        }
-        if (Boolean.TRUE.equals(Naming.param(options, "key"))) {
-            attributes.add(new FieldAttribute.Key());
-        }
         String hash = Naming.stringParam(options, "hash");
-        if (!hash.isBlank()) {
-            attributes.add(new FieldAttribute.Hash(hash));
-        }
         String nested = Naming.stringParam(options, "nestedFlatbuffer");
-        if (!nested.isBlank()) {
-            attributes.add(new FieldAttribute.NestedFlatbuffer(nested));
-        }
-        if (Boolean.TRUE.equals(Naming.param(options, "flexbuffer"))) {
-            attributes.add(new FieldAttribute.Flexbuffer());
-        }
         int forceAlign = intParam(options, "forceAlign");
-        if (forceAlign > 0) {
-            attributes.add(new FieldAttribute.ForceAlign(forceAlign));
-        }
+
+        List<FieldAttribute> attributes = new ArrayList<>();
+        addIf(attributes, flag(options, "required"), FieldAttribute.Required::new);
+        addIf(attributes, flag(options, "deprecated"), FieldAttribute.Deprecated::new);
+        addIf(attributes, fieldId instanceof Number n && n.intValue() >= 0, () -> new FieldAttribute.Id(((Number) fieldId).intValue()));
+        addIf(attributes, flag(options, "key"), FieldAttribute.Key::new);
+        addIf(attributes, !hash.isBlank(), () -> new FieldAttribute.Hash(hash));
+        addIf(attributes, !nested.isBlank(), () -> new FieldAttribute.NestedFlatbuffer(nested));
+        addIf(attributes, flag(options, "flexbuffer"), FieldAttribute.Flexbuffer::new);
+        addIf(attributes, forceAlign > 0, () -> new FieldAttribute.ForceAlign(forceAlign));
         return attributes;
+    }
+
+    private static void addIf(List<FieldAttribute> attributes, boolean condition, Supplier<FieldAttribute> attribute) {
+        if (condition) {
+            attributes.add(attribute.get());
+        }
+    }
+
+    private static boolean flag(AnnotationInfo options, String name) {
+        return Boolean.TRUE.equals(Naming.param(options, name));
     }
 
     /** Declared fields, then inherited ones; skips ignored, synthetic and (optionally) static fields. */

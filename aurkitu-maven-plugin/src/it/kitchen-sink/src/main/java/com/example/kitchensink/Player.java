@@ -18,13 +18,6 @@ import java.util.UUID;
 @FlatBufferTable(rootType = true)
 public class Player extends Entity {
 
-    /** Nested type: declared and referenced as "Achievement". */
-    @FlatBufferTable
-    public static class Achievement {
-        private String title;
-        private long unlockedAt;
-    }
-
     // Scalars and wrappers
     private boolean active;
     private byte mood;
@@ -110,4 +103,11 @@ public class Player extends Entity {
     private String sessionToken;
 
     private static int instances;
+
+    /** Nested type: declared and referenced as "Achievement". */
+    @FlatBufferTable
+    public static class Achievement {
+        private String title;
+        private long unlockedAt;
+    }
 }

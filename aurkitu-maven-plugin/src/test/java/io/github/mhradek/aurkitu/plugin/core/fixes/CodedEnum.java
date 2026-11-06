@@ -12,4 +12,6 @@ public enum CodedEnum {
     private final short code;
 
     CodedEnum(short code) { this.code = code; }
+
+    public short getCode() { return code; }
 }

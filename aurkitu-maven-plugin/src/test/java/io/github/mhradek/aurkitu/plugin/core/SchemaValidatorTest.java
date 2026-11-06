@@ -17,6 +17,7 @@ import io.github.mhradek.aurkitu.plugin.core.model.SchemaType.Vector;
 import io.github.mhradek.aurkitu.plugin.core.model.StructDeclaration;
 import io.github.mhradek.aurkitu.plugin.core.model.TableDeclaration;
 import io.github.mhradek.aurkitu.plugin.core.model.TypeName;
+import io.github.mhradek.aurkitu.plugin.core.model.UnionDeclaration;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -121,7 +122,7 @@ class SchemaValidatorTest {
     @Test
     void structFieldsReferencingTablesOrUnionsAreNonScalar() {
         var result = validate(false,
-                new io.github.mhradek.aurkitu.plugin.core.model.UnionDeclaration(name("Any"), "Any", "", List.of("Root")),
+                new UnionDeclaration(name("Any"), "Any", "", List.of("Root")),
                 struct("S", field("table", new Reference(name("Root"))), field("union", new Reference(name("Any")))),
                 table("Root", true));
         assertEquals(List.of(

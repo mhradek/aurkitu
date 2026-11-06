@@ -12,4 +12,6 @@ public enum ByteCodedEnum {
     private final byte code;
 
     ByteCodedEnum(byte code) { this.code = code; }
+
+    public byte getCode() { return code; }
 }

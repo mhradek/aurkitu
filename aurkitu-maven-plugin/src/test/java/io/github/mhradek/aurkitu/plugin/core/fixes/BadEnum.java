@@ -11,4 +11,6 @@ public enum BadEnum {
     private final int code;
 
     BadEnum(int code) { this.code = code; }
+
+    public int getCode() { return code; }
 }
