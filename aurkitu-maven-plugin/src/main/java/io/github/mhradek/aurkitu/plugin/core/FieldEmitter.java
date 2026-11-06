@@ -48,7 +48,7 @@ final class FieldEmitter {
                     }
                 }
                 if (ftStr.contains("UBYTE") || ftStr.contains("USHORT") || ftStr.contains("UINT") || ftStr.contains("ULONG")) {
-                    log.debug("Unsigned type {} on {}.{} (Java has no unsigned primitives)", ft, owner.getSimpleName(), name);
+                    log.debug("Unsigned type {} on {}.{} (Java has no unsigned primitives)", ft, TypeRegistry.typeName(owner.getName()), name);
                 }
             }
         }
@@ -56,7 +56,7 @@ final class FieldEmitter {
         if (typeName == null) {
             log.debug("Skipping unsupported field: {}", name);
             if (config.validate) {
-                validationIssues.add("Unsupported field type: " + owner.getSimpleName() + "." + name);
+                validationIssues.add("Unsupported field type: " + TypeRegistry.typeName(owner.getName()) + "." + name);
             }
             return null;
         }
@@ -72,7 +72,7 @@ final class FieldEmitter {
                 } else if (!typeName.contains("[")) {
                     typeName = "[" + typeName + ":" + n + "]";
                 }
-                log.debug("fixedLength rewrite on {}.{}: {} -> {}", owner.getSimpleName(), name, before, typeName);
+                log.debug("fixedLength rewrite on {}.{}: {} -> {}", TypeRegistry.typeName(owner.getName()), name, before, typeName);
             }
         }
 
@@ -124,21 +124,26 @@ final class FieldEmitter {
                 if ("[ubyte]".equals(typeName) || "[byte]".equals(typeName)) {
                     attrs.add("nested_flatbuffer: \"" + nfb + "\"");
                 } else if (config.validate) {
-                    validationIssues.add("nested_flatbuffer on " + owner.getSimpleName() + "." + name + " skipped: type must be [ubyte]");
-                    log.warn("nested_flatbuffer on {}.{} skipped (type is {}, must be [ubyte])", owner.getSimpleName(), name, typeName);
+                    validationIssues.add("nested_flatbuffer on " + TypeRegistry.typeName(owner.getName()) + "." + name + " skipped: type must be [ubyte]");
+                    log.warn("nested_flatbuffer on {}.{} skipped (type is {}, must be [ubyte])", TypeRegistry.typeName(owner.getName()), name, typeName);
                 }
             }
             if (Boolean.TRUE.equals(Naming.param(options, "flexbuffer"))) {
                 if ("[ubyte]".equals(typeName) || "[byte]".equals(typeName)) {
                     attrs.add("flexbuffer");
                 } else if (config.validate) {
-                    validationIssues.add("flexbuffer on " + owner.getSimpleName() + "." + name + " skipped: type must be [ubyte]");
-                    log.warn("flexbuffer on {}.{} skipped (type is {}, must be [ubyte])", owner.getSimpleName(), name, typeName);
+                    validationIssues.add("flexbuffer on " + TypeRegistry.typeName(owner.getName()) + "." + name + " skipped: type must be [ubyte]");
+                    log.warn("flexbuffer on {}.{} skipped (type is {}, must be [ubyte])", TypeRegistry.typeName(owner.getName()), name, typeName);
                 }
             }
             Object fa = Naming.param(options, "forceAlign");
             if (fa instanceof Number fn && fn.intValue() > 0) {
-                attrs.add("force_align: " + fn.intValue());
+                if (typeName.startsWith("[")) {
+                    attrs.add("force_align: " + fn.intValue());
+                } else if (config.validate) {
+                    validationIssues.add("force_align on " + TypeRegistry.typeName(owner.getName()) + "." + name + " skipped: only valid on vectors");
+                    log.warn("force_align on {}.{} skipped (type is {}, only valid on vectors)", TypeRegistry.typeName(owner.getName()), name, typeName);
+                }
             }
             if (!attrs.isEmpty()) {
                 line.append(" (").append(String.join(", ", attrs)).append(")");

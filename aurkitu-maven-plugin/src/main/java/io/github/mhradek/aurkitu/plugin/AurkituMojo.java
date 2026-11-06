@@ -1,10 +1,13 @@
 package io.github.mhradek.aurkitu.plugin;
 
+import io.github.mhradek.aurkitu.plugin.core.AurkituVersion;
+import io.github.mhradek.aurkitu.plugin.core.SchemaGenerationException;
 import io.github.mhradek.aurkitu.plugin.core.SchemaGenerator;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
@@ -13,10 +16,11 @@ import org.apache.maven.project.MavenProject;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
- * Modern Aurkitu Maven Mojo (1.0.0).
+ * Aurkitu Maven Mojo.
  * Generates FlatBuffer schemas from annotated Java classes using ClassGraph.
  */
 @Slf4j
@@ -92,8 +96,8 @@ public class AurkituMojo extends AbstractMojo {
     private String fileExtension;
 
     @Override
-    public void execute() throws MojoExecutionException {
-        log.info("Aurkitu 1.0.0 - generating schema '{}' in namespace '{}'", schemaName, schemaNamespace);
+    public void execute() throws MojoExecutionException, MojoFailureException {
+        log.info("Aurkitu {} - generating schema '{}' in namespace '{}'", AurkituVersion.VERSION, schemaName, schemaNamespace);
 
         if (!outputDirectory.exists() && !outputDirectory.mkdirs()) {
             throw new MojoExecutionException("Failed to create output directory: " + outputDirectory);
@@ -103,7 +107,12 @@ public class AurkituMojo extends AbstractMojo {
                 project, specifiedPackages, validate, ignoreStaticMembers, fileIdentifier, includes, mapCommonTypes, cacheEnabled, snakeCaseFields, generateVersion, failOnValidationIssues, fileExtension,
                 resolveClasspath());
         SchemaGenerator generator = new SchemaGenerator(config);
-        generator.generate(schemaName, schemaNamespace, outputDirectory);
+        try {
+            generator.generate(schemaName, schemaNamespace, outputDirectory);
+        } catch (SchemaGenerationException e) {
+            // Invalid models or failed validation are build failures, not plugin errors.
+            throw new MojoFailureException(e.getMessage(), e);
+        }
 
         log.info("Schema generation complete. Output: {}", outputDirectory.getAbsolutePath());
 
@@ -130,20 +139,23 @@ public class AurkituMojo extends AbstractMojo {
     }
 
     private void runFlatcValidation(File schemaFile) throws MojoExecutionException {
+        ProcessBuilder pb = new ProcessBuilder(flatcPath, "--schema", schemaFile.getAbsolutePath());
+        pb.directory(schemaFile.getParentFile());
+        pb.redirectErrorStream(true);
         try {
-            ProcessBuilder pb = new ProcessBuilder(flatcPath, "--schema", schemaFile.getAbsolutePath());
-            pb.directory(schemaFile.getParentFile());
-            pb.redirectErrorStream(true);
             Process process = pb.start();
+            // Drain output before waiting so a full pipe cannot block flatc.
+            String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
             int exit = process.waitFor();
             if (exit != 0) {
-                String output = new String(process.getInputStream().readAllBytes());
                 throw new MojoExecutionException("flatc validation failed for " + schemaFile.getName() + ":\n" + output);
             }
             log.info("flatc validation succeeded for {}", schemaFile.getName());
-        } catch (IOException | InterruptedException e) {
-            Thread.currentThread().interrupt();
+        } catch (IOException e) {
             throw new MojoExecutionException("Failed to run flatc", e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new MojoExecutionException("Interrupted while running flatc", e);
         }
     }
 }

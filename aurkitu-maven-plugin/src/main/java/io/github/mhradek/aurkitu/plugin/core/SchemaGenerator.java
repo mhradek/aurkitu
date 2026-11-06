@@ -109,7 +109,6 @@ public class SchemaGenerator {
                 .enableAnnotationInfo()
                 .enableClassInfo()
                 .enableFieldInfo()
-                .enableStaticFinalFieldConstantInitializerValues()
                 .ignoreFieldVisibility()
                 .acceptPackages(config.specifiedPackages != null && !config.specifiedPackages.isEmpty()
                         ? config.specifiedPackages.toArray(new String[0])
@@ -122,21 +121,16 @@ public class SchemaGenerator {
                 return;
             }
 
-            TypeMapper typeMapper = new TypeMapper(config, generatedMapTables);
+            TypeRegistry registry = TypeRegistry.build(scanResult, namespace, config.validate, validationIssues);
+            TypeMapper typeMapper = new TypeMapper(config, generatedMapTables, registry);
             FieldEmitter fieldEmitter = new FieldEmitter(config, typeMapper, validationIssues);
             TableEmitter tableEmitter = new TableEmitter(config, fieldEmitter, validationIssues);
+            EnumEmitter enumEmitter = new EnumEmitter(config.validate, validationIssues);
 
             StringBuilder schema = new StringBuilder();
-            schema.append("// Aurkitu 1.0.0 automatically generated FlatBuffer schema\n");
-            schema.append("namespace ").append(namespace).append(";\n\n");
+            schema.append(AurkituVersion.schemaHeader());
 
-            if (config.fileIdentifier != null && !config.fileIdentifier.isBlank()) {
-                schema.append("file_identifier \"").append(config.fileIdentifier).append("\";\n\n");
-            }
-            if (config.fileExtension != null && !config.fileExtension.isBlank()) {
-                schema.append("file_extension \"").append(config.fileExtension).append("\";\n\n");
-            }
-
+            // flatc requires includes before any other declaration.
             for (String include : config.includes) {
                 schema.append("include \"").append(include).append("\";\n");
             }
@@ -144,22 +138,33 @@ public class SchemaGenerator {
                 schema.append("\n");
             }
 
-            String rootType = null;
+            schema.append("namespace ").append(namespace).append(";\n\n");
 
-            for (ClassInfo classInfo : scanResult.getClassesWithAnnotation(FlatBufferEnum.class.getName())) {
-                schema.append(EnumEmitter.buildEnum(classInfo));
+            if (config.fileIdentifier != null && !config.fileIdentifier.isBlank()) {
+                if (config.fileIdentifier.length() != 4 && config.validate) {
+                    validationIssues.add("file_identifier \"" + config.fileIdentifier + "\" must be exactly 4 characters");
+                }
+                schema.append("file_identifier \"").append(config.fileIdentifier).append("\";\n\n");
+            }
+            if (config.fileExtension != null && !config.fileExtension.isBlank()) {
+                schema.append("file_extension \"").append(config.fileExtension).append("\";\n\n");
             }
 
+            for (ClassInfo classInfo : scanResult.getClassesWithAnnotation(FlatBufferEnum.class.getName())) {
+                appendInNamespace(schema, registry, classInfo, enumEmitter.buildEnum(classInfo));
+            }
+
+            ClassInfo rootType = null;
             for (ClassInfo classInfo : scanResult.getClassesWithAnnotation(FlatBufferTable.class.getName())) {
-                schema.append(tableEmitter.buildTable(classInfo));
+                appendInNamespace(schema, registry, classInfo, tableEmitter.buildTable(classInfo));
                 if (TableEmitter.isRootType(classInfo)) {
                     if (rootType != null) {
-                        log.warn("Multiple root types detected; using last one: {}", classInfo.getSimpleName());
+                        log.warn("Multiple root types detected; using last one: {}", classInfo.getName());
                         if (config.validate) {
-                            validationIssues.add("Multiple root types; last used: " + classInfo.getSimpleName());
+                            validationIssues.add("Multiple root types; last used: " + TypeRegistry.typeName(classInfo.getName()));
                         }
                     }
-                    rootType = classInfo.getSimpleName();
+                    rootType = classInfo;
                 }
             }
 
@@ -168,7 +173,7 @@ public class SchemaGenerator {
             }
 
             if (rootType != null) {
-                schema.append("root_type ").append(rootType).append(";\n");
+                schema.append("root_type ").append(registry.reference(rootType.getName(), namespace)).append(";\n");
             } else if (config.validate) {
                 validationIssues.add("No root type defined");
             }
@@ -180,21 +185,13 @@ public class SchemaGenerator {
                 }
             }
 
-            String sanitized = schema.toString().replace('$', '_');
-
+            String output = schema.toString();
             if (config.generateVersion) {
-                String forHash = sanitized;
-                int valIdx = forHash.indexOf("\n// Validation issues:");
-                if (valIdx > 0) {
-                    forHash = forHash.substring(0, valIdx);
-                }
-                String version = Integer.toHexString(forHash.hashCode());
-                sanitized = sanitized.replace(
-                        "// Aurkitu 1.0.0 automatically generated FlatBuffer schema\n",
-                        "// Aurkitu 1.0.0 automatically generated FlatBuffer schema\n// @version: " + version + "\n");
+                String header = AurkituVersion.schemaHeader();
+                output = output.replace(header, header + "// @version: " + contentVersion(output) + "\n");
             }
 
-            Files.writeString(outFile.toPath(), sanitized);
+            Files.writeString(outFile.toPath(), output);
             if (config.cacheEnabled) {
                 SchemaCache.write(cacheFile, inputHash);
             }
@@ -213,5 +210,33 @@ public class SchemaGenerator {
         } catch (IOException e) {
             throw new SchemaGenerationException("Failed to generate schema", e);
         }
+    }
+
+    /**
+     * Places a type declaration in its namespace. A {@code namespace} line applies to every
+     * declaration after it, so the default namespace is restored straight after an override.
+     */
+    private static void appendInNamespace(StringBuilder schema, TypeRegistry registry, ClassInfo classInfo, String declaration) {
+        String ns = registry.namespaceOf(classInfo.getName());
+        if (ns.equals(registry.defaultNamespace())) {
+            schema.append(declaration);
+        } else {
+            schema.append("namespace ").append(ns).append(";\n\n")
+                    .append(declaration)
+                    .append("namespace ").append(registry.defaultNamespace()).append(";\n\n");
+        }
+    }
+
+    /**
+     * Hash of the schema body only: the header line (which carries the plugin version) and the
+     * trailing validation comments are excluded, so the version changes only when the schema does.
+     */
+    static String contentVersion(String schema) {
+        String body = schema.substring(schema.indexOf('\n') + 1);
+        int validation = body.indexOf("\n// Validation issues:");
+        if (validation >= 0) {
+            body = body.substring(0, validation);
+        }
+        return Integer.toHexString(body.hashCode());
     }
 }

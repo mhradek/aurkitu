@@ -32,30 +32,22 @@ final class TableEmitter {
         StringBuilder sb = new StringBuilder();
         boolean isStruct = isStruct(classInfo);
 
-        var tableAnno = classInfo.getAnnotationInfo(FlatBufferTable.class.getName());
+        String name = TypeRegistry.typeName(classInfo.getName());
 
-        if (classInfo.hasAnnotation(FlatBufferComment.class.getName())) {
-            var commentAnno = classInfo.getAnnotationInfo(FlatBufferComment.class.getName());
-            String comment = Naming.stringParam(commentAnno, "comment");
-            if (!comment.isBlank()) {
-                sb.append("// ").append(comment).append("\n");
-            }
+        String comment = Naming.stringParam(classInfo.getAnnotationInfo(FlatBufferComment.class.getName()), "comment");
+        if (!comment.isBlank()) {
+            sb.append("// ").append(comment).append("\n");
         }
 
-        String ns = Naming.stringParam(tableAnno, "namespace");
-        if (!ns.isBlank()) {
-            sb.append("namespace ").append(ns).append(";\n");
-        }
-
-        sb.append(isStruct ? "struct " : "table ").append(classInfo.getSimpleName()).append(" {\n");
+        sb.append(isStruct ? "struct " : "table ").append(name).append(" {\n");
 
         List<FieldInfo> fields = collectFields(classInfo);
 
         long withId = fields.stream().filter(fieldEmitter::hasFieldId).count();
         boolean emitIds = withId == 0 || withId == fields.size();
         if (withId > 0 && withId < fields.size() && config.validate) {
-            validationIssues.add("Partial field ids on " + classInfo.getSimpleName() + "; ids omitted (all fields or none must have an id)");
-            log.warn("Partial field ids on {}; omitting id attributes", classInfo.getSimpleName());
+            validationIssues.add("Partial field ids on " + name + "; ids omitted (all fields or none must have an id)");
+            log.warn("Partial field ids on {}; omitting id attributes", name);
         }
 
         for (FieldInfo field : fields) {
@@ -63,7 +55,7 @@ final class TableEmitter {
             if (fieldLine != null) {
                 if (isStruct && isNonScalarField(fieldLine)) {
                     if (config.validate) {
-                        validationIssues.add("Struct " + classInfo.getSimpleName() + " field " + field.getName() + " is non-scalar; structs may only contain scalars or other structs");
+                        validationIssues.add("Struct " + name + " field " + field.getName() + " is non-scalar; structs may only contain scalars or other structs");
                     }
                     if (config.failOnValidationIssues) {
                         continue;
@@ -89,7 +81,8 @@ final class TableEmitter {
                 }
                 seen.add(fname);
 
-                if (field.hasAnnotation(FlatBufferIgnore.class.getName())) {
+                // Compiler-generated fields, e.g. this$0 on non-static inner classes.
+                if (field.isSynthetic() || field.hasAnnotation(FlatBufferIgnore.class.getName())) {
                     continue;
                 }
                 if (config.ignoreStaticMembers && java.lang.reflect.Modifier.isStatic(field.getModifiers())) {

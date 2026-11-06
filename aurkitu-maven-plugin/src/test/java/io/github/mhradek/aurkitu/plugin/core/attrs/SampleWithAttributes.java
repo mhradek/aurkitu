@@ -23,6 +23,9 @@ public class SampleWithAttributes {
     @FlatBufferFieldOptions(fieldType = FieldType.INT, forceAlign = 8)
     private int aligned;
 
+    @FlatBufferFieldOptions(fieldType = FieldType.ARRAY, forceAlign = 16)
+    private byte[] alignedBytes;
+
     @FlatBufferFieldOptions(fieldType = FieldType.IDENT, useFullName = true)
     private SampleEnum fullNameEnum;
 
