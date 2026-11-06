@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ master, main, v1.0.0-modern ]
 
+env:
+  FLATC_VERSION: 25.12.19
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -21,7 +24,7 @@ jobs:
 
       - name: Download flatc
         run: |
-          curl -sL -o flatc.zip https://github.com/google/flatbuffers/releases/download/v25.12.19/Linux.flatc.binary.g++-13.zip
+          curl -sL -o flatc.zip https://github.com/google/flatbuffers/releases/download/v${FLATC_VERSION}/Linux.flatc.binary.g++-13.zip
           unzip -o flatc.zip -d /tmp/flatc-bin
           chmod +x /tmp/flatc-bin/flatc
           echo "/tmp/flatc-bin" >> $GITHUB_PATH
