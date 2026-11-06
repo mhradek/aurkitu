@@ -115,6 +115,15 @@ class SchemaGeneratorFixesTest {
     }
 
     @Test
+    void unannotatedNestedTypesOfATableAreDeclared() {
+        assertTrue(schema.contains("enum Mode : byte {\n  ON,\n  OFF,\n}"), schema);
+        assertTrue(schema.contains("table Detail {\n  level:int;\n}"), schema);
+        assertTrue(schema.contains("table WithNested {\n  mode:Mode;\n  detail:Detail;\n}"), schema);
+        assertFalse(schema.contains("Hidden"), schema);
+        assertFalse(schema.contains("Marker"), schema);
+    }
+
+    @Test
     void includesComeBeforeAllOtherDeclarations() {
         int include = schema.indexOf("include \"other.fbs\";");
         assertTrue(include > 0, schema);

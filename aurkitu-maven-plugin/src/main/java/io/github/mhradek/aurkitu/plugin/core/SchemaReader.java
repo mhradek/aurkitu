@@ -63,8 +63,19 @@ final class SchemaReader {
             declarations.add(enumReader.read(classInfo));
         }
         List<CompositeDeclaration> composites = new ArrayList<>();
-        for (ClassInfo classInfo : scanResult.getClassesWithAnnotation(FlatBufferTable.class.getName())) {
+        List<ClassInfo> tables = scanResult.getClassesWithAnnotation(FlatBufferTable.class.getName());
+        for (ClassInfo classInfo : tables) {
             composites.add(readComposite(classInfo));
+        }
+        // Unannotated nested types of annotated tables and structs (see TypeRegistry).
+        for (ClassInfo outer : tables) {
+            for (ClassInfo nested : TypeRegistry.nestedTypes(outer)) {
+                if (nested.isEnum()) {
+                    declarations.add(enumReader.read(nested));
+                } else {
+                    composites.add(readComposite(nested));
+                }
+            }
         }
         declarations.addAll(declarationOrder(composites));
         declarations.addAll(mapTables.values());

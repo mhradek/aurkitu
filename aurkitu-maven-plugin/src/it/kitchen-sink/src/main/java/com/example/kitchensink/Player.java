@@ -63,6 +63,7 @@ public class Player extends Entity {
     @FlatBufferFieldOptions(fieldType = FieldType.IDENT, defaultValue = "LOW")
     private Priority priority;
     private Shape avatar;
+    private Mood temper;
     private Vec3 spawn;
     private Transform transform;
     private PlayerList friends;
@@ -103,6 +104,11 @@ public class Player extends Entity {
     private String sessionToken;
 
     private static int instances;
+
+    /** Nested and not annotated: declared automatically because Player is annotated. */
+    public enum Mood {
+        CALM, ANGRY
+    }
 
     /** Nested type: declared and referenced as "Achievement". */
     @FlatBufferTable

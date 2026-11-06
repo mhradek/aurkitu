@@ -31,6 +31,11 @@ enum Status : uint {
   CLOSED = 10,
 }
 
+enum Mood : byte {
+  CALM,
+  ANGRY,
+}
+
 struct Vec3 {
   x:float;
   y:float;
@@ -87,6 +92,7 @@ table Player {
   status:Status = ACTIVE;
   priority:Priority = LOW;
   avatar:Shape;
+  temper:Mood;
   spawn:Vec3;
   transform:Transform;
   friends:PlayerList;
