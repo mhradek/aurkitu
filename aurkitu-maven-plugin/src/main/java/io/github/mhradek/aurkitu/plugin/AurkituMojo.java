@@ -69,7 +69,8 @@ public class AurkituMojo extends AbstractMojo {
     private String flatcPath;
 
     /**
-     * When true, skip regeneration if the output schema already exists and the input hash matches.
+     * When true, the schema file is only rewritten when its content changes, so its timestamp is kept
+     * and downstream steps (e.g. flatc code generation) can skip work. Validation always runs.
      */
     @Parameter(property = "aurkitu.cacheEnabled", defaultValue = "false")
     private boolean cacheEnabled;

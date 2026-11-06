@@ -8,6 +8,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -118,33 +119,43 @@ class AurkituMojoConfigTest {
     }
 
     @Test
-    void cacheSkipsRegenerationWhenHashMatches() throws Exception {
-        SchemaGenerator.Config config = new SchemaGenerator.Config(
+    void cacheKeepsAnUnchangedSchemaAndRewritesAChangedOne() throws Exception {
+        File out = tempDir.toFile();
+        Path schema = out.toPath().resolve("cached.fbs");
+        SchemaGenerator generator = new SchemaGenerator(cachingConfig(false));
+
+        generator.generate("cached", "test.cache", out);
+        String generated = Files.readString(schema);
+        FileTime old = FileTime.fromMillis(0);
+        Files.setLastModifiedTime(schema, old);
+
+        generator.generate("cached", "test.cache", out);
+        assertEquals(old, Files.getLastModifiedTime(schema), "unchanged schema must not be rewritten");
+
+        // Any change to the output (here: a stale or edited file) is detected, unlike a type-name hash.
+        Files.writeString(schema, generated.replace("table SampleRootTable", "table Stale"));
+        Files.setLastModifiedTime(schema, old);
+        generator.generate("cached", "test.cache", out);
+        assertEquals(generated, Files.readString(schema));
+        assertNotEquals(old, Files.getLastModifiedTime(schema));
+        assertFalse(Files.exists(out.toPath().resolve("cached.fbs.cache")), "no separate cache file");
+    }
+
+    @Test
+    void cacheStillValidates() throws Exception {
+        File out = tempDir.toFile();
+        new SchemaGenerator(cachingConfig(false)).generate("cached", "test.cache", out);
+        // Same, unchanged output: failOnValidationIssues must still apply.
+        SchemaGenerator strict = new SchemaGenerator(cachingConfig(true));
+        assertThrows(SchemaGenerationException.class, () -> strict.generate("cached", "test.cache", out));
+    }
+
+    private static SchemaGenerator.Config cachingConfig(boolean failOnValidationIssues) {
+        return new SchemaGenerator.Config(
                 null,
                 List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
-                true,
-                true,
-                null,
-                List.of(),
-                true,
+                true, true, null, List.of(), true,
                 true, // cacheEnabled
-                true,
-                false,
-                false,
-                null);
-        SchemaGenerator generator = new SchemaGenerator(config);
-        File out = tempDir.toFile();
-
-        generator.generate("cached", "test.cache", out);
-        Path schema = out.toPath().resolve("cached.fbs");
-        Path cache = out.toPath().resolve("cached.fbs.cache");
-        assertTrue(Files.exists(schema));
-        assertTrue(Files.exists(cache));
-
-        long firstMtime = Files.getLastModifiedTime(schema).toMillis();
-        Thread.sleep(10);
-        generator.generate("cached", "test.cache", out);
-        long secondMtime = Files.getLastModifiedTime(schema).toMillis();
-        assertEquals(firstMtime, secondMtime, "Cache hit should not rewrite the schema");
+                true, false, failOnValidationIssues, null);
     }
 }

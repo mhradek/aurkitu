@@ -381,9 +381,7 @@ class SchemaGeneratorTest {
 
         generator.generate("cached", "test.cached", out);
         Path schema = out.toPath().resolve("cached.fbs");
-        Path cache = out.toPath().resolve("cached.fbs.cache");
         assertTrue(Files.exists(schema));
-        assertTrue(Files.exists(cache));
 
         String first = Files.readString(schema);
         generator.generate("cached", "test.cached", out);

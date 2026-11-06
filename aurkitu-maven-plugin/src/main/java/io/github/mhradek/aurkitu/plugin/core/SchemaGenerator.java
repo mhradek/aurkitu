@@ -89,7 +89,6 @@ public class SchemaGenerator {
 
     public void generate(String schemaName, String namespace, File outputDir) {
         File outFile = new File(outputDir, schemaName + ".fbs");
-        File cacheFile = new File(outputDir, schemaName + ".fbs.cache");
 
         ClassGraph classGraph = new ClassGraph();
         if (config.classpathElements != null && !config.classpathElements.isEmpty()) {
@@ -106,22 +105,18 @@ public class SchemaGenerator {
                         : new String[]{"*"})
                 .scan()) {
 
-            String inputHash = SchemaCache.computeHash(config, namespace, scanResult);
-            if (SchemaCache.isHit(config.cacheEnabled, outFile, cacheFile, inputHash)) {
-                log.info("Schema cache hit for {}; skipping regeneration", schemaName);
-                return;
-            }
-
             Schema schema = new SchemaReader(config, TypeRegistry.build(scanResult, namespace)).read(scanResult);
             SchemaValidator.Result validation = new SchemaValidator(config.failOnValidationIssues).validate(schema);
             List<String> issues = config.validate ? validation.issues() : List.of();
 
             String output = validation.schema().write(AurkituVersion.schemaHeader(), config.generateVersion, issues);
-            Files.writeString(outFile.toPath(), output);
-            if (config.cacheEnabled) {
-                SchemaCache.write(cacheFile, inputHash);
+            if (config.cacheEnabled && unchanged(outFile, output)) {
+                // Keeps the file's timestamp, so downstream steps (e.g. flatc code generation) can skip work.
+                log.info("Schema {} is unchanged; not rewritten", outFile.getAbsolutePath());
+            } else {
+                Files.writeString(outFile.toPath(), output);
+                log.info("Wrote schema to {}", outFile.getAbsolutePath());
             }
-            log.info("Wrote schema to {}", outFile.getAbsolutePath());
 
             if (config.validate) {
                 if (issues.isEmpty()) {
@@ -137,5 +132,10 @@ public class SchemaGenerator {
         } catch (IOException e) {
             throw new SchemaGenerationException("Failed to generate schema", e);
         }
+    }
+
+    /** True if {@code file} already holds exactly {@code content}. */
+    private static boolean unchanged(File file, String content) throws IOException {
+        return file.isFile() && Files.readString(file.toPath()).equals(content);
     }
 }
