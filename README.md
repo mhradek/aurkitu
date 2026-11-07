@@ -1,4 +1,4 @@
-# Aurkitu 1.0.1
+# Aurkitu 1.1.0
 
 [![Latest release](https://img.shields.io/github/release/mhradek/aurkitu.svg)](https://github.com/mhradek/aurkitu/releases/latest)
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.mhradek/aurkitu-maven-plugin.svg?label=plugin)](https://central.sonatype.com/artifact/io.github.mhradek/aurkitu-maven-plugin)
@@ -23,7 +23,9 @@ The 1.0 line:
 
 It generates schemas for tables, structs, enums, unions, maps, inheritance and field options, validates them, and can optionally check them with `flatc`.
 
-> **Upgrading from 1.0.0?** 1.0.0 scanned the plugin's own classpath instead of your project's, so it generated an empty schema in real builds. Use 1.0.1. See [What's new in 1.0.1](#whats-new-in-101).
+> **Upgrading from 1.0.1?** See [What's new in 1.1.0](#whats-new-in-110) for the output changes to expect.
+>
+> **Upgrading from 1.0.0?** 1.0.0 scanned the plugin's own classpath instead of your project's, so it generated an empty schema in real builds. See [What's new in 1.0.1](#whats-new-in-101).
 >
 > **Upgrading from 0.0.x?** See [Migration from 0.0.x](#migration-from-00x).
 
@@ -37,7 +39,7 @@ It generates schemas for tables, structs, enums, unions, maps, inheritance and f
 <dependency>
     <groupId>io.github.mhradek</groupId>
     <artifactId>aurkitu-annotations</artifactId>
-    <version>1.0.1</version>
+    <version>1.1.0</version>
 </dependency>
 ```
 
@@ -47,7 +49,7 @@ It generates schemas for tables, structs, enums, unions, maps, inheritance and f
 <plugin>
     <groupId>io.github.mhradek</groupId>
     <artifactId>aurkitu-maven-plugin</artifactId>
-    <version>1.0.1</version>
+    <version>1.1.0</version>
     <configuration>
         <schemaName>user</schemaName>
         <schemaNamespace>com.example.flatbuffers</schemaNamespace>
@@ -598,14 +600,27 @@ Publishing a GitHub release runs `.github/workflows/publish.yml`, which builds t
 
 ---
 
-## What's new in 1.1.0 (unreleased)
+## What's new in 1.1.0
 
-- **Validation** of the FlatBuffers schema rules Aurkitu used to write without checking: `required`, defaults, struct-only and vector-only attributes, field ids, `key`, `hash`, `nested_flatbuffer`, duplicate field names, union `_type` clashes and more (see [Validation](#validation)). Invalid parts are reported and left out.
-- **Warnings** for risks to existing data, starting with inherited fields in tables without field ids ([Schema evolution](#schema-evolution)).
-- **Fix**: an optional enum field (`= null`) was reported as an invalid default.
-- **Documentation comments**: `@FlatBufferComment` writes `///` comments, which `flatc` copies into generated code, and now also works on enum constants, union members and RPC methods. Output change: `//` comments become `///`.
+- **Validation** of the FlatBuffers schema rules Aurkitu used to write without checking: `required`, defaults, struct-only and vector-only attributes, field ids, `key`, `hash`, `nested_flatbuffer`, duplicate field names, union `_type` clashes, empty structs and more (see [Validation](#validation)). Invalid parts are reported and left out, so the written schema always compiles. The rules are tested against `flatc` itself.
+- **Warnings** for schemas `flatc` accepts but that are risky: inherited fields in tables without field ids ([Schema evolution](#schema-evolution)), and `force_align` on a field that is not a vector (`flatc` ignores it).
+- **Documentation comments**: `@FlatBufferComment` writes `///` comments, which `flatc` copies into generated code, and now also works on enum constants, union members and RPC methods.
 - **New features**: optional scalars (`optionalScalars`), `bit_flags` enums, union aliases (`@FlatBufferUnionMember`), RPC services (`@FlatBufferRpcService`), custom attributes (`attributes`), `original_order` and struct `force_align`.
+- **Fixes**:
+  - A map of maps (`Map<String, Map<String, V>>`) produced a table that referred to itself. The inner map now gets its own table, `MapValueSet_<Owner>_<field>_value`.
+  - A `namespace` statement is written only where the namespace changes. Previously the default was restored after every type in another namespace.
+  - A non-scalar struct field was left in unless `failOnValidationIssues` was set. It is now always left out.
+  - An optional enum field (`= null`) was reported as an invalid default.
+- **Tests**: every generator option on and off in all 2048 combinations; validation compared with `flatc` for every field type and attribute pair; an opt-in `pitest` profile for mutation testing.
 - **Coveralls** receives both modules' coverage.
+
+Output changes to expect when upgrading from 1.0.1:
+- `//` comments become `///`.
+- Fields, attributes and defaults that `flatc` rejects are left out and reported. These include references to undeclared types (without `includes`) and struct fields that are not scalars.
+- `force_align` on a scalar is left out, with a warning.
+- A map of maps gets a separate inner table.
+- There are fewer `namespace` lines.
+- `@version` hashes change wherever the schema text changes.
 
 ## What's new in 1.0.1
 
@@ -667,7 +682,7 @@ Output changes to expect when upgrading from 1.0.0: explicit enum values are wri
 
 ### Steps
 
-1. Update the dependency and plugin coordinates to `io.github.mhradek` and version `1.0.1`.
+1. Update the dependency and plugin coordinates to `io.github.mhradek` and version `1.1.0`.
 2. Change imports from `com.michaelhradek.aurkitu.*` to `io.github.mhradek.aurkitu.*`.
 3. Rename plugin parameters as above.
 4. Set `<snakeCaseFields>false</snakeCaseFields>` if clients depend on camelCase field names.
