@@ -9,16 +9,28 @@ on:
 env:
   FLATC_VERSION: 25.12.19
 
+permissions:
+  contents: read
+
 jobs:
   build:
+    name: build (Java ${{ matrix.java }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The minimum supported Java (17, what the release is built with) and the current LTS versions.
+        java: [ '17', '21', '25' ]
+    env:
+      # Coverage is uploaded once, from the Java 17 build.
+      UPLOAD_COVERAGE: ${{ matrix.java == '17' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      - name: Set up JDK ${{ matrix.java }}
+        uses: actions/setup-java@v5
         with:
-          java-version: '17'
+          java-version: ${{ matrix.java }}
           distribution: 'temurin'
           cache: maven
 
@@ -36,6 +48,7 @@ jobs:
           FLATC_PATH: /tmp/flatc-bin/flatc
 
       - name: Diagnose coverage reports and tokens
+        if: env.UPLOAD_COVERAGE == 'true'
         run: |
           echo "=== JaCoCo reports ==="
           find . -path "*/target/site/jacoco/jacoco.xml" -type f | head -20
@@ -49,6 +62,7 @@ jobs:
           CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
 
       - name: Upload coverage to Codecov
+        if: env.UPLOAD_COVERAGE == 'true'
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -59,6 +73,7 @@ jobs:
           verbose: true
 
       - name: Upload coverage to Coveralls
+        if: env.UPLOAD_COVERAGE == 'true'
         uses: coverallsapp/github-action@v2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -69,6 +84,7 @@ jobs:
           format: jacoco
 
       - name: Upload coverage to Codacy
+        if: env.UPLOAD_COVERAGE == 'true'
         continue-on-error: true
         uses: codacy/codacy-coverage-reporter-action@v1.3.0
         with:

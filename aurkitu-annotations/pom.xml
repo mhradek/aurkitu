@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.github.mhradek</groupId>
         <artifactId>aurkitu-parent</artifactId>
-        <version>1.1.0</version>
+        <version>1.2.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -32,6 +32,49 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <!--
+                  Users compile against these annotations, so their API is compared with the last release:
+                  a binary or source incompatible change, or one that needs a newer version number than the
+                  project has (semantic versioning), fails the build.
+                -->
+                <groupId>com.github.siom79.japicmp</groupId>
+                <artifactId>japicmp-maven-plugin</artifactId>
+                <configuration>
+                    <oldVersion>
+                        <dependency>
+                            <groupId>${project.groupId}</groupId>
+                            <artifactId>${project.artifactId}</artifactId>
+                            <version>${japicmp.baseline}</version>
+                            <type>jar</type>
+                        </dependency>
+                    </oldVersion>
+                    <parameter>
+                        <onlyModified>true</onlyModified>
+                        <breakBuildOnBinaryIncompatibleModifications>true</breakBuildOnBinaryIncompatibleModifications>
+                        <breakBuildOnSourceIncompatibleModifications>true</breakBuildOnSourceIncompatibleModifications>
+                        <breakBuildBasedOnSemanticVersioning>true</breakBuildBasedOnSemanticVersioning>
+                        <overrideCompatibilityChangeParameters>
+                            <!--
+                              A new annotation element is compatible when it has a default, which japicmp cannot
+                              see: it counts as a new feature (minor version). Elements without a default are
+                              caught by AnnotationContractTest, which pins every element and its default.
+                            -->
+                            <overrideCompatibilityChangeParameter>
+                                <compatibilityChange>METHOD_ABSTRACT_ADDED_TO_CLASS</compatibilityChange>
+                                <binaryCompatible>true</binaryCompatible>
+                                <sourceCompatible>true</sourceCompatible>
+                                <semanticVersionLevel>MINOR</semanticVersionLevel>
+                            </overrideCompatibilityChangeParameter>
+                        </overrideCompatibilityChangeParameters>
+                    </parameter>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals><goal>cmp</goal></goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
