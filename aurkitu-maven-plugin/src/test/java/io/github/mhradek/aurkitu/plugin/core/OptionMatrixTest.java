@@ -169,63 +169,61 @@ class OptionMatrixTest {
      * failOnIssues and version.
      */
     static String body(Options o) {
-        StringBuilder out = new StringBuilder();
-        if (o.includes()) {
-            out.append("include \"base.fbs\";\n\n");
-        }
-        out.append("namespace ").append(o.namespace()).append(";\n\n");
-        if (o.fileIdentifier()) {
-            out.append("file_identifier \"OPTS\";\n\n");
-        }
-        if (o.fileExtension()) {
-            out.append("file_extension \"dat\";\n\n");
-        }
-        out.append("struct Point {\n  x:int;\n  y:int;\n}\n\n");
-        out.append("table Account {\n");
-        field(out, o, "user_id", "userId", "long");
-        if (o.mapCommonTypes()) {
-            field(out, o, "created_at", "createdAt", "string");
-        }
-        field(out, o, "login_count", "loginCount", o.optionalScalars() ? "int = null" : "int");
-        field(out, o, "retry_limit", "retryLimit", "int = 3");
-        field(out, o, "display_name", "displayName", "string (required)");
-        String mapTable = "MapValueSet_Account_" + name(o, "score_totals", "scoreTotals");
-        field(out, o, "score_totals", "scoreTotals", "[" + mapTable + "]");
-        out.append("  home:Point;\n");
-        if (!o.ignoreStatic()) {
-            field(out, o, "instance_count", "instanceCount", "int");
-        }
-        if (o.includes()) {
-            out.append("  ghost:Ghost;\n"); // may come from the include, so it stays
-        }
-        field(out, o, "nick_name", "nickName", "string");
-        if (!o.snakeCase()) {
-            out.append("  nick_name:string;\n"); // only distinct from nickName without snake_case
-        }
-        field(out, o, "updated_at", "updatedAt", "string"); // fieldType = STRING, even without mapCommonTypes
-        out.append("  audit:").append(o.auditNamespace() ? "Audit" : "audit.Audit").append(";\n");
-        field(out, o, "tenant_id", "tenantId", "long");
-        out.append("}\n\n");
-        // A namespace statement only where the namespace changes.
-        out.append(o.auditNamespace() ? "" : "namespace audit;\n\n").append("table Audit {\n  at:long;\n}\n\n")
-                .append(o.auditNamespace() ? "" : "namespace opts;\n\n");
-        out.append("table Ledger {\n");
-        if (o.ignoreStatic()) {
-            field(out, o, "entry_id", "entryId", "long (id: 0)");
-            out.append("  amount:int (id: 1);\n");
-        } else {
-            field(out, o, "entry_id", "entryId", "long");
-            out.append("  amount:int;\n");
-            field(out, o, "open_count", "openCount", "int");
-        }
-        out.append("}\n\n");
-        out.append("table ").append(mapTable).append(" {\n  key:string;\n  value:int;\n}\n\n");
-        out.append("root_type Account;\n");
-        return out.toString();
+        return header(o) + "struct Point {\n  x:int;\n  y:int;\n}\n\n" + account(o)
+                // A namespace statement only where the namespace changes.
+                + when(!o.auditNamespace(), "namespace audit;\n\n") + "table Audit {\n  at:long;\n}\n\n"
+                + when(!o.auditNamespace(), "namespace opts;\n\n")
+                + ledger(o) + mapTables(o) + "root_type Account;\n";
     }
 
-    private static void field(StringBuilder out, Options o, String snake, String camel, String type) {
-        out.append("  ").append(name(o, snake, camel)).append(':').append(type).append(";\n");
+    private static String header(Options o) {
+        return when(o.includes(), "include \"base.fbs\";\n\n") + "namespace " + o.namespace() + ";\n\n"
+                + when(o.fileIdentifier(), "file_identifier \"OPTS\";\n\n")
+                + when(o.fileExtension(), "file_extension \"dat\";\n\n");
+    }
+
+    private static String account(Options o) {
+        return "table Account {\n"
+                + field(o, "user_id", "userId", "long")
+                + when(o.mapCommonTypes(), field(o, "created_at", "createdAt", "string"))
+                + field(o, "login_count", "loginCount", o.optionalScalars() ? "int = null" : "int")
+                + field(o, "retry_limit", "retryLimit", "int = 3")
+                + field(o, "display_name", "displayName", "string (required)")
+                + field(o, "score_totals", "scoreTotals", "[" + scoreTable(o) + "]")
+                + "  home:Point;\n"
+                + when(!o.ignoreStatic(), field(o, "instance_count", "instanceCount", "int"))
+                + when(o.includes(), "  ghost:Ghost;\n") // may come from the include, so it stays
+                + field(o, "nick_name", "nickName", "string")
+                + when(!o.snakeCase(), "  nick_name:string;\n") // only distinct from nickName without snake_case
+                + field(o, "updated_at", "updatedAt", "string") // fieldType = STRING, even without mapCommonTypes
+                + "  audit:" + (o.auditNamespace() ? "Audit" : "audit.Audit") + ";\n"
+                + field(o, "tenant_id", "tenantId", "long")
+                + "}\n\n";
+    }
+
+    private static String ledger(Options o) {
+        // ignoreStaticMembers=false adds a static field without an id, so the ids become partial and are left out.
+        return "table Ledger {\n"
+                + field(o, "entry_id", "entryId", o.ignoreStatic() ? "long (id: 0)" : "long")
+                + (o.ignoreStatic() ? "  amount:int (id: 1);\n" : "  amount:int;\n")
+                + when(!o.ignoreStatic(), field(o, "open_count", "openCount", "int"))
+                + "}\n\n";
+    }
+
+    private static String mapTables(Options o) {
+        return "table " + scoreTable(o) + " {\n  key:string;\n  value:int;\n}\n\n";
+    }
+
+    private static String scoreTable(Options o) {
+        return "MapValueSet_Account_" + name(o, "score_totals", "scoreTotals");
+    }
+
+    private static String when(boolean condition, String text) {
+        return condition ? text : "";
+    }
+
+    private static String field(Options o, String snake, String camel, String type) {
+        return "  " + name(o, snake, camel) + ":" + type + ";\n";
     }
 
     private static String name(Options o, String snake, String camel) {
