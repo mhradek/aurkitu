@@ -82,26 +82,15 @@ final class SchemaValidator {
                 declaration = new StructDeclaration(struct.name(), struct.source(), struct.comment(), struct.fields(), false);
                 rootSeen = true; // reported above; not also "No root type defined"
             }
-            if (declaration instanceof CompositeDeclaration composite) {
-                CompositeDeclaration checked = composites.validate(composite);
-                if (removed.contains(checked.name())) {
-                    issues.add("Struct " + checked.name().name() + " has no valid fields and is left out (flatc does not"
-                            + " allow empty structs)");
-                    continue;
+            if (declaration instanceof CompositeDeclaration composite && composite.root()) {
+                if (rootSeen) {
+                    issues.add("Multiple root types; last used: " + composite.name().name());
                 }
+                rootSeen = true;
+            }
+            Declaration checked = validate(declaration, composites, declared, removed, checkReferences, issues);
+            if (checked != null) {
                 valid.add(checked);
-                if (composite.root()) {
-                    if (rootSeen) {
-                        issues.add("Multiple root types; last used: " + composite.name().name());
-                    }
-                    rootSeen = true;
-                }
-            } else if (declaration instanceof EnumDeclaration enumDeclaration) {
-                valid.add(validate(enumDeclaration, issues));
-            } else if (declaration instanceof UnionDeclaration union) {
-                valid.add(validate(union, declared, checkReferences, issues));
-            } else if (declaration instanceof RpcServiceDeclaration service) {
-                valid.add(validate(service, declared, checkReferences, issues));
             }
         }
         if (!rootSeen) {
@@ -111,6 +100,27 @@ final class SchemaValidator {
     }
 
     /** Declarations by name; reports names declared twice. */
+    /** One declaration checked and corrected; null if it is left out. */
+    private Declaration validate(Declaration declaration, CompositeValidator composites, Map<TypeName, Declaration> declared,
+                                 Set<TypeName> removed, boolean checkReferences, List<String> issues) {
+        if (declaration instanceof CompositeDeclaration composite) {
+            CompositeDeclaration checked = composites.validate(composite);
+            if (removed.contains(checked.name())) {
+                issues.add("Struct " + checked.name().name() + " has no valid fields and is left out (flatc does not"
+                        + " allow empty structs)");
+                return null;
+            }
+            return checked;
+        }
+        if (declaration instanceof EnumDeclaration enumDeclaration) {
+            return validate(enumDeclaration, issues);
+        }
+        if (declaration instanceof UnionDeclaration union) {
+            return validate(union, declared, checkReferences, issues);
+        }
+        return declaration instanceof RpcServiceDeclaration service ? validate(service, declared, checkReferences, issues) : declaration;
+    }
+
     private static Map<TypeName, Declaration> declarations(Schema schema, List<String> issues) {
         Map<TypeName, Declaration> declared = new HashMap<>();
         for (Declaration declaration : schema.declarations()) {

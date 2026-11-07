@@ -186,7 +186,7 @@ private int version;
   version:int (id: 1);
 ```
 
-Other options: `defaultValue`, `deprecated`, `key` (one per table), `hash` (`fnv1_32`, `fnv1a_32`, `fnv1_64`, `fnv1a_64`, on 32/64-bit integers), `nestedFlatbuffer` and `flexbuffer` (on `[ubyte]` fields), `forceAlign` (on vectors), `fixedLength` (in structs), `useFullName` (reference a type by its fully qualified Java name), and `attributes` (see [Custom attributes](#custom-attributes)). Ids are written only when every field in the table has one; they must be unique and contiguous from 0, and a union field also takes the id before its own.
+Other options: `defaultValue`, `deprecated`, `key` (one per table, not deprecated), `hash` (`fnv1_32`, `fnv1a_32`, `fnv1_64`, `fnv1a_64`, on 32/64-bit integers or vectors of them), `nestedFlatbuffer` and `flexbuffer` (on `[ubyte]` fields), `forceAlign` (on vectors), `fixedLength` (in structs), `useFullName` (reference a type by its fully qualified Java name), and `attributes` (see [Custom attributes](#custom-attributes)). Ids are written only when every field in the table has one; they must be unique and contiguous from 0, and a union field also takes the id before its own.
 
 ### Documentation comments
 
@@ -465,11 +465,11 @@ Declarations are written as `include`s first, then the namespace, file identifie
 With `validate` on (the default), problems are listed as comments at the end of the schema and logged as warnings. Set `failOnValidationIssues` to fail the build instead. Reported:
 
 - Unsupported field types: `char`, nested vectors (`int[][]`, `List<List<T>>`), and JDK types that are not mapped. These fields are left out.
-- References to types the schema does not declare. This is not checked when `includes` are set, since included schemas are not read.
-- Struct fields that are not scalars, enums, structs or fixed-length arrays of those. They are left out.
+- References to types the schema does not declare. These fields are left out. This is not checked when `includes` are set, since included schemas are not read.
+- Struct fields that are not scalars, enums, structs or fixed-length arrays of those. They are left out, and a struct left with no fields is left out too (`flatc` does not allow empty structs), with the fields that use it.
 - A struct marked as the root type (`root_type` must be a table); no root type; more than one root type.
 - Field ids on only some fields of a table, repeated ids, gaps, or a union field without the id before its own free (all ids are then left out).
-- Attributes on the wrong kind of field: `required` on scalars, enums or struct fields; `deprecated` on struct fields; `key` on anything but a string, scalar or enum, or a second `key`; `hash` with an unknown algorithm or on the wrong integer width; `nested_flatbuffer` and `flexbuffer` not on `[ubyte]`, or `nested_flatbuffer` naming a table that is not declared; `force_align` not on a vector. The attribute is left out.
+- Attributes on the wrong kind of field: `required` on scalars, enums or struct fields; `deprecated` on struct fields; `key` on anything but a string, scalar, enum or struct (or, in a struct, a fixed-length array), on a deprecated field, or a second `key`; `hash` with an unknown algorithm or not on an integer (or vector of integers) of its width; `nested_flatbuffer` and `flexbuffer` not on `[ubyte]`, or `nested_flatbuffer` naming a table that is not declared. The attribute is left out.
 - Defaults that `flatc` rejects: on strings, vectors, tables or struct fields, together with `required`, or not fitting the type (`300` on a `ubyte`, `abc` on an `int`). The default is left out. `= null` is valid on scalars and enums.
 - `fixedLength` outside a struct (written as a vector), two fields written with the same name (`fooBar` and `foo_bar`), and a field clashing with a union's hidden `<name>_type` field.
 - Enum problems: no values, duplicate or out-of-range values, more than one `@FlatBufferEnumTypeField`, a value field that cannot be read, table enum fields whose default is not an enum value, and `bit_flags` on a signed type or with a bit position that does not fit.
@@ -478,7 +478,9 @@ With `validate` on (the default), problems are listed as comments at the end of 
 - RPC methods that do not take and return one declared table.
 - Namespaces that are not dot-separated identifiers, two types with the same name in one namespace, and a `file_identifier` that is not 4 characters.
 
-**Warnings** are listed after the issues and logged, but never fail the build. They flag risks to data already written with the schema; see [Schema evolution](#schema-evolution).
+**Warnings** are listed after the issues and logged, but never fail the build. They flag schemas `flatc` accepts but that are risky or do not do what they say: inherited fields that existing data depends on (see [Schema evolution](#schema-evolution)), and `force_align` on a field that is not a vector, which `flatc` ignores (it is left out).
+
+The rules are checked against `flatc` itself: a test compiles every field type, in a table and in a struct, with each attribute and each pair of attributes, and requires an issue exactly when `flatc` rejects the schema, and the written schema to compile every time.
 
 `flatcPath` adds a full check by `flatc` itself.
 
