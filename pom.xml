@@ -90,6 +90,17 @@
                         <target>${java.version}</target>
                         <release>${java.version}</release>
                         <encoding>UTF-8</encoding>
+                        <!--
+                          Annotation processors are named explicitly: since JDK 23, javac no longer runs
+                          processors it only finds on the classpath, so Lombok would silently not run.
+                        -->
+                        <annotationProcessorPaths>
+                            <path>
+                                <groupId>org.projectlombok</groupId>
+                                <artifactId>lombok</artifactId>
+                                <version>${lombok.version}</version>
+                            </path>
+                        </annotationProcessorPaths>
                     </configuration>
                 </plugin>
                 <plugin>
