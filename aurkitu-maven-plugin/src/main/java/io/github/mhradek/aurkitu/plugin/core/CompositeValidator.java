@@ -316,16 +316,7 @@ final class CompositeValidator {
             return field;
         }
         if (enumType != null && !struct && !field.has(FieldAttribute.Required.class)) {
-            // Without a default the field is 0: fine when 0 is a value (or bit_flags), so the bad default is left
-            // out. Otherwise no default would be valid either, so the field is kept for the user to fix.
-            if (enumType.bitFlags() || enumValues(enumType).contains(0L)) {
-                issues.add("Field " + where + " default " + value + " is not a value of enum " + enumType.name().name()
-                        + "; default left out");
-                return field.withDefaultValue("");
-            }
-            issues.add("Field " + where + " default " + value + " is not a value of enum " + enumType.name().name()
-                    + ", which has no value 0: set a defaultValue that is one of its values");
-            return field;
+            return invalidEnumDefault(field, where, enumType, value);
         }
         issues.add("default " + value + " on " + where + " skipped: " + problem);
         return field.withDefaultValue("");
@@ -346,6 +337,21 @@ final class CompositeValidator {
         boolean name = enumType.values().stream().anyMatch(v -> v.name().equals(value));
         Long number = INTEGER.matcher(value).matches() ? parseInteger(value).longValue() : null;
         return name || enumValues(enumType).contains(number) ? null : "not a value of the enum";
+    }
+
+    /**
+     * A table enum field whose default is not a value. Without a default the field is 0: fine when 0 is a value
+     * (or bit_flags), so the bad default is left out. Otherwise no default would be valid either, so the field is
+     * kept for the user to fix.
+     */
+    private Field invalidEnumDefault(Field field, String where, EnumDeclaration enumType, String value) {
+        String problem = "Field " + where + " default " + value + " is not a value of enum " + enumType.name().name();
+        if (enumType.bitFlags() || enumValues(enumType).contains(0L)) {
+            issues.add(problem + "; default left out");
+            return field.withDefaultValue("");
+        }
+        issues.add(problem + ", which has no value 0: set a defaultValue that is one of its values");
+        return field;
     }
 
     private static Set<Long> enumValues(EnumDeclaration enumType) {
