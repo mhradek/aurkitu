@@ -7,7 +7,10 @@
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/42b23d745afc4ef1b1102807752e8a38)](https://app.codacy.com/gh/mhradek/aurkitu/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 [![codecov](https://codecov.io/gh/mhradek/aurkitu/branch/master/graph/badge.svg)](https://codecov.io/gh/mhradek/aurkitu)
 [![Coverage Status](https://coveralls.io/repos/github/mhradek/aurkitu/badge.svg?branch=master)](https://coveralls.io/github/mhradek/aurkitu?branch=master)
-[![Java](https://img.shields.io/badge/Java-17-blue.svg)](https://openjdk.org/projects/jdk/17/)
+[![CodeQL](https://github.com/mhradek/aurkitu/actions/workflows/codeql.yml/badge.svg)](https://github.com/mhradek/aurkitu/actions/workflows/codeql.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/mhradek/aurkitu/badge)](https://scorecard.dev/viewer/?uri=github.com/mhradek/aurkitu)
+[![javadoc](https://javadoc.io/badge2/io.github.mhradek/aurkitu-annotations/javadoc.svg)](https://javadoc.io/doc/io.github.mhradek/aurkitu-annotations)
+[![Java](https://img.shields.io/badge/Java-17%20%7C%2021%20%7C%2025-blue.svg)](https://openjdk.org/projects/jdk/17/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub stars](https://img.shields.io/github/stars/mhradek/aurkitu.svg)](https://github.com/mhradek/aurkitu/stargazers)
 
@@ -612,9 +615,23 @@ Codecov, Coveralls and Codacy are mirrors and need these repository secrets:
 
 Codacy's quality-grade badge comes from its static analysis and is independent of coverage.
 
+### Code quality checks
+
+| Check | Where | What it does |
+|-------|-------|--------------|
+| Maven Enforcer | every build | Requires Java 17+ and Maven 3.6.3+, a pinned version for every plugin (so a build cannot change or downgrade silently), and convergent dependency versions |
+| API compatibility ([japicmp](https://siom79.github.io/japicmp/)) | every build of `aurkitu-annotations` | Compares the annotations with the last release (`japicmp.baseline`). A binary or source incompatible change fails the build, and so does a change that needs a newer version number than the project has (semantic versioning: a new annotation option needs a minor version) |
+| Java 17, 21 and 25 | CI | The build and every test run on each, so newer JDKs keep working |
+| [CodeQL](https://codeql.github.com/) | CI and weekly | GitHub's security and quality analysis; findings appear under Security → Code scanning |
+| [OpenSSF Scorecard](https://scorecard.dev/) | weekly and on push | Scores the repository's security practices (the Scorecard badge) |
+| Dependabot | weekly | Opens grouped PRs for Maven and GitHub Actions updates |
+| Codacy, Codecov, Coveralls | CI | Static analysis and coverage reports (see [Coverage](#coverage)) |
+
 ### Publishing
 
-Publishing a GitHub release runs `.github/workflows/publish.yml`, which builds the release tag and deploys both artifacts and the parent POM to Maven Central (signed, with sources and Javadoc). It needs the `MAVEN_USERNAME`, `MAVEN_PASSWORD`, `GPG_PRIVATE_KEY` and `GPG_PASSPHRASE` secrets. The workflow can also be run manually on a tag. If the version is already on Maven Central, the run does nothing, so publishing the release page after a manual run is safe.
+Publishing a GitHub release runs `.github/workflows/publish.yml`, which builds the release tag and deploys both artifacts and the parent POM to Maven Central (signed, with sources and Javadoc). It needs the `MAVEN_USERNAME`, `MAVEN_PASSWORD`, `GPG_PRIVATE_KEY` and `GPG_PASSPHRASE` secrets. The workflow can also be run manually on a tag. If the version is already on Maven Central, the run does nothing, so publishing the release page after a manual run is safe. Publish the release page only after a manual run has finished, so the two runs do not both upload.
+
+After a release, move the POMs to the next `-SNAPSHOT` version and set `japicmp.baseline` to the version just released. The build enforces this: with the project version equal to the baseline, japicmp would compare the annotations with themselves.
 
 ---
 
