@@ -82,7 +82,9 @@ public class Player extends Entity {
     private Achievement[] achievements;
     private Map<String, Integer> stats;
     private Map<String, Map<String, Integer>> levels;
-    private Map<String, Status> statusByName;    // Status has no 0 value: the map value defaults to ACTIVE
+    private Map<Status, Integer> statusCounts;   // typedMapKeys: an enum key; Status has no 0, so it defaults to ACTIVE
+    private Map<String, Status> statusByName;    // an enum value without 0 gets a default too
+    private String profileURL;                   // snakeCaseAcronyms: profile_url
 
     // Binary data
     private byte[] thumbnail;

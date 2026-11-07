@@ -121,7 +121,9 @@ table Player {
   achievements:[Achievement];
   stats:[MapValueSet_Player_stats];
   levels:[MapValueSet_Player_levels];
+  status_counts:[MapValueSet_Player_status_counts];
   status_by_name:[MapValueSet_Player_status_by_name];
+  profile_url:string;
   thumbnail:[ubyte];
   featured_item:[ubyte] (nested_flatbuffer: "Item");
   extras:[ubyte] (flexbuffer);
@@ -153,22 +155,27 @@ table Versioned {
 }
 
 table MapValueSet_Player_stats {
-  key:string;
+  key:string (key);
   value:int;
 }
 
 table MapValueSet_Player_levels {
-  key:string;
+  key:string (key);
   value:[MapValueSet_Player_levels_value];
 }
 
 table MapValueSet_Player_levels_value {
-  key:string;
+  key:string (key);
+  value:int;
+}
+
+table MapValueSet_Player_status_counts {
+  key:Status = ACTIVE (key);
   value:int;
 }
 
 table MapValueSet_Player_status_by_name {
-  key:string;
+  key:string (key);
   value:Status = ACTIVE;
 }
 

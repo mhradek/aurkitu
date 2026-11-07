@@ -60,7 +60,7 @@ final class SchemaReader {
     SchemaReader(SchemaGenerator.Config config, TypeRegistry registry) {
         this.config = config;
         this.registry = registry;
-        this.typeMapper = new TypeMapper(config.mapCommonTypes, config.snakeCaseFields, registry, mapTables);
+        this.typeMapper = new TypeMapper(config, registry, mapTables);
         this.enumReader = new EnumReader(registry);
     }
 
@@ -200,7 +200,7 @@ final class SchemaReader {
                 && attributes.stream().noneMatch(FieldAttribute.Required.class::isInstance)) {
             defaultValue = "null";
         }
-        return new Field(field.getName(), Naming.fieldName(field.getName(), config.snakeCaseFields), type,
+        return new Field(field.getName(), Naming.fieldName(field.getName(), config.snakeCaseFields, config.snakeCaseAcronyms), type,
                 defaultValue, comment(field.getAnnotationInfo(FlatBufferComment.class.getName())),
                 attributes, field.getClassInfo().getName());
     }

@@ -42,6 +42,10 @@ public class SchemaGenerator {
         public final List<String> classpathElements;
         /** Write boxed Java scalars (Integer, Boolean, ...) in tables as optional scalars ({@code = null}). */
         public final boolean optionalScalars;
+        /** With {@link #snakeCaseFields}, keep a run of capitals as one word: {@code userID} becomes {@code user_id}. */
+        public final boolean snakeCaseAcronyms;
+        /** Write map keys with their own type, marked {@code (key)}, instead of always {@code string}. */
+        public final boolean typedMapKeys;
 
         @SuppressWarnings("PMD.ExcessiveParameterList")
         public Config(MavenProject project, List<String> specifiedPackages, boolean validate,
@@ -84,6 +88,37 @@ public class SchemaGenerator {
             this.fileExtension = fileExtension;
             this.classpathElements = classpathElements;
             this.optionalScalars = optionalScalars;
+            this.snakeCaseAcronyms = false;
+            this.typedMapKeys = false;
+        }
+
+        private Config(Config base, boolean snakeCaseAcronyms, boolean typedMapKeys) {
+            this.project = base.project;
+            this.specifiedPackages = base.specifiedPackages;
+            this.validate = base.validate;
+            this.ignoreStaticMembers = base.ignoreStaticMembers;
+            this.fileIdentifier = base.fileIdentifier;
+            this.includes = base.includes;
+            this.mapCommonTypes = base.mapCommonTypes;
+            this.cacheEnabled = base.cacheEnabled;
+            this.snakeCaseFields = base.snakeCaseFields;
+            this.generateVersion = base.generateVersion;
+            this.failOnValidationIssues = base.failOnValidationIssues;
+            this.fileExtension = base.fileExtension;
+            this.classpathElements = base.classpathElements;
+            this.optionalScalars = base.optionalScalars;
+            this.snakeCaseAcronyms = snakeCaseAcronyms;
+            this.typedMapKeys = typedMapKeys;
+        }
+
+        /** This configuration with {@link #snakeCaseAcronyms} set. */
+        public Config withSnakeCaseAcronyms(boolean enabled) {
+            return new Config(this, enabled, typedMapKeys);
+        }
+
+        /** This configuration with {@link #typedMapKeys} set. */
+        public Config withTypedMapKeys(boolean enabled) {
+            return new Config(this, snakeCaseAcronyms, enabled);
         }
 
         // Convenience constructor for tests

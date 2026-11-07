@@ -98,6 +98,7 @@ Run `mvn process-classes` (or any later phase, such as `mvn package`) to generat
 | `failOnValidationIssues` | `aurkitu.failOnValidationIssues` | `false` | Fail the build when there are validation issues |
 | `ignoreStaticMembers` | `aurkitu.ignoreStaticMembers` | `true` | Skip static fields |
 | `snakeCaseFields` | `aurkitu.snakeCaseFields` | `true` | Write field names in snake_case (`displayName` → `display_name`) |
+| `snakeCaseAcronyms` | `aurkitu.snakeCaseAcronyms` | `false` | With `snakeCaseFields`, keep a run of capitals as one word: `userID` → `user_id`, `XMLParser` → `xml_parser`, `userIDs` → `user_ids` (otherwise `user_i_d`, `x_m_l_parser`). Off by default because it renames existing fields. Since 1.2.0. |
 | `mapCommonTypes` | `aurkitu.mapCommonTypes` | `true` | Map `Date`, `UUID`, `URL`, `URI`, `BigDecimal`, `BigInteger` and `java.time` types (`Instant`, `LocalDate`, `LocalDateTime`, `LocalTime`, `OffsetDateTime`, `ZonedDateTime`, `Duration`) to `string`. `String` is always mapped. |
 | `fileIdentifier` | `aurkitu.fileIdentifier` | — | Emit `file_identifier "..."` (must be 4 characters) |
 | `fileExtension` | `aurkitu.fileExtension` | — | Emit `file_extension "..."` |
@@ -106,6 +107,7 @@ Run `mvn process-classes` (or any later phase, such as `mvn package`) to generat
 | `flatcPath` | `aurkitu.flatcPath` | — | Path to a `flatc` binary. When set (and `validate` is on), the schema is checked with `flatc --binary --schema` and the build fails if `flatc` rejects it. |
 | `cacheEnabled` | `aurkitu.cacheEnabled` | `false` | Only rewrite the schema file when its content changes, keeping its timestamp for downstream steps. The schema is still generated and validated every time. |
 | `optionalScalars` | `aurkitu.optionalScalars` | `false` | Write boxed Java scalars (`Integer`, `Boolean`, …) in tables as [optional scalars](#optional-scalars) (`= null`). Since 1.1.0. |
+| `typedMapKeys` | `aurkitu.typedMapKeys` | `false` | Write [map](#maps) keys with their own type, marked `(key)`, instead of always `string`. Off by default because it changes existing map tables. Since 1.2.0. |
 
 The plugin scans the project's compile classpath (its compiled classes plus compile-scope dependencies), so annotated models can live in the project itself or in a dependency jar.
 
@@ -421,6 +423,21 @@ table MapValueSet_Account_scores {
 
 A map whose values are maps gets one table per level: `Map<String, Map<String, Integer>> levels` becomes `levels:[MapValueSet_Account_levels]`, whose `value` is `[MapValueSet_Account_levels_value]`.
 
+With `typedMapKeys`, the key keeps its Java type and is marked `(key)`, so generated code can look entries up by key (build the vector sorted, e.g. with `createSortedVectorOfTables` in Java):
+
+```idl
+  names_by_id:[MapValueSet_Account_names_by_id];
+
+table MapValueSet_Account_names_by_id {
+  key:int (key);
+  value:string;
+}
+```
+
+Keys can be strings, boxed scalars, enums, structs and (with `mapCommonTypes`) the common types, which are written as `string`. A map keyed by a collection, map, array or any other type is reported and left out. A table key keeps its type but cannot be the `(key)`.
+
+A map key or value whose enum has no `0` value gets the enum's lowest value as its default (`key:Status = ACTIVE (key);`), because `flatc` requires a table enum field's default to be one of its values and the generated fields cannot be annotated.
+
 ---
 
 ## Sample output
@@ -504,8 +521,8 @@ FlatBuffers stores table fields by position, so a schema must change only in com
 - **Maps** need a small translation layer in clients (`MapValueSet_*` tables).
 - **Includes** are written but not read, so types from included schemas are not resolved or validated.
 - **One schema file** per execution; per-type namespaces are written into that file.
-- **Field names**: consecutive capitals are split letter by letter (`userID` becomes `user_i_d`).
-- **Map keys** are always written as `string`, whatever the Java key type.
+- **Field names**: by default, consecutive capitals are split letter by letter (`userID` becomes `user_i_d`), as in earlier versions; set `snakeCaseAcronyms` to keep acronyms together.
+- **Map keys** are written as `string` unless `typedMapKeys` is set.
 - **Scanning** without `specifiedPackages` scans the whole compile classpath, which is slower.
 
 ---
@@ -571,7 +588,7 @@ mvn clean verify
 
 | Project | Covers |
 |---------|--------|
-| `kitchen-sink` | Every supported annotation and field attribute, enums, unions, structs, inheritance, nested types, maps, common types, includes, a per-type namespace |
+| `kitchen-sink` | Every supported annotation and field attribute, enums, unions, structs, inheritance, nested types, maps (typed keys, enum keys and values), acronym snake_case, common types, includes, a per-type namespace |
 | `settings-variants` | `snakeCaseFields=false`, `mapCommonTypes=false`, `ignoreStaticMembers=false`, `generateVersion`, validation comments |
 | `fail-on-validation` | `failOnValidationIssues=true` fails the build |
 | `flatc-path` | The `flatcPath` option (runs only when `FLATC_PATH` is set) |
@@ -600,6 +617,12 @@ Codacy's quality-grade badge comes from its static analysis and is independent o
 Publishing a GitHub release runs `.github/workflows/publish.yml`, which builds the release tag and deploys both artifacts and the parent POM to Maven Central (signed, with sources and Javadoc). It needs the `MAVEN_USERNAME`, `MAVEN_PASSWORD`, `GPG_PRIVATE_KEY` and `GPG_PASSPHRASE` secrets. The workflow can also be run manually on a tag. If the version is already on Maven Central, the run does nothing, so publishing the release page after a manual run is safe.
 
 ---
+
+## What's new in 1.2.0 (unreleased)
+
+- **`snakeCaseAcronyms`** (opt-in): acronym-aware snake_case, so `userID` becomes `user_id` and `XMLParser` becomes `xml_parser` (in field names and `MapValueSet_*` table names). Off by default, because it renames fields.
+- **`typedMapKeys`** (opt-in): map keys keep their Java type (`Map<Integer, V>` → `key:int`) and are marked `(key)` for lookups. Off by default, because it changes existing map tables.
+- **Tests**: the option matrix covers both new options (14 options, 16384 combinations, run in parallel).
 
 ## What's new in 1.1.0
 
@@ -702,8 +725,7 @@ Output changes to expect when upgrading from 1.0.0: explicit enum values are wri
 | Medium | Published Javadoc site | Javadoc jars are on Maven Central |
 | Low | Schema include resolution | Includes are written, not read |
 | Low | Multiple schema files (one per namespace) | One file per execution |
-| Low | Acronym-aware snake_case (`userID` → `user_id`) | Changes field names, so opt-in |
-| Low | Typed map keys and a `(key)` attribute on `MapValueSet_*` keys | Keys are written as `string` |
+| Low | Acronym-aware snake_case and typed map keys on by default | Opt-in since 1.2.0; candidates for the default in 2.0 |
 | Low | Remove deprecated `@FlatBufferOptions` | Planned for 2.0 |
 
 ## License

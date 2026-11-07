@@ -7,6 +7,7 @@ import io.github.classgraph.ClassRefTypeSignature;
 import io.github.classgraph.TypeArgument;
 import io.github.classgraph.TypeSignature;
 import io.github.mhradek.aurkitu.plugin.core.model.Field;
+import io.github.mhradek.aurkitu.plugin.core.model.FieldAttribute;
 import io.github.mhradek.aurkitu.plugin.core.model.ScalarKind;
 import io.github.mhradek.aurkitu.plugin.core.model.SchemaType;
 import io.github.mhradek.aurkitu.plugin.core.model.SchemaType.Reference;
@@ -67,15 +68,19 @@ final class TypeMapper {
 
     private final boolean mapCommonTypes;
     private final boolean snakeCaseFields;
+    private final boolean snakeCaseAcronyms;
+    private final boolean typedMapKeys;
     private final TypeRegistry registry;
     private final Map<String, TableDeclaration> mapTables;
 
     /**
      * @param mapTables receives a generated table for every {@code Map} field, keyed by name
      */
-    TypeMapper(boolean mapCommonTypes, boolean snakeCaseFields, TypeRegistry registry, Map<String, TableDeclaration> mapTables) {
-        this.mapCommonTypes = mapCommonTypes;
-        this.snakeCaseFields = snakeCaseFields;
+    TypeMapper(SchemaGenerator.Config config, TypeRegistry registry, Map<String, TableDeclaration> mapTables) {
+        this.mapCommonTypes = config.mapCommonTypes;
+        this.snakeCaseFields = config.snakeCaseFields;
+        this.snakeCaseAcronyms = config.snakeCaseAcronyms;
+        this.typedMapKeys = config.typedMapKeys;
         this.registry = registry;
         this.mapTables = mapTables;
     }
@@ -112,7 +117,9 @@ final class TypeMapper {
         String className = classRef.getFullyQualifiedClassName();
         List<TypeArgument> typeArgs = classRef.getTypeArguments();
         if (isJdkSubtype(className, Map.class)) {
-            return typeArgs.size() == 2 ? mapTable(typeArgs.get(1).getTypeSignature(), owner, fieldName, useFullName) : null;
+            return typeArgs.size() == 2
+                    ? mapTable(typeArgs.get(0).getTypeSignature(), typeArgs.get(1).getTypeSignature(), owner, fieldName, useFullName)
+                    : null;
         }
         if (isJdkSubtype(className, Collection.class)) {
             return typeArgs.size() == 1 ? vectorOf(map(typeArgs.get(0).getTypeSignature(), owner, fieldName, useFullName)) : null;
@@ -125,13 +132,18 @@ final class TypeMapper {
     }
 
     /**
-     * A {@code Map} becomes a vector of a generated {@code key:string; value:T} table named
+     * A {@code Map} becomes a vector of a generated {@code key; value} table named
      * {@code MapValueSet_<Owner>_<field>} (the field name as written in the schema),
-     * written at the end of the schema in the default namespace.
+     * written at the end of the schema in the default namespace. The key is a {@code string},
+     * or with {@code typedMapKeys} its own type, marked {@code (key)}.
      */
-    private SchemaType mapTable(TypeSignature valueSig, ClassInfo owner, String fieldName, boolean useFullName) {
-        TypeName mapTable = new TypeName(registry.defaultNamespace(),
-                MAP_TABLE_PREFIX + Naming.typeName(owner.getName()) + "_" + Naming.fieldName(fieldName, snakeCaseFields));
+    private SchemaType mapTable(TypeSignature keySig, TypeSignature valueSig, ClassInfo owner, String fieldName, boolean useFullName) {
+        Field key = typedMapKeys ? typedKey(keySig, owner, fieldName, useFullName) : Field.of("key", StringType.INSTANCE);
+        if (key == null) {
+            return null;
+        }
+        TypeName mapTable = new TypeName(registry.defaultNamespace(), MAP_TABLE_PREFIX + Naming.typeName(owner.getName())
+                + "_" + Naming.fieldName(fieldName, snakeCaseFields, snakeCaseAcronyms));
         // Reserves this table's place, so it is written before the table of a map nested in it.
         mapTables.put(mapTable.name(), null);
         // A map value that is itself a map gets its own table, MapValueSet_<Owner>_<field>_value.
@@ -141,8 +153,18 @@ final class TypeMapper {
             return null;
         }
         mapTables.put(mapTable.name(), new TableDeclaration(mapTable, owner.getName(), "",
-                List.of(Field.of("key", StringType.INSTANCE), Field.of("value", valueType)), false));
+                List.of(key, Field.of("value", valueType)), false));
         return new Vector(new Reference(mapTable));
+    }
+
+    /** The key field of a map with typed keys; null when the key type cannot be a key (collections, maps, arrays). */
+    private Field typedKey(TypeSignature keySig, ClassInfo owner, String fieldName, boolean useFullName) {
+        if (!(keySig instanceof ClassRefTypeSignature ref) || isJdkSubtype(ref.getFullyQualifiedClassName(), Map.class)
+                || isJdkSubtype(ref.getFullyQualifiedClassName(), Collection.class)) {
+            return null;
+        }
+        SchemaType type = mapClassRef(ref, owner, fieldName, useFullName);
+        return type == null ? null : new Field("key", "key", type, "", "", List.of(new FieldAttribute.Key()));
     }
 
     /** String, boxed scalars and (optionally) common JDK value types; null for anything else. */

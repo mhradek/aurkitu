@@ -81,6 +81,31 @@ class AurkituMojoIntegrationTest {
     }
 
     @Test
+    void acronymAndTypedMapKeySettingsReachTheGenerator() throws Exception {
+        for (boolean on : new boolean[]{false, true}) {
+            AurkituMojo mojo = new AurkituMojo();
+            set(mojo, "schemaName", "keys" + on);
+            set(mojo, "schemaNamespace", "opts");
+            set(mojo, "outputDirectory", tempDir.toFile());
+            set(mojo, "specifiedPackages", List.of("io.github.mhradek.aurkitu.plugin.core.options"));
+            set(mojo, "validate", true);
+            set(mojo, "ignoreStaticMembers", true);
+            set(mojo, "mapCommonTypes", true);
+            set(mojo, "snakeCaseFields", true);
+            set(mojo, "snakeCaseAcronyms", on);
+            set(mojo, "typedMapKeys", on);
+
+            mojo.execute();
+
+            String content = Files.readString(tempDir.resolve("keys" + on + ".fbs"));
+            assertEquals(on, content.contains("  account_url:string;\n"), content);
+            assertEquals(!on, content.contains("  account_u_r_l:string;\n"), content);
+            assertEquals(on, content.contains("table MapValueSet_Account_names_by_id {\n  key:int (key);\n"), content);
+            assertEquals(!on, content.contains("table MapValueSet_Account_names_by_i_d {\n  key:string;\n"), content);
+        }
+    }
+
+    @Test
     void executeCreatesOutputDirectory() throws Exception {
         Path nested = tempDir.resolve("nested/out");
         assertFalse(Files.exists(nested));
@@ -152,6 +177,8 @@ class AurkituMojoIntegrationTest {
                 "<outputDirectory implementation=\"java.io.File\" default-value=\"${project.build.directory}/aurkitu/schemas\">${aurkitu.outputDir}</outputDirectory>",
                 "<schemaNamespace implementation=\"java.lang.String\" default-value=\"generated.flatbuffers\">${aurkitu.schemaNamespace}</schemaNamespace>",
                 "<snakeCaseFields implementation=\"boolean\" default-value=\"true\">${aurkitu.snakeCaseFields}</snakeCaseFields>",
+                "<snakeCaseAcronyms implementation=\"boolean\" default-value=\"false\">${aurkitu.snakeCaseAcronyms}</snakeCaseAcronyms>",
+                "<typedMapKeys implementation=\"boolean\" default-value=\"false\">${aurkitu.typedMapKeys}</typedMapKeys>",
                 "<validate implementation=\"boolean\" default-value=\"true\">${aurkitu.validate}</validate>")) {
             assertTrue(xml.contains(line), line);
         }

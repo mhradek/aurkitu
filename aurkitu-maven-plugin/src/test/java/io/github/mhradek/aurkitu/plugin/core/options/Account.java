@@ -32,6 +32,9 @@ public class Account extends AccountBase {
     @FlatBufferFieldOptions(fieldType = FieldType.STRING)
     private Date updatedAt;                      // fieldType wins over mapCommonTypes
     private Audit audit;                         // schemaNamespace x a type with its own namespace
+    private String accountURL;                   // snakeCaseAcronyms
+    private Map<Integer, String> namesByID;      // typedMapKeys; snakeCaseAcronyms in the map table name too
+    private Map<Date, Integer> loginsByDay;      // typedMapKeys x mapCommonTypes: a Date key needs common types
 
     public long getUserId() {
         return userId;
@@ -84,5 +87,17 @@ public class Account extends AccountBase {
 
     public Audit getAudit() {
         return audit;
+    }
+
+    public String getAccountURL() {
+        return accountURL;
+    }
+
+    public Map<Integer, String> getNamesByID() {
+        return namesByID;
+    }
+
+    public Map<Date, Integer> getLoginsByDay() {
+        return loginsByDay;
     }
 }

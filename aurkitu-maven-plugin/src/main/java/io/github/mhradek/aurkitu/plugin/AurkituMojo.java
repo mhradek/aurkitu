@@ -82,6 +82,26 @@ public class AurkituMojo extends AbstractMojo {
     private boolean snakeCaseFields;
 
     /**
+     * With snakeCaseFields, keep a run of capitals as one word: {@code userID} becomes {@code user_id} and
+     * {@code XMLParser} becomes {@code xml_parser}, instead of {@code user_i_d} and {@code x_m_l_parser}.
+     * Off by default, because it renames existing fields.
+     *
+     * @since 1.2.0
+     */
+    @Parameter(property = "aurkitu.snakeCaseAcronyms", defaultValue = "false")
+    private boolean snakeCaseAcronyms;
+
+    /**
+     * Write map keys with their own type ({@code Map<Integer, V>} gets {@code key:int}), marked {@code (key)} so
+     * generated code can look entries up, instead of always {@code key:string}. Off by default, because it changes
+     * existing map tables.
+     *
+     * @since 1.2.0
+     */
+    @Parameter(property = "aurkitu.typedMapKeys", defaultValue = "false")
+    private boolean typedMapKeys;
+
+    /**
      * When true, compute a version hash of the schema (excluding validation comments)
      * and emit it as a comment at the top of the file.
      */
@@ -119,7 +139,9 @@ public class AurkituMojo extends AbstractMojo {
 
         SchemaGenerator.Config config = new SchemaGenerator.Config(
                 project, specifiedPackages, validate, ignoreStaticMembers, fileIdentifier, includes, mapCommonTypes, cacheEnabled, snakeCaseFields, generateVersion, failOnValidationIssues, fileExtension,
-                resolveClasspath(), optionalScalars);
+                resolveClasspath(), optionalScalars)
+                .withSnakeCaseAcronyms(snakeCaseAcronyms)
+                .withTypedMapKeys(typedMapKeys);
         SchemaGenerator generator = new SchemaGenerator(config);
         try {
             generator.generate(schemaName, schemaNamespace, outputDirectory);
