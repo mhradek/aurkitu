@@ -63,6 +63,7 @@ class SchemaGeneratorFixesTest {
         assertTrue(schema.contains("  ids:[int];"), schema);
         assertTrue(schema.contains("  names:[string];"), schema);
         assertTrue(schema.contains("  counts:[MapValueSet_Holder_counts];"), schema);
+        assertTrue(schema.contains("  labels:[string];"), "String[]:\n" + schema);
     }
 
     @Test

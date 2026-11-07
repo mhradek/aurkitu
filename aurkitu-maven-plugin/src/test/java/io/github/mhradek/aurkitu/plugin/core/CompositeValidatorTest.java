@@ -149,7 +149,30 @@ class CompositeValidatorTest {
         assertFalse(fieldOf(invalid, "Root", "a").has(FieldAttribute.Id.class));
 
         var unionAtZero = validate(SHAPE, root(field("shape", new Reference(name("Shape")), new FieldAttribute.Id(0))));
-        assertEquals(1, unionAtZero.issues().size());
+        assertEquals(List.of("Field ids on Root must be unique and contiguous from 0, and a union field also takes"
+                + " the id before its own; ids omitted (used: [0])"), unionAtZero.issues());
+
+        // Duplicates alone, with no gap, are caught too.
+        var duplicate = validate(root(
+                field("a", INT, new FieldAttribute.Id(0)),
+                field("b", INT, new FieldAttribute.Id(1)),
+                field("c", INT, new FieldAttribute.Id(1))));
+        assertEquals(List.of("Field ids on Root must be unique and contiguous from 0, and a union field also takes"
+                + " the id before its own; ids omitted (used: [0, 1])"), duplicate.issues());
+    }
+
+    @Test
+    void structFixedArraysHoldOnlyScalarsAndStructsAndAreNotNested() {
+        StructDeclaration struct = new StructDeclaration(name("S"), "S", "", List.of(
+                field("ints", new FixedArray(INT, 2)),
+                field("texts", new FixedArray(StringType.INSTANCE, 2)),
+                field("grid", new FixedArray(new FixedArray(INT, 2), 2)),
+                field("missing", new FixedArray(new Reference(name("Missing")), 2))), false);
+        assertEquals(List.of(
+                "Struct S field texts is non-scalar; structs may only contain scalars or other structs",
+                "Struct S field grid is non-scalar; structs may only contain scalars or other structs",
+                "Field S.missing references app.Missing, which is not declared in this schema; annotate it,"
+                        + " or include the schema that declares it"), validate(struct, root()).issues());
     }
 
     @Test
@@ -266,6 +289,17 @@ class CompositeValidatorTest {
                 "Enum Big value B is bit 8, but bit_flags on ubyte allows bits 0 to 7"), result.issues());
         assertFalse(((EnumDeclaration) result.schema().declarations().get(0)).bitFlags());
         assertTrue(((EnumDeclaration) result.schema().declarations().get(1)).bitFlags());
+    }
+
+    @Test
+    void bitFlagsMayUseBitZeroAndTheHighestBit() {
+        EnumDeclaration implicit = new EnumDeclaration(name("Implicit"), "Implicit", "", ScalarKind.UBYTE,
+                List.of(new EnumDeclaration.Value("A", null), new EnumDeclaration.Value("B", null)), null,
+                List.of(new FieldAttribute.BitFlags()));
+        EnumDeclaration edges = new EnumDeclaration(name("Edges"), "Edges", "", ScalarKind.UBYTE,
+                List.of(new EnumDeclaration.Value("LOW", 0L), new EnumDeclaration.Value("HIGH", 7L)), null,
+                List.of(new FieldAttribute.BitFlags()));
+        assertEquals(List.of(), validate(implicit, edges, root()).issues());
     }
 
     @Test

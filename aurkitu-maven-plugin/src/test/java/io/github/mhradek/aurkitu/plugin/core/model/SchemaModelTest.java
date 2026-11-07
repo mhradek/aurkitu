@@ -194,13 +194,13 @@ class SchemaModelTest {
         Field field = new Field("f", "f", new Scalar(ScalarKind.INT), "", "",
                 List.of(new FieldAttribute.Custom("priority", "1"), new FieldAttribute.Custom("help", "\"x\"")));
         Schema schema = new Schema("app", List.of(), null, null, List.of(
-                new TableDeclaration(ITEM, "Item", "", List.of(field), true, List.of(new FieldAttribute.Custom("priority", "2"))),
+                new TableDeclaration(ITEM, "Item", "", List.of(field), true, List.of(new FieldAttribute.Custom("layout", "2"))),
                 new EnumDeclaration(new TypeName("app", "E"), "E", "", ScalarKind.BYTE, List.of(new EnumDeclaration.Value("A", null)),
                         null, List.of(new FieldAttribute.Custom("tag", ""))),
                 UnionDeclaration.of(new TypeName("app", "U"), "U", "", List.of("Item")).withAttributes(
                         List.of(new FieldAttribute.Custom("help", "\"u\"")))));
-        assertEquals(List.of("priority", "help", "tag"), schema.customAttributeNames());
-        assertTrue(schema.writeBody().startsWith("namespace app;\n\nattribute \"priority\";\nattribute \"help\";\nattribute \"tag\";\n\n"),
+        assertEquals(List.of("layout", "priority", "help", "tag"), schema.customAttributeNames());
+        assertTrue(schema.writeBody().startsWith("namespace app;\n\nattribute \"layout\";\nattribute \"priority\";\nattribute \"help\";\nattribute \"tag\";\n\n"),
                 schema.writeBody());
     }
 

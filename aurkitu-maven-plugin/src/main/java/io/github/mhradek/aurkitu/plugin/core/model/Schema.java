@@ -122,16 +122,19 @@ public record Schema(String namespace, List<String> includes, String fileIdentif
             out.blankLine();
         }
 
+        // A namespace statement applies to everything after it: switch only when the namespace changes,
+        // and restore the default before root_type.
+        String current = namespace;
         for (Declaration declaration : declarations) {
-            // A namespace statement applies to everything after it, so restore the default straight away.
             String ns = declaration.name().namespace();
-            if (ns.equals(namespace)) {
-                declaration.write(out);
-            } else {
+            if (!ns.equals(current)) {
                 out.namespace(ns);
-                declaration.write(out);
-                out.namespace(namespace);
+                current = ns;
             }
+            declaration.write(out);
+        }
+        if (!current.equals(namespace)) {
+            out.namespace(namespace);
         }
 
         root().ifPresent(root -> out.line("root_type " + root.name().referenceFrom(namespace) + ";"));

@@ -19,6 +19,7 @@ public class Holder {
     private ArrayList<Integer> ids;
     private List<String> names;
     private Map<String, Long> counts;
+    private String[] labels;
     private Map<String, Optional<String>> optionalMap;
     private int[][] grid;
     private List<List<String>> nested;

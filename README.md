@@ -402,7 +402,7 @@ Types are declared by their simple name (`Knight.Weapon` becomes `Weapon`). Mark
 
 ### Namespaces
 
-`@FlatBufferTable(namespace = "...")` and `@FlatBufferEnum(namespace = "...")` place one type in another namespace. The default namespace is restored straight after it, and references across namespaces (including `root_type`) are fully qualified.
+`@FlatBufferTable(namespace = "...")` and `@FlatBufferEnum(namespace = "...")` place one type in another namespace. A `namespace` statement is written only where the namespace changes, the default is restored before `root_type`, and references across namespaces (including `root_type`) are fully qualified.
 
 ### Maps
 
