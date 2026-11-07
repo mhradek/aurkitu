@@ -108,8 +108,9 @@ public class SchemaGenerator {
             Schema schema = new SchemaReader(config, TypeRegistry.build(scanResult, namespace)).read(scanResult);
             SchemaValidator.Result validation = new SchemaValidator(config.failOnValidationIssues).validate(schema);
             List<String> issues = config.validate ? validation.issues() : List.of();
+            List<String> warnings = config.validate ? validation.warnings() : List.of();
 
-            String output = validation.schema().write(AurkituVersion.schemaHeader(), config.generateVersion, issues);
+            String output = validation.schema().write(AurkituVersion.schemaHeader(), config.generateVersion, issues, warnings);
             if (config.cacheEnabled && unchanged(outFile, output)) {
                 // Keeps the file's timestamp, so downstream steps (e.g. flatc code generation) can skip work.
                 log.info("Schema {} is unchanged; not rewritten", outFile.getAbsolutePath());
@@ -119,6 +120,7 @@ public class SchemaGenerator {
             }
 
             if (config.validate) {
+                warnings.forEach(warning -> log.warn("Warning: {}", warning));
                 if (issues.isEmpty()) {
                     log.info("Basic validation complete. No issues found.");
                 } else {

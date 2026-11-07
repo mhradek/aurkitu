@@ -44,19 +44,31 @@ public record Schema(String namespace, List<String> includes, String fileIdentif
      * @param validationIssues issues to list in a trailing comment block (empty for none)
      */
     public String write(String header, boolean includeVersion, List<String> validationIssues) {
+        return write(header, includeVersion, validationIssues, List.of());
+    }
+
+    /**
+     * As {@link #write(String, boolean, List)}, followed by a block of warnings (empty for none).
+     */
+    public String write(String header, boolean includeVersion, List<String> validationIssues, List<String> warnings) {
         String body = writeBody();
         StringBuilder out = new StringBuilder(header).append('\n');
         if (includeVersion) {
             out.append("// @version: ").append(version(body)).append('\n');
         }
         out.append(body);
-        if (!validationIssues.isEmpty()) {
-            out.append("\n// Validation issues:\n");
-            for (String issue : validationIssues) {
-                out.append("// - ").append(issue).append('\n');
+        appendBlock(out, "Validation issues", validationIssues);
+        appendBlock(out, "Warnings", warnings);
+        return out.toString();
+    }
+
+    private static void appendBlock(StringBuilder out, String title, List<String> lines) {
+        if (!lines.isEmpty()) {
+            out.append("\n// ").append(title).append(":\n");
+            for (String line : lines) {
+                out.append("// - ").append(line).append('\n');
             }
         }
-        return out.toString();
     }
 
     /** Content hash of a schema body. */

@@ -91,14 +91,14 @@ final class SchemaReader {
 
         List<Field> fields = new ArrayList<>();
         for (FieldInfo field : collectFields(classInfo)) {
-            fields.add(readField(field, classInfo, struct));
+            fields.add(readField(field, classInfo));
         }
         return struct
                 ? new StructDeclaration(name, classInfo.getName(), comment, fields, root)
                 : new TableDeclaration(name, classInfo.getName(), comment, fields, root);
     }
 
-    private Field readField(FieldInfo field, ClassInfo owner, boolean inStruct) {
+    private Field readField(FieldInfo field, ClassInfo owner) {
         AnnotationInfo options = field.getAnnotationInfo(FIELD_OPTIONS);
         boolean useFullName = Boolean.TRUE.equals(Naming.param(options, "useFullName"));
         SchemaType type = typeMapper.map(field.getTypeSignatureOrTypeDescriptor(), owner, field.getName(), useFullName);
@@ -107,7 +107,8 @@ final class SchemaReader {
         if (type == null) {
             type = new Unsupported(field.getTypeSignatureOrTypeDescriptor().toString());
         }
-        if (inStruct && intParam(options, "fixedLength") > 0 && !(type instanceof Unsupported)) {
+        // Applied in tables too, so the validator can report it (arrays are only allowed in structs).
+        if (intParam(options, "fixedLength") > 0 && !(type instanceof Unsupported)) {
             int length = intParam(options, "fixedLength");
             type = type instanceof Vector v ? new FixedArray(v.element(), length)
                     : type instanceof FixedArray ? type
@@ -117,7 +118,7 @@ final class SchemaReader {
         return new Field(field.getName(), Naming.fieldName(field.getName(), config.snakeCaseFields), type,
                 Naming.stringParam(options, "defaultValue"),
                 comment(field.getAnnotationInfo(FlatBufferComment.class.getName())),
-                attributes(options));
+                attributes(options), field.getClassInfo().getName());
     }
 
     /**

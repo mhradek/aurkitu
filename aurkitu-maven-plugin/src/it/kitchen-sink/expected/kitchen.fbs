@@ -141,3 +141,6 @@ table MapValueSet_Player_stats {
 }
 
 root_type Player;
+
+// Warnings:
+// - Table Player has inherited fields (from Entity) after its own; adding a field to Player moves them and breaks existing data. Give every field a fieldId to fix their positions.

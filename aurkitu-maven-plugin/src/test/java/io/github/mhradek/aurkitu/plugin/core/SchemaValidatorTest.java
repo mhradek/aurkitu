@@ -85,7 +85,7 @@ class SchemaValidatorTest {
 
     @Test
     void attributesOnTheWrongTypeAreDropped() {
-        var result = validate(false, table("Root", true,
+        var result = validate(false, table("X", false), table("Root", true,
                 field("ok", BYTES, new FieldAttribute.NestedFlatbuffer("X"), new FieldAttribute.Flexbuffer(), new FieldAttribute.ForceAlign(8)),
                 field("bad", INT, new FieldAttribute.NestedFlatbuffer("X"), new FieldAttribute.Flexbuffer(), new FieldAttribute.ForceAlign(8))));
         assertEquals(List.of(
