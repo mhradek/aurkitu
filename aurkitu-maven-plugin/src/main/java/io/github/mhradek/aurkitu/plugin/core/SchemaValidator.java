@@ -29,7 +29,7 @@ import java.util.regex.Pattern;
  *
  * <p>Corrections: unsupported fields are dropped; invalid ids, attributes and defaults are
  * dropped; fixed-length arrays outside structs become vectors; non-scalar struct fields are
- * dropped when {@code dropInvalidStructFields} is set; a struct marked as root loses the mark
+ * dropped; a struct marked as root loses the mark
  * (flatc only accepts a table as root).</p>
  */
 final class SchemaValidator {
@@ -42,10 +42,8 @@ final class SchemaValidator {
 
     private static final Pattern NAMESPACE = Pattern.compile("[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*");
 
-    private final boolean dropInvalidStructFields;
-
-    SchemaValidator(boolean dropInvalidStructFields) {
-        this.dropInvalidStructFields = dropInvalidStructFields;
+    SchemaValidator() {
+        // stateless; one instance per validation
     }
 
     Result validate(Schema schema) {
@@ -60,7 +58,7 @@ final class SchemaValidator {
 
         checkNamespaces(schema, issues);
         boolean checkReferences = schema.includes().isEmpty(); // included types cannot be resolved here
-        CompositeValidator composites = new CompositeValidator(declared, checkReferences, dropInvalidStructFields, issues, warnings);
+        CompositeValidator composites = new CompositeValidator(declared, checkReferences, issues, warnings);
 
         List<Declaration> valid = new ArrayList<>();
         boolean rootSeen = false;

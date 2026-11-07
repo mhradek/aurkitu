@@ -121,7 +121,7 @@ public class SchemaGenerator {
                 .scan()) {
 
             Schema schema = new SchemaReader(config, TypeRegistry.build(scanResult, namespace)).read(scanResult);
-            SchemaValidator.Result validation = new SchemaValidator(config.failOnValidationIssues).validate(schema);
+            SchemaValidator.Result validation = new SchemaValidator().validate(schema);
             List<String> issues = config.validate ? validation.issues() : List.of();
             List<String> warnings = config.validate ? validation.warnings() : List.of();
 

@@ -101,7 +101,7 @@ class FlatcAgreementTest {
                 Case testCase = cases.get(i);
                 Path dir = tempDir.resolve("case" + i);
                 futures.add(pool.submit(() -> {
-                    SchemaValidator.Result result = new SchemaValidator(false).validate(testCase.schema());
+                    SchemaValidator.Result result = new SchemaValidator().validate(testCase.schema());
                     outcomes.add(new Outcome(testCase, result.issues(),
                             compile(flatc.get(), dir.resolve("raw"), testCase.schema()),
                             compile(flatc.get(), dir.resolve("cleaned"), result.schema())));
@@ -115,20 +115,21 @@ class FlatcAgreementTest {
             pool.shutdown();
         }
 
+        // One line per disagreement, grouped by kind, so the whole list fits in a CI log.
         List<String> problems = new ArrayList<>();
         for (Outcome o : outcomes) {
             String label = o.testCase().label();
-            o.cleanedRejection().ifPresent(error -> problems.add("WRITTEN SCHEMA REJECTED " + label + ": " + error
-                    + "\n    issues: " + o.issues() + "\n" + indent(o.testCase().schema())));
+            o.cleanedRejection().ifPresent(error -> problems.add("WRITTEN-REJECTED | " + label + " | flatc: " + error
+                    + " | issues: " + o.issues()));
             boolean reported = o.issues().stream().anyMatch(issue -> STRICTER.stream().noneMatch(issue::contains));
             if (o.rawRejection().isPresent() && o.issues().isEmpty()) {
-                problems.add("MISSED " + label + ": flatc says " + o.rawRejection().get() + "\n" + indent(o.testCase().schema()));
+                problems.add("MISSED | " + label + " | flatc: " + o.rawRejection().get());
             } else if (o.rawRejection().isEmpty() && reported) {
-                problems.add("FALSE ALARM " + label + ": " + o.issues() + "\n" + indent(o.testCase().schema()));
+                problems.add("FALSE-ALARM | " + label + " | issues: " + o.issues());
             }
         }
         Collections.sort(problems);
-        assertTrue(problems.isEmpty(), problems.size() + " of " + outcomes.size() + " cases disagree with flatc:\n"
+        assertTrue(problems.isEmpty(), problems.size() + " disagreements in " + outcomes.size() + " cases:\n"
                 + String.join("\n", problems));
     }
 
@@ -213,12 +214,7 @@ class FlatcAgreementTest {
                 .redirectErrorStream(true).start();
         String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         return process.waitFor() == 0 ? Optional.empty()
-                : Optional.of(output.strip().replace(file.toString(), "case.fbs").replace('\n', ' '));
-    }
-
-    private static String indent(Schema schema) {
-        return schema.writeBody().lines().filter(l -> l.contains(" f") || l.startsWith("struct S") || l.startsWith("table Root"))
-                .map(l -> "      " + l).reduce((a, b) -> a + "\n" + b).orElse("");
+                : Optional.of(output.strip().replace(file.toString(), "case.fbs").replace('\n', ' ').replaceAll("\\s+", " "));
     }
 
     private static TypeName name(String n) {
@@ -232,10 +228,10 @@ class FlatcAgreementTest {
         assertEquals(10 * 2 * (1 + 11 + 55), cases.size());
         assertEquals(cases.size(), cases.stream().map(Case::label).distinct().count());
         for (Case c : cases) {
-            SchemaValidator.Result result = assertDoesNotThrow(() -> new SchemaValidator(false).validate(c.schema()), c.label());
+            SchemaValidator.Result result = assertDoesNotThrow(() -> new SchemaValidator().validate(c.schema()), c.label());
             assertDoesNotThrow(() -> result.schema().write("// test", false, result.issues()), c.label());
         }
         // The baseline (no attributes) is valid wherever the type is allowed.
-        assertEquals(List.of(), new SchemaValidator(false).validate(cases.get(0).schema()).issues(), cases.get(0).label());
+        assertEquals(List.of(), new SchemaValidator().validate(cases.get(0).schema()).issues(), cases.get(0).label());
     }
 }

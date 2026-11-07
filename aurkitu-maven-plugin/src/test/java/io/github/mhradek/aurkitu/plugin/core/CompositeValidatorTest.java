@@ -49,7 +49,7 @@ class CompositeValidatorTest {
     }
 
     private static SchemaValidator.Result validate(Declaration... declarations) {
-        return new SchemaValidator(false).validate(new Schema("app", List.of(), null, null, List.of(declarations)));
+        return new SchemaValidator().validate(new Schema("app", List.of(), null, null, List.of(declarations)));
     }
 
     private static Field fieldOf(SchemaValidator.Result result, String declaration, String field) {

@@ -178,7 +178,6 @@ class SchemaGeneratorTest {
                 namespace test.struct;
 
                 struct SampleStructWithString {
-                  name:string;
                   value:int;
                 }
 

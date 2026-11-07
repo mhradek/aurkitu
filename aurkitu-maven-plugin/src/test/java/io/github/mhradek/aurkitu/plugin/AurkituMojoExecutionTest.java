@@ -1,5 +1,6 @@
 package io.github.mhradek.aurkitu.plugin;
 
+import io.github.mhradek.aurkitu.plugin.core.SchemaGenerationException;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -156,7 +157,7 @@ class AurkituMojoExecutionTest {
 
         MojoFailureException e = assertThrows(MojoFailureException.class, mojo::execute);
         assertEquals("Schema validation failed with 2 issue(s). See schema comments.", e.getMessage());
-        assertInstanceOf(io.github.mhradek.aurkitu.plugin.core.SchemaGenerationException.class, e.getCause());
+        assertInstanceOf(SchemaGenerationException.class, e.getCause());
     }
 
     @Test

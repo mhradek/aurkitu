@@ -46,13 +46,13 @@ class SchemaValidatorTest {
         return new Field(n, n, type, "", "", List.of(attributes));
     }
 
-    private static SchemaValidator.Result validate(boolean drop, Declaration... declarations) {
-        return new SchemaValidator(drop).validate(new Schema("app", List.of(), null, null, List.of(declarations)));
+    private static SchemaValidator.Result validate(Declaration... declarations) {
+        return new SchemaValidator().validate(new Schema("app", List.of(), null, null, List.of(declarations)));
     }
 
     /** With an include, references to undeclared types are assumed to come from it. */
     private static SchemaValidator.Result validateWithInclude(Declaration... declarations) {
-        return new SchemaValidator(false).validate(new Schema("app", List.of("other.fbs"), null, null, List.of(declarations)));
+        return new SchemaValidator().validate(new Schema("app", List.of("other.fbs"), null, null, List.of(declarations)));
     }
 
     private static List<Field> fieldsOf(SchemaValidator.Result result, String n) {
@@ -64,28 +64,28 @@ class SchemaValidatorTest {
     @Test
     void validSchemaHasNoIssuesAndIsUnchanged() {
         Schema schema = new Schema("app", List.of(), "ABCD", null, List.of(table("Root", true, field("a", INT))));
-        SchemaValidator.Result result = new SchemaValidator(false).validate(schema);
+        SchemaValidator.Result result = new SchemaValidator().validate(schema);
         assertEquals(List.of(), result.issues());
         assertEquals(schema, result.schema());
     }
 
     @Test
     void unsupportedFieldsAreDropped() {
-        var result = validate(false, table("Root", true, field("a", INT), field("c", new Unsupported("char"))));
+        var result = validate(table("Root", true, field("a", INT), field("c", new Unsupported("char"))));
         assertEquals(List.of("Unsupported field type: Root.c"), result.issues());
         assertEquals(List.of("a"), fieldsOf(result, "Root").stream().map(Field::name).toList());
     }
 
     @Test
     void partialIdsAreDroppedFromTheWholeTable() {
-        var result = validate(false, table("Root", true, field("a", INT, new FieldAttribute.Id(0)), field("b", INT)));
+        var result = validate(table("Root", true, field("a", INT, new FieldAttribute.Id(0)), field("b", INT)));
         assertEquals(List.of("Partial field ids on Root; ids omitted (all fields or none must have an id)"), result.issues());
         assertTrue(fieldsOf(result, "Root").stream().noneMatch(f -> f.has(FieldAttribute.Id.class)));
     }
 
     @Test
     void attributesOnTheWrongTypeAreDropped() {
-        var result = validate(false, table("X", false), table("Root", true,
+        var result = validate(table("X", false), table("Root", true,
                 field("ok", BYTES, new FieldAttribute.NestedFlatbuffer("X"), new FieldAttribute.Flexbuffer(), new FieldAttribute.ForceAlign(8)),
                 field("bad", INT, new FieldAttribute.NestedFlatbuffer("X"), new FieldAttribute.Flexbuffer(), new FieldAttribute.ForceAlign(8))));
         assertEquals(List.of(
@@ -113,21 +113,18 @@ class SchemaValidatorTest {
     }
 
     @Test
-    void nonScalarStructFieldsAreReportedAndOptionallyDropped() {
+    void nonScalarStructFieldsAreReportedAndDropped() {
         Declaration bad = struct("S", field("ok", INT), field("text", StringType.INSTANCE), field("list", new Vector(INT)));
-        var kept = validate(false, bad, table("Root", true));
+        var result = validate(bad, table("Root", true));
         assertEquals(List.of(
                 "Struct S field text is non-scalar; structs may only contain scalars or other structs",
-                "Struct S field list is non-scalar; structs may only contain scalars or other structs"), kept.issues());
-        assertEquals(3, fieldsOf(kept, "S").size());
-
-        var dropped = validate(true, bad, table("Root", true));
-        assertEquals(List.of("ok"), fieldsOf(dropped, "S").stream().map(Field::name).toList());
+                "Struct S field list is non-scalar; structs may only contain scalars or other structs"), result.issues());
+        assertEquals(List.of("ok"), fieldsOf(result, "S").stream().map(Field::name).toList());
     }
 
     @Test
     void structFieldsReferencingTablesOrUnionsAreNonScalar() {
-        var result = validate(false,
+        var result = validate(
                 UnionDeclaration.of(name("Any"), "Any", "", List.of("Root")),
                 struct("S", field("table", new Reference(name("Root"))), field("union", new Reference(name("Any")))),
                 table("Root", true));
@@ -139,7 +136,7 @@ class SchemaValidatorTest {
     @Test
     void rootTypeMustBeATable() {
         StructDeclaration root = new StructDeclaration(name("S"), "java.S", "", List.of(field("x", INT)), true);
-        var result = validate(false, root);
+        var result = validate(root);
         assertEquals(List.of("Root type S is a struct; root_type must be a table"), result.issues());
         assertTrue(result.schema().root().isEmpty(), "struct root is not written");
     }
@@ -152,7 +149,7 @@ class SchemaValidatorTest {
                 List.of(new EnumDeclaration.Value("ACTIVE", 1L), new EnumDeclaration.Value("CLOSED", 10L)), null);
         Reference color = new Reference(name("Color"));
         Reference status = new Reference(name("Status"));
-        var result = validate(false, implicit, noZero, table("Root", true,
+        var result = validate(implicit, noZero, table("Root", true,
                 field("a", color),                                         // implicit values include 0: ok
                 new Field("b", "b", color, "GREEN", "", List.of()),          // by name: ok
                 new Field("c", "c", status, "10", "", List.of()),            // by value: ok
@@ -168,7 +165,7 @@ class SchemaValidatorTest {
     void structEnumFieldsNeedNoDefault() {
         EnumDeclaration noZero = new EnumDeclaration(name("Status"), "Status", "", ScalarKind.UINT,
                 List.of(new EnumDeclaration.Value("ACTIVE", 1L)), null);
-        var result = validate(false, noZero, struct("S", field("s", new Reference(name("Status")))), table("Root", true));
+        var result = validate(noZero, struct("S", field("s", new Reference(name("Status")))), table("Root", true));
         assertEquals(List.of(), result.issues());
     }
 
@@ -177,7 +174,7 @@ class SchemaValidatorTest {
         Field dangling = field("other", new Vector(new Reference(name("Missing"))));
         assertEquals(List.of("Field Root.other references app.Missing, which is not declared in this schema;"
                         + " annotate it, or include the schema that declares it"),
-                validate(false, table("Root", true, dangling)).issues());
+                validate(table("Root", true, dangling)).issues());
         assertEquals(List.of(), validateWithInclude(table("Root", true, dangling)).issues());
     }
 
@@ -190,26 +187,26 @@ class SchemaValidatorTest {
         assertEquals(List.of(
                 "Union Any member Color is not a table",
                 "Union Any member Gone is not declared in this schema"),
-                validate(false, declarations).issues());
+                validate(declarations).issues());
         assertEquals(List.of("Union Any member Color is not a table"), validateWithInclude(declarations).issues());
         assertEquals(List.of("Union None has no members"),
-                validate(false, UnionDeclaration.of(name("None"), "None", "", List.of()), table("Root", true)).issues());
+                validate(UnionDeclaration.of(name("None"), "None", "", List.of()), table("Root", true)).issues());
     }
 
     @Test
     void emptyEnumsAreReported() {
         EnumDeclaration empty = new EnumDeclaration(name("E"), "E", "", ScalarKind.BYTE, List.of(), null);
-        assertEquals(List.of("Enum E has no values"), validate(false, empty, table("Root", true)).issues());
+        assertEquals(List.of("Enum E has no values"), validate(empty, table("Root", true)).issues());
     }
 
     @Test
     void namespacesMustBeDottedIdentifiers() {
         TableDeclaration bad = new TableDeclaration(new TypeName("audit-log", "A"), "A", "", List.of(), false);
-        var result = new SchemaValidator(false).validate(new Schema("my.app2", List.of(), null, null,
+        var result = new SchemaValidator().validate(new Schema("my.app2", List.of(), null, null,
                 List.of(table("Root", true), bad)));
         assertEquals(List.of("Namespace \"audit-log\" is not valid: use dot-separated identifiers (letters, digits, _)"),
                 result.issues());
-        assertEquals(1, new SchemaValidator(false).validate(new Schema("2fast", List.of(), null, null,
+        assertEquals(1, new SchemaValidator().validate(new Schema("2fast", List.of(), null, null,
                 List.of(new TableDeclaration(new TypeName("2fast", "R"), "R", "", List.of(), true)))).issues().size());
     }
 
@@ -219,7 +216,7 @@ class SchemaValidatorTest {
                 new EnumDeclaration.Value("A", 1L), new EnumDeclaration.Value("B", 1L), new EnumDeclaration.Value("C", 500L)), null);
         EnumDeclaration unread = new EnumDeclaration(name("U"), "U", "", ScalarKind.BYTE,
                 List.of(new EnumDeclaration.Value("X", null)), "could not read @FlatBufferEnumTypeField code");
-        var result = validate(false, bad, unread, table("Root", true));
+        var result = validate(bad, unread, table("Root", true));
         assertEquals(List.of(
                 "Enum E has duplicate value 1 (B)",
                 "Enum E value 500 (C) is out of range for byte",
@@ -228,13 +225,13 @@ class SchemaValidatorTest {
 
     @Test
     void schemaLevelProblemsAreReported() {
-        var result = new SchemaValidator(false).validate(new Schema("app", List.of(), "TOOLONG", null, List.of(
+        var result = new SchemaValidator().validate(new Schema("app", List.of(), "TOOLONG", null, List.of(
                 table("A", true), table("A", false), table("B", true))));
         assertEquals(List.of(
                 "Duplicate type name app.A (declared by java.A and java.A)",
                 "file_identifier \"TOOLONG\" must be exactly 4 characters",
                 "Multiple root types; last used: B"), result.issues());
 
-        assertEquals(List.of("No root type defined"), validate(false, table("A", false)).issues());
+        assertEquals(List.of("No root type defined"), validate(table("A", false)).issues());
     }
 }

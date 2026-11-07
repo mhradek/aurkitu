@@ -57,15 +57,13 @@ final class CompositeValidator {
 
     private final Map<TypeName, Declaration> declared;
     private final boolean checkReferences;
-    private final boolean dropInvalidStructFields;
     private final List<String> issues;
     private final List<String> warnings;
 
-    CompositeValidator(Map<TypeName, Declaration> declared, boolean checkReferences, boolean dropInvalidStructFields,
+    CompositeValidator(Map<TypeName, Declaration> declared, boolean checkReferences,
                        List<String> issues, List<String> warnings) {
         this.declared = declared;
         this.checkReferences = checkReferences;
-        this.dropInvalidStructFields = dropInvalidStructFields;
         this.issues = issues;
         this.warnings = warnings;
     }
@@ -102,9 +100,7 @@ final class CompositeValidator {
             if (struct && !isStructCompatible(checked.type())) {
                 issues.add("Struct " + owner + " field " + field.javaName()
                         + " is non-scalar; structs may only contain scalars or other structs");
-                if (dropInvalidStructFields) {
-                    continue;
-                }
+                continue;
             }
             valid.add(checked);
         }
