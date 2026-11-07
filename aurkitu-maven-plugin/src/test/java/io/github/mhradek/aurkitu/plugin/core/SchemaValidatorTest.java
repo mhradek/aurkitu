@@ -90,8 +90,10 @@ class SchemaValidatorTest {
                 field("bad", INT, new FieldAttribute.NestedFlatbuffer("X"), new FieldAttribute.Flexbuffer(), new FieldAttribute.ForceAlign(8))));
         assertEquals(List.of(
                 "nested_flatbuffer on Root.bad skipped: type must be [ubyte]",
-                "flexbuffer on Root.bad skipped: type must be [ubyte]",
-                "force_align on Root.bad skipped: only valid on vectors"), result.issues());
+                "flexbuffer on Root.bad skipped: type must be [ubyte]"), result.issues());
+        // flatc accepts force_align on a non-vector and ignores it: a warning, and left out.
+        assertEquals(List.of("force_align on Root.bad has no effect: only vectors are aligned (align a struct with"
+                + " @FlatBufferTable(forceAlign)); left out"), result.warnings());
         assertEquals(3, fieldsOf(result, "Root").get(0).attributes().size());
         assertEquals(List.of(), fieldsOf(result, "Root").get(1).attributes());
     }
@@ -130,7 +132,34 @@ class SchemaValidatorTest {
                 table("Root", true));
         assertEquals(List.of(
                 "Struct S field table is non-scalar; structs may only contain scalars or other structs",
-                "Struct S field union is non-scalar; structs may only contain scalars or other structs"), result.issues());
+                "Struct S field union is non-scalar; structs may only contain scalars or other structs",
+                "Struct S has no valid fields and is left out (flatc does not allow empty structs)"), result.issues());
+    }
+
+    @Test
+    void emptyStructsAreLeftOutWithTheFieldsAndStructsThatUseThem() {
+        var result = validate(
+                struct("Empty", field("text", StringType.INSTANCE)),
+                struct("Outer", field("inner", new Reference(name("Empty")))),
+                struct("Kept", field("x", INT), field("inner", new Reference(name("Empty")))),
+                table("Root", true, field("outer", new Reference(name("Outer"))), field("kept", new Reference(name("Kept")))));
+        assertEquals(List.of(
+                "Struct Empty field text is non-scalar; structs may only contain scalars or other structs",
+                "Struct Empty has no valid fields and is left out (flatc does not allow empty structs)",
+                "Field Outer.inner references app.Empty, which is left out; field left out",
+                "Struct Outer has no valid fields and is left out (flatc does not allow empty structs)",
+                "Field Kept.inner references app.Empty, which is left out; field left out",
+                "Field Root.outer references app.Outer, which is left out; field left out"), result.issues());
+        assertEquals(List.of("Kept", "Root"), result.schema().declarations().stream().map(d -> d.name().name()).toList());
+        assertEquals(List.of("x"), fieldsOf(result, "Kept").stream().map(Field::name).toList());
+        assertEquals(List.of("kept"), fieldsOf(result, "Root").stream().map(Field::name).toList());
+    }
+
+    @Test
+    void fieldsReferencingUndeclaredTypesAreLeftOutUnlessAnIncludeMayDeclareThem() {
+        Field dangling = field("other", new Reference(name("Missing")));
+        assertEquals(List.of(), fieldsOf(validate(table("Root", true, dangling)), "Root"));
+        assertEquals(List.of(dangling), fieldsOf(validateWithInclude(table("Root", true, dangling)), "Root"));
     }
 
     @Test

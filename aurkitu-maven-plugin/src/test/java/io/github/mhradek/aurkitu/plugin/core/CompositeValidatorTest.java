@@ -176,15 +176,42 @@ class CompositeValidatorTest {
     }
 
     @Test
-    void oneKeyOfAStringScalarOrEnum() {
+    void oneKeyOfAStringScalarEnumOrStructNotDeprecated() {
         var result = validate(COLOR, root(
                 field("list", new Vector(INT), new FieldAttribute.Key()),
+                field("old", INT, new FieldAttribute.Deprecated(), new FieldAttribute.Key()),
                 field("name", StringType.INSTANCE, new FieldAttribute.Key()),
                 field("count", INT, new FieldAttribute.Key())));
         assertEquals(List.of(
-                "key on Root.list skipped: a key must be a string, scalar or enum",
+                "key on Root.list skipped: a key must be a string, scalar, enum or struct",
+                "key on Root.old skipped: a deprecated field cannot be the key",
                 "key on Root.count skipped: only one key is allowed (already on name)"), result.issues());
         assertTrue(fieldOf(result, "Root", "name").has(FieldAttribute.Key.class));
+        assertTrue(fieldOf(result, "Root", "old").has(FieldAttribute.Deprecated.class));
+
+        StructDeclaration vec = new StructDeclaration(name("Vec"), "Vec", "", List.of(field("x", INT)), false);
+        assertEquals(List.of(), validate(vec, root(field("at", new Reference(name("Vec")), new FieldAttribute.Key()))).issues());
+        StructDeclaration keyed = new StructDeclaration(name("Keyed"), "Keyed", "",
+                List.of(field("cells", new FixedArray(INT, 2), new FieldAttribute.Key())), false);
+        assertEquals(List.of(), validate(keyed, root()).issues(), "a fixed-length array in a struct can be the key");
+    }
+
+    @Test
+    void hashOnAVectorHashesEachElement() {
+        var result = validate(root(
+                field("ids", new Vector(INT), new FieldAttribute.Hash("fnv1_32")),
+                field("longs", new Vector(new Scalar(ScalarKind.ULONG)), new FieldAttribute.Hash("fnv1a_64")),
+                field("names", new Vector(StringType.INSTANCE), new FieldAttribute.Hash("fnv1_32"))));
+        assertEquals(List.of("hash on Root.names skipped: fnv1_32 needs a 32-bit integer field or vector"), result.issues());
+    }
+
+    @Test
+    void keyOnAFixedArrayInATableIsCheckedAgainstTheVectorWritten() {
+        var result = validate(root(field("cells", new FixedArray(INT, 2), new FieldAttribute.Key())));
+        assertEquals(List.of(
+                "fixedLength on Root.cells ignored: fixed-length arrays are only allowed in structs; written as a vector",
+                "key on Root.cells skipped: a key must be a string, scalar, enum or struct"), result.issues());
+        assertEquals(List.of(), fieldOf(result, "Root", "cells").attributes());
     }
 
     @Test
@@ -196,8 +223,8 @@ class CompositeValidatorTest {
                 field("d", new Scalar(ScalarKind.LONG), new FieldAttribute.Hash("fnv1a_32")),
                 field("e", INT, new FieldAttribute.Hash("md5"))));
         assertEquals(List.of(
-                "hash on Root.c skipped: fnv1a_32 needs a 32-bit integer field",
-                "hash on Root.d skipped: fnv1a_32 needs a 32-bit integer field",
+                "hash on Root.c skipped: fnv1a_32 needs a 32-bit integer field or vector",
+                "hash on Root.d skipped: fnv1a_32 needs a 32-bit integer field or vector",
                 "hash on Root.e skipped: md5 is not one of [fnv1_32, fnv1_64, fnv1a_32, fnv1a_64]"), result.issues());
     }
 

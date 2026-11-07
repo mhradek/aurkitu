@@ -59,10 +59,13 @@ final class CompositeValidator {
     private final boolean checkReferences;
     private final List<String> issues;
     private final List<String> warnings;
+    /** Declarations left out (empty structs): references to them are left out too. */
+    private final Set<TypeName> removed;
 
-    CompositeValidator(Map<TypeName, Declaration> declared, boolean checkReferences,
+    CompositeValidator(Map<TypeName, Declaration> declared, Set<TypeName> removed, boolean checkReferences,
                        List<String> issues, List<String> warnings) {
         this.declared = declared;
+        this.removed = removed;
         this.checkReferences = checkReferences;
         this.issues = issues;
         this.warnings = warnings;
@@ -74,41 +77,50 @@ final class CompositeValidator {
         boolean dropIds = !idsValid(composite, owner);
 
         List<Field> valid = new ArrayList<>();
-        String key = null;
+        String key = "";
         for (Field field : composite.fields()) {
-            if (field.type() instanceof Unsupported) {
-                issues.add("Unsupported field type: " + owner + "." + field.javaName());
-                continue;
+            Field checked = checkField(field, owner, struct, dropIds, key);
+            if (checked != null) {
+                if (checked.has(FieldAttribute.Key.class)) {
+                    key = field.javaName();
+                }
+                valid.add(checked);
             }
-            String where = owner + "." + field.javaName();
-            Field checked = field.withAttributes(validAttributes(field, where, struct, dropIds, key != null ? key : ""));
-            if (checked.has(FieldAttribute.Key.class)) {
-                key = field.javaName();
-            }
-            checked = checkDefault(checked, where, struct);
-            if (checkReferences) {
-                checkReferenceDeclared(checked, where);
-            }
-            if (!struct && checked.type() instanceof FixedArray array) {
-                issues.add("fixedLength on " + where + " ignored: fixed-length arrays are only allowed in structs;"
-                        + " written as a vector");
-                checked = checked.withType(new Vector(array.element()));
-            }
-            if (isUnion(elementOf(checked.type())) && checked.type() instanceof Vector) {
-                issues.add("Field " + where + " is a vector of unions, which flatc supports only for C++");
-            }
-            if (struct && !isStructCompatible(checked.type())) {
-                issues.add("Struct " + owner + " field " + field.javaName()
-                        + " is non-scalar; structs may only contain scalars or other structs");
-                continue;
-            }
-            valid.add(checked);
         }
         checkNames(owner, valid);
         if (!struct) {
             warnAboutInheritedFields((TableDeclaration) composite, valid);
         }
         return composite.withFields(valid).withAttributes(typeAttributes(composite, struct));
+    }
+
+    /** The field with its problems reported and corrected, or null if it must be left out. */
+    private Field checkField(Field field, String owner, boolean struct, boolean dropIds, String key) {
+        String where = owner + "." + field.javaName();
+        if (field.type() instanceof Unsupported) {
+            issues.add("Unsupported field type: " + where);
+            return null;
+        }
+        Field typed = field;
+        if (!struct && field.type() instanceof FixedArray array) {
+            // Converted first, so the attributes are checked against the type that is written.
+            issues.add("fixedLength on " + where + " ignored: fixed-length arrays are only allowed in structs;"
+                    + " written as a vector");
+            typed = field.withType(new Vector(array.element()));
+        }
+        Field checked = checkDefault(typed.withAttributes(validAttributes(typed, where, struct, dropIds, key)), where, struct);
+        if (!referenceDeclared(checked, where)) {
+            return null;
+        }
+        if (struct && !isStructCompatible(checked.type())) {
+            issues.add("Struct " + owner + " field " + field.javaName()
+                    + " is non-scalar; structs may only contain scalars or other structs");
+            return null;
+        }
+        if (!struct && isUnion(elementOf(checked.type())) && checked.type() instanceof Vector) {
+            issues.add("Field " + where + " is a vector of unions, which flatc supports only for C++");
+        }
+        return checked;
     }
 
     /** original_order: tables only; force_align: structs only, a power of two; custom: valid names. */
@@ -198,8 +210,15 @@ final class CompositeValidator {
     private List<FieldAttribute> validAttributes(Field field, String where, boolean struct, boolean dropIds, String key) {
         List<FieldAttribute> valid = new ArrayList<>();
         SchemaType type = field.type();
+        boolean deprecated = !struct && field.has(FieldAttribute.Deprecated.class);
         for (FieldAttribute attribute : field.attributes()) {
-            String problem = problem(attribute, type, struct, dropIds, key);
+            if (attribute instanceof FieldAttribute.ForceAlign && !(type instanceof Vector || type instanceof FixedArray)) {
+                // flatc accepts it and ignores it, so it is a warning, not an issue.
+                warnings.add("force_align on " + where + " has no effect: only vectors are aligned (align a struct with"
+                        + " @FlatBufferTable(forceAlign)); left out");
+                continue;
+            }
+            String problem = problem(attribute, type, struct, dropIds, deprecated ? null : key);
             if (problem == null) {
                 valid.add(attribute);
             } else if (!problem.isEmpty()) {
@@ -209,48 +228,57 @@ final class CompositeValidator {
         return valid;
     }
 
-    /** Why an attribute cannot stay (with {} for the field), "" to drop it silently, or null to keep it. */
-    @SuppressWarnings("PMD.CyclomaticComplexity")
+    /**
+     * Why an attribute cannot stay (with {} for the field), "" to drop it silently, or null to keep it.
+     * {@code key} is the field already holding the key ("" if none), or null if this field is deprecated.
+     */
     private String problem(FieldAttribute attribute, SchemaType type, boolean struct, boolean dropIds, String key) {
+        String problem = null;
         if (attribute instanceof FieldAttribute.Id) {
-            return dropIds ? "" : null;
+            problem = dropIds ? "" : null;
+        } else if (attribute instanceof FieldAttribute.NestedFlatbuffer nested) {
+            problem = nestedFlatbufferProblem(nested, type);
+        } else if (attribute instanceof FieldAttribute.Flexbuffer) {
+            problem = SchemaType.isByteVector(type) ? null : "flexbuffer on {} skipped: type must be [ubyte]";
+        } else if (attribute instanceof FieldAttribute.Required) {
+            problem = requiredProblem(type, struct);
+        } else if (attribute instanceof FieldAttribute.Deprecated) {
+            problem = struct ? "deprecated on {} skipped: struct fields cannot be deprecated" : null;
+        } else if (attribute instanceof FieldAttribute.Key) {
+            problem = keyProblem(type, key);
+        } else if (attribute instanceof FieldAttribute.Hash hash) {
+            problem = hashProblem(hash, type);
+        } else if (attribute instanceof FieldAttribute.Custom custom) {
+            problem = customProblem(custom);
         }
-        if (attribute instanceof FieldAttribute.NestedFlatbuffer nested) {
-            if (!SchemaType.isByteVector(type)) {
-                return "nested_flatbuffer on {} skipped: type must be [ubyte]";
-            }
-            return checkReferences && findTable(nested.rootType()) == null
-                    ? "nested_flatbuffer on {} skipped: " + nested.rootType() + " is not a table declared in this schema"
-                    : null;
+        return problem;
+    }
+
+    private String nestedFlatbufferProblem(FieldAttribute.NestedFlatbuffer nested, SchemaType type) {
+        if (!SchemaType.isByteVector(type)) {
+            return "nested_flatbuffer on {} skipped: type must be [ubyte]";
         }
-        if (attribute instanceof FieldAttribute.Flexbuffer) {
-            return SchemaType.isByteVector(type) ? null : "flexbuffer on {} skipped: type must be [ubyte]";
+        return checkReferences && findTable(nested.rootType()) == null
+                ? "nested_flatbuffer on {} skipped: " + nested.rootType() + " is not a table declared in this schema"
+                : null;
+    }
+
+    private String requiredProblem(SchemaType type, boolean struct) {
+        if (struct) {
+            return "required on {} skipped: struct fields are always present";
         }
-        if (attribute instanceof FieldAttribute.ForceAlign) {
-            return type instanceof Vector || type instanceof FixedArray ? null : "force_align on {} skipped: only valid on vectors";
+        return isScalarLike(type) ? "required on {} skipped: only strings, vectors, tables and structs can be required" : null;
+    }
+
+    /** A key is a string, scalar, enum, struct or (in a struct) fixed-length array, on one non-deprecated field. */
+    private String keyProblem(SchemaType type, String key) {
+        if (!(type instanceof StringType || type instanceof FixedArray || isScalarLike(type) || isStruct(type))) {
+            return "key on {} skipped: a key must be a string, scalar, enum or struct";
         }
-        if (attribute instanceof FieldAttribute.Required) {
-            if (struct) {
-                return "required on {} skipped: struct fields are always present";
-            }
-            return isScalarLike(type) ? "required on {} skipped: only strings, vectors, tables and structs can be required" : null;
+        if (key == null) {
+            return "key on {} skipped: a deprecated field cannot be the key";
         }
-        if (attribute instanceof FieldAttribute.Deprecated) {
-            return struct ? "deprecated on {} skipped: struct fields cannot be deprecated" : null;
-        }
-        if (attribute instanceof FieldAttribute.Key) {
-            if (!(type instanceof StringType) && !isScalarLike(type)) {
-                return "key on {} skipped: a key must be a string, scalar or enum";
-            }
-            return key.isEmpty() ? null : "key on {} skipped: only one key is allowed (already on " + key + ")";
-        }
-        if (attribute instanceof FieldAttribute.Hash hash) {
-            return hashProblem(hash, type);
-        }
-        if (attribute instanceof FieldAttribute.Custom custom) {
-            return customProblem(custom);
-        }
-        return null;
+        return key.isEmpty() ? null : "key on {} skipped: only one key is allowed (already on " + key + ")";
     }
 
     private static String hashProblem(FieldAttribute.Hash hash, SchemaType type) {
@@ -258,12 +286,14 @@ final class CompositeValidator {
         if (width == null) {
             return "hash on {} skipped: " + hash.algorithm() + " is not one of " + new TreeSet<>(HASHES.keySet());
         }
-        boolean matches = type instanceof Scalar s && switch (s.kind()) {
+        // On a vector, each element is hashed.
+        SchemaType hashed = type instanceof Vector vector ? vector.element() : type;
+        boolean matches = hashed instanceof Scalar s && switch (s.kind()) {
             case INT, UINT -> width == 32;
             case LONG, ULONG -> width == 64;
             default -> false;
         };
-        return matches ? null : "hash on {} skipped: " + hash.algorithm() + " needs a " + width + "-bit integer field";
+        return matches ? null : "hash on {} skipped: " + hash.algorithm() + " needs a " + width + "-bit integer field or vector";
     }
 
     /** Defaults: only on scalars and enums in tables, never with required, and the value must fit the type. */
@@ -343,11 +373,21 @@ final class CompositeValidator {
     }
 
     /** A referenced type must be declared in this schema (unless it may come from an include). */
-    private void checkReferenceDeclared(Field field, String where) {
-        if (elementOf(field.type()) instanceof Reference reference && !declared.containsKey(reference.target())) {
-            issues.add("Field " + where + " references " + reference.target().qualified()
-                    + ", which is not declared in this schema; annotate it, or include the schema that declares it");
+    /** False (reported) if the field refers to a type that is not declared here and cannot come from an include. */
+    private boolean referenceDeclared(Field field, String where) {
+        if (!(elementOf(field.type()) instanceof Reference reference) || declared.containsKey(reference.target())) {
+            return true;
         }
+        if (removed.contains(reference.target())) {
+            issues.add("Field " + where + " references " + reference.target().qualified() + ", which is left out; field left out");
+            return false;
+        }
+        if (!checkReferences) {
+            return true; // may be declared in an included schema
+        }
+        issues.add("Field " + where + " references " + reference.target().qualified()
+                + ", which is not declared in this schema; annotate it, or include the schema that declares it");
+        return false;
     }
 
     /** Field names must be unique, including the hidden {@code <name>_type} field of each union field. */
@@ -412,6 +452,10 @@ final class CompositeValidator {
 
     private EnumDeclaration enumOf(SchemaType type) {
         return type instanceof Reference reference && declared.get(reference.target()) instanceof EnumDeclaration e ? e : null;
+    }
+
+    private boolean isStruct(SchemaType type) {
+        return type instanceof Reference reference && declared.get(reference.target()) instanceof StructDeclaration;
     }
 
     private boolean isUnion(SchemaType type) {

@@ -18,6 +18,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -42,14 +43,27 @@ final class SchemaValidator {
 
     private static final Pattern NAMESPACE = Pattern.compile("[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*");
 
-    SchemaValidator() {
-        // stateless; one instance per validation
+    Result validate(Schema schema) {
+        // flatc rejects empty structs: one whose fields are all invalid is left out, with the fields that use it,
+        // which can empty another struct, so validate until none is left empty.
+        Set<TypeName> removed = new HashSet<>();
+        while (true) {
+            Result result = validate(schema, removed);
+            Set<TypeName> empty = result.schema().declarations().stream()
+                    .filter(d -> d instanceof StructDeclaration struct && struct.fields().isEmpty())
+                    .map(Declaration::name).collect(Collectors.toSet());
+            if (empty.isEmpty()) {
+                return result;
+            }
+            removed.addAll(empty);
+        }
     }
 
-    Result validate(Schema schema) {
+    private Result validate(Schema schema, Set<TypeName> removed) {
         List<String> issues = new ArrayList<>();
         List<String> warnings = new ArrayList<>();
         Map<TypeName, Declaration> declared = declarations(schema, issues);
+        declared.keySet().removeAll(removed);
 
         String id = schema.fileIdentifier();
         if (id != null && !id.isBlank() && id.length() != 4) {
@@ -58,7 +72,7 @@ final class SchemaValidator {
 
         checkNamespaces(schema, issues);
         boolean checkReferences = schema.includes().isEmpty(); // included types cannot be resolved here
-        CompositeValidator composites = new CompositeValidator(declared, checkReferences, issues, warnings);
+        CompositeValidator composites = new CompositeValidator(declared, removed, checkReferences, issues, warnings);
 
         List<Declaration> valid = new ArrayList<>();
         boolean rootSeen = false;
@@ -69,7 +83,13 @@ final class SchemaValidator {
                 rootSeen = true; // reported above; not also "No root type defined"
             }
             if (declaration instanceof CompositeDeclaration composite) {
-                valid.add(composites.validate(composite));
+                CompositeDeclaration checked = composites.validate(composite);
+                if (removed.contains(checked.name())) {
+                    issues.add("Struct " + checked.name().name() + " has no valid fields and is left out (flatc does not"
+                            + " allow empty structs)");
+                    continue;
+                }
+                valid.add(checked);
                 if (composite.root()) {
                     if (rootSeen) {
                         issues.add("Multiple root types; last used: " + composite.name().name());

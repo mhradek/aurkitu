@@ -208,13 +208,16 @@ class SchemaGeneratorTest {
                   flex:[ubyte] (flexbuffer);
                   aligned:int;
                   aligned_bytes:[ubyte] (force_align: 16);
-                  full_name_enum:io.github.mhradek.aurkitu.plugin.core.testmodels.SampleEnum;
                   fixed_struct:FixedStruct;
                 }
                 """, block(content, "table SampleWithAttributes {"));
         assertEquals("struct FixedStruct {\n  values:[int:4];\n}\n", block(content, "struct FixedStruct {"));
-        // force_align is only valid on vectors: skipped (and reported) on a scalar.
-        assertTrue(content.contains("// - force_align on SampleWithAttributes.aligned skipped: only valid on vectors\n"), content);
+        // flatc ignores force_align on a scalar: left out, with a warning.
+        assertTrue(content.contains("// Warnings:\n// - force_align on SampleWithAttributes.aligned has no effect: only vectors"
+                + " are aligned (align a struct with @FlatBufferTable(forceAlign)); left out\n"), content);
+        // A reference to a type outside the schema (and no include) is left out.
+        assertTrue(content.contains("// - Field SampleWithAttributes.fullNameEnum references"
+                + " io.github.mhradek.aurkitu.plugin.core.testmodels.SampleEnum, which is not declared in this schema;"), content);
     }
 
     @Test

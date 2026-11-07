@@ -466,7 +466,7 @@ With `validate` on (the default), problems are listed as comments at the end of 
 
 - Unsupported field types: `char`, nested vectors (`int[][]`, `List<List<T>>`), and JDK types that are not mapped. These fields are left out.
 - References to types the schema does not declare. This is not checked when `includes` are set, since included schemas are not read.
-- Struct fields that are not scalars, enums, structs or fixed-length arrays of those. They are left out when `failOnValidationIssues` is set.
+- Struct fields that are not scalars, enums, structs or fixed-length arrays of those. They are left out.
 - A struct marked as the root type (`root_type` must be a table); no root type; more than one root type.
 - Field ids on only some fields of a table, repeated ids, gaps, or a union field without the id before its own free (all ids are then left out).
 - Attributes on the wrong kind of field: `required` on scalars, enums or struct fields; `deprecated` on struct fields; `key` on anything but a string, scalar or enum, or a second `key`; `hash` with an unknown algorithm or on the wrong integer width; `nested_flatbuffer` and `flexbuffer` not on `[ubyte]`, or `nested_flatbuffer` naming a table that is not declared; `force_align` not on a vector. The attribute is left out.
