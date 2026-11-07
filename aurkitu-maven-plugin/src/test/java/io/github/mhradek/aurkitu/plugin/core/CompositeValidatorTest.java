@@ -5,6 +5,7 @@ import io.github.mhradek.aurkitu.plugin.core.model.Declaration;
 import io.github.mhradek.aurkitu.plugin.core.model.EnumDeclaration;
 import io.github.mhradek.aurkitu.plugin.core.model.Field;
 import io.github.mhradek.aurkitu.plugin.core.model.FieldAttribute;
+import io.github.mhradek.aurkitu.plugin.core.model.RpcServiceDeclaration;
 import io.github.mhradek.aurkitu.plugin.core.model.ScalarKind;
 import io.github.mhradek.aurkitu.plugin.core.model.Schema;
 import io.github.mhradek.aurkitu.plugin.core.model.SchemaType;
@@ -29,7 +30,7 @@ class CompositeValidatorTest {
     private static final Scalar INT = new Scalar(ScalarKind.INT);
     private static final EnumDeclaration COLOR = new EnumDeclaration(name("Color"), "Color", "", ScalarKind.BYTE,
             List.of(new EnumDeclaration.Value("RED", null), new EnumDeclaration.Value("GREEN", null)), null);
-    private static final UnionDeclaration SHAPE = new UnionDeclaration(name("Shape"), "Shape", "", List.of("Root"));
+    private static final UnionDeclaration SHAPE = UnionDeclaration.of(name("Shape"), "Shape", "", List.of("Root"));
 
     private static TypeName name(String n) {
         return new TypeName("app", n);
@@ -219,5 +220,88 @@ class CompositeValidatorTest {
         var withIds = validate(root(own.withAttributes(List.of(new FieldAttribute.Id(0))),
                 inherited.withAttributes(List.of(new FieldAttribute.Id(1)))));
         assertEquals(List.of(), withIds.warnings());
+    }
+
+    @Test
+    void typeAttributesBelongToTheRightKindOfType() {
+        var result = validate(
+                new TableDeclaration(name("Root"), "Root", "", List.of(), true,
+                        List.of(new FieldAttribute.OriginalOrder(), new FieldAttribute.ForceAlign(16))),
+                new StructDeclaration(name("S"), "S", "", List.of(field("x", INT)), false,
+                        List.of(new FieldAttribute.OriginalOrder(), new FieldAttribute.ForceAlign(16))),
+                new StructDeclaration(name("T"), "T", "", List.of(field("x", INT)), false,
+                        List.of(new FieldAttribute.ForceAlign(12))));
+        assertEquals(List.of(
+                "force_align on table Root skipped: only structs (on a table, put it on a vector field)",
+                "original_order on struct S skipped: only tables",
+                "force_align on struct T skipped: 12 is not a power of two"), result.issues());
+        assertEquals(List.of(new FieldAttribute.OriginalOrder()),
+                ((CompositeDeclaration) result.schema().declarations().get(0)).attributes());
+    }
+
+    @Test
+    void customAttributesNeedAValidNameThatIsNotBuiltIn() {
+        var result = validate(COLOR.withAttributes(List.of(new FieldAttribute.Custom("1st", ""))),
+                SHAPE.withAttributes(List.of(new FieldAttribute.Custom("help", "\"x\""))),
+                new TableDeclaration(name("Root"), "Root", "", List.of(
+                        field("a", INT, new FieldAttribute.Custom("priority", "1"), new FieldAttribute.Custom("key", ""))),
+                        true, List.of(new FieldAttribute.Custom("bad name", ""))));
+        assertEquals(List.of(
+                "attribute \"1st\" on enum Color skipped: not a valid name",
+                "attribute key on Root.a skipped: built in; use the annotation option instead",
+                "attribute \"bad name\" on table Root skipped: not a valid name"), result.issues());
+        assertEquals(List.of("help", "priority"), result.schema().customAttributeNames()); // order of first use
+    }
+
+    @Test
+    void bitFlagsNeedAnUnsignedTypeAndValuesThatFit() {
+        EnumDeclaration signed = new EnumDeclaration(name("Signed"), "Signed", "", ScalarKind.BYTE,
+                List.of(new EnumDeclaration.Value("A", null)), null, List.of(new FieldAttribute.BitFlags()));
+        EnumDeclaration tooBig = new EnumDeclaration(name("Big"), "Big", "", ScalarKind.UBYTE,
+                List.of(new EnumDeclaration.Value("A", 3L), new EnumDeclaration.Value("B", 8L)), null,
+                List.of(new FieldAttribute.BitFlags()));
+        var result = validate(signed, tooBig, root());
+        assertEquals(List.of(
+                "bit_flags on enum Signed skipped: needs an unsigned enumType (UBYTE, USHORT, UINT, ULONG)",
+                "Enum Big value B is bit 8, but bit_flags on ubyte allows bits 0 to 7"), result.issues());
+        assertFalse(((EnumDeclaration) result.schema().declarations().get(0)).bitFlags());
+        assertTrue(((EnumDeclaration) result.schema().declarations().get(1)).bitFlags());
+    }
+
+    @Test
+    void bitFlagsFieldsMayDefaultToNoFlags() {
+        EnumDeclaration flags = new EnumDeclaration(name("Flags"), "Flags", "", ScalarKind.UBYTE,
+                List.of(new EnumDeclaration.Value("A", 1L), new EnumDeclaration.Value("B", 2L)), null,
+                List.of(new FieldAttribute.BitFlags()));
+        assertEquals(List.of(), validate(flags, root(field("flags", new Reference(name("Flags"))))).issues());
+    }
+
+    @Test
+    void unionMemberNamesMustBeUniqueAndNotNone() {
+        UnionDeclaration union = new UnionDeclaration(name("U"), "U", "", List.of(
+                new UnionDeclaration.Member("NONE", name("Root"), ""),
+                new UnionDeclaration.Member("Twice", name("Root"), ""),
+                new UnionDeclaration.Member("Twice", name("Root"), "")));
+        assertEquals(List.of(
+                "Union U member NONE: the name is reserved (flatc adds NONE for no value)",
+                "Union U has two members named Twice"), validate(union, root()).issues());
+    }
+
+    @Test
+    void rpcMethodsTakeAndReturnDeclaredTables() {
+        RpcServiceDeclaration service = new RpcServiceDeclaration(name("Svc"), "Svc", "", List.of(
+                new RpcServiceDeclaration.Method("ok", name("Root"), name("Root"), ""),
+                new RpcServiceDeclaration.Method("noArgs", null, name("Root"), ""),
+                new RpcServiceDeclaration.Method("enumReply", name("Root"), name("Color"), ""),
+                new RpcServiceDeclaration.Method("missing", name("Gone"), name("Root"), "")));
+        var result = validate(COLOR, root(), service);
+        assertEquals(List.of(
+                "RPC method Svc.noArgs skipped: it must take exactly one table and return a table",
+                "RPC method Svc.enumReply uses app.Color, which is not a table",
+                "RPC method Svc.missing uses app.Gone, which is not declared in this schema"), result.issues());
+        assertEquals(3, ((RpcServiceDeclaration) result.schema().declarations().get(2)).methods().size());
+
+        var empty = validate(root(), new RpcServiceDeclaration(name("None"), "None", "", List.of()));
+        assertEquals(List.of("RPC service None has no methods"), empty.issues());
     }
 }

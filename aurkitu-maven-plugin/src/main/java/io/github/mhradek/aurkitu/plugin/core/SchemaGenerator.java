@@ -40,6 +40,8 @@ public class SchemaGenerator {
          * plugin's own classpath and does not contain the project's classes.
          */
         public final List<String> classpathElements;
+        /** Write boxed Java scalars (Integer, Boolean, ...) in tables as optional scalars ({@code = null}). */
+        public final boolean optionalScalars;
 
         @SuppressWarnings("PMD.ExcessiveParameterList")
         public Config(MavenProject project, List<String> specifiedPackages, boolean validate,
@@ -57,6 +59,17 @@ public class SchemaGenerator {
                       boolean mapCommonTypes, boolean cacheEnabled, boolean snakeCaseFields,
                       boolean generateVersion, boolean failOnValidationIssues, String fileExtension,
                       List<String> classpathElements) {
+            this(project, specifiedPackages, validate, ignoreStaticMembers, fileIdentifier, includes,
+                    mapCommonTypes, cacheEnabled, snakeCaseFields, generateVersion, failOnValidationIssues,
+                    fileExtension, classpathElements, false);
+        }
+
+        @SuppressWarnings("PMD.ExcessiveParameterList")
+        public Config(MavenProject project, List<String> specifiedPackages, boolean validate,
+                      boolean ignoreStaticMembers, String fileIdentifier, List<String> includes,
+                      boolean mapCommonTypes, boolean cacheEnabled, boolean snakeCaseFields,
+                      boolean generateVersion, boolean failOnValidationIssues, String fileExtension,
+                      List<String> classpathElements, boolean optionalScalars) {
             this.project = project;
             this.specifiedPackages = specifiedPackages;
             this.validate = validate;
@@ -70,6 +83,7 @@ public class SchemaGenerator {
             this.failOnValidationIssues = failOnValidationIssues;
             this.fileExtension = fileExtension;
             this.classpathElements = classpathElements;
+            this.optionalScalars = optionalScalars;
         }
 
         // Convenience constructor for tests
@@ -99,6 +113,7 @@ public class SchemaGenerator {
                 .enableAnnotationInfo()
                 .enableClassInfo()
                 .enableFieldInfo()
+                .enableMethodInfo()
                 .ignoreFieldVisibility()
                 .acceptPackages(config.specifiedPackages != null && !config.specifiedPackages.isEmpty()
                         ? config.specifiedPackages.toArray(new String[0])

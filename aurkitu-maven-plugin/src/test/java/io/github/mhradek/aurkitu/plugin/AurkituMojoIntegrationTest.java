@@ -113,6 +113,7 @@ class AurkituMojoIntegrationTest {
         assertTrue(xml.contains("<name>generateVersion</name>"));
         assertTrue(xml.contains("<name>failOnValidationIssues</name>"));
         assertTrue(xml.contains("<name>flatcPath</name>"));
+        assertTrue(xml.contains("<name>optionalScalars</name>"));
     }
 
     @SuppressWarnings("PMD.AvoidAccessibilityAlteration")

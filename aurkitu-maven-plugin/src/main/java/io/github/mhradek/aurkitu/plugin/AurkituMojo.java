@@ -95,6 +95,15 @@ public class AurkituMojo extends AbstractMojo {
     private boolean failOnValidationIssues;
 
     /**
+     * When true, boxed Java scalars (Integer, Boolean, ...) in tables are written as optional scalars
+     * ({@code = null}), so an unset value reads as null rather than 0. Off by default.
+     *
+     * @since 1.1.0
+     */
+    @Parameter(property = "aurkitu.optionalScalars", defaultValue = "false")
+    private boolean optionalScalars;
+
+    /**
      * Optional file extension for generated binaries (emits file_extension "...").
      */
     @Parameter(property = "aurkitu.fileExtension")
@@ -110,7 +119,7 @@ public class AurkituMojo extends AbstractMojo {
 
         SchemaGenerator.Config config = new SchemaGenerator.Config(
                 project, specifiedPackages, validate, ignoreStaticMembers, fileIdentifier, includes, mapCommonTypes, cacheEnabled, snakeCaseFields, generateVersion, failOnValidationIssues, fileExtension,
-                resolveClasspath());
+                resolveClasspath(), optionalScalars);
         SchemaGenerator generator = new SchemaGenerator(config);
         try {
             generator.generate(schemaName, schemaNamespace, outputDirectory);

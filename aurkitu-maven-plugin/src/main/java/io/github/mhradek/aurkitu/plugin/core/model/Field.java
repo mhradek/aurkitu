@@ -47,9 +47,7 @@ public record Field(String javaName, String name, SchemaType type, String defaul
     }
 
     public void write(SchemaWriter out) {
-        if (!comment.isBlank()) {
-            out.indented("// " + comment);
-        }
+        out.indentedComment(comment);
         StringBuilder line = new StringBuilder(name).append(':').append(type.write(out.scope()));
         if (!defaultValue.isBlank()) {
             line.append(" = ").append(defaultValue);

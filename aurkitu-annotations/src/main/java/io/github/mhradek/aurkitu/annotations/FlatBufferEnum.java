@@ -24,6 +24,21 @@ public @interface FlatBufferEnum {
      */
     String namespace() default "";
 
+    /**
+     * Enums with an unsigned underlying type only: values are bit positions (bit_flags), so an
+     * explicit value N means 1 &lt;&lt; N and implicit values give 1, 2, 4, 8, ...
+     *
+     * @since 1.1.0
+     */
+    boolean bitFlags() default false;
+
+    /**
+     * Custom attributes written after the enum or union name, e.g. {@code "priority: 1"}.
+     *
+     * @since 1.1.0
+     */
+    String[] attributes() default {};
+
     enum EnumStructureType {
         ENUM, UNION;
 

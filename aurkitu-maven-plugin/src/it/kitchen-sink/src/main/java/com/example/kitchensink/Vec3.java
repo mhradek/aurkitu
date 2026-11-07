@@ -2,7 +2,7 @@ package com.example.kitchensink;
 
 import io.github.mhradek.aurkitu.annotations.FlatBufferTable;
 
-@FlatBufferTable(FlatBufferTable.TableStructureType.STRUCT)
+@FlatBufferTable(value = FlatBufferTable.TableStructureType.STRUCT, forceAlign = 16)
 public class Vec3 {
     private float x;
     private float y;

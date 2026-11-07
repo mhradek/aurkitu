@@ -35,7 +35,7 @@ public class Player extends Entity {
     private String name;
 
     @FlatBufferComment(comment = "Starting health")
-    @FlatBufferFieldOptions(fieldType = FieldType.INT, defaultValue = "100")
+    @FlatBufferFieldOptions(fieldType = FieldType.INT, defaultValue = "100", attributes = {"priority: 2"})
     private int health;
 
     @FlatBufferFieldOptions(fieldType = FieldType.UBYTE)
@@ -63,6 +63,7 @@ public class Player extends Entity {
     @FlatBufferFieldOptions(fieldType = FieldType.IDENT, defaultValue = "LOW")
     private Priority priority;
     private Shape avatar;
+    private Perm permissions;
     private Mood temper;
     private Vec3 spawn;
     private Transform transform;

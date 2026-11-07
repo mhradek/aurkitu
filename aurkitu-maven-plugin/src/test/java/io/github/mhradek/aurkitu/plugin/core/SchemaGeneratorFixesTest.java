@@ -149,6 +149,49 @@ class SchemaGeneratorFixesTest {
     }
 
     @Test
+    void enumsGetDocCommentsBitFlagsAndCustomAttributes() {
+        assertTrue(schema.contains("/// Permissions\n/// One bit each\nenum Perm : ubyte (bit_flags, priority: 2) {\n"
+                + "  /// May read\n  READ,\n  WRITE,\n}"), schema);
+    }
+
+    @Test
+    void unionMembersUseAliasesAndResolveTables() {
+        assertTrue(schema.contains("union Pos {\n  /// Where it starts\n  Start:Checkpoint,\n  Finish:Checkpoint,\n  Checkpoint,\n  PlayerList,\n}"),
+                schema);
+    }
+
+    @Test
+    void rpcServicesKeepMethodsTakingAndReturningOneTable() {
+        assertTrue(schema.contains("/// Storage service\nrpc_service Store {\n  /// Saves players\n  put(PlayerList):Checkpoint;\n}"),
+                schema);
+        assertTrue(schema.contains("RPC method Store.twoArguments skipped"), schema);
+        assertFalse(schema.contains("ignored("), schema);
+        assertFalse(schema.contains("notAbstract("), schema);
+    }
+
+    @Test
+    void typeAndFieldAttributesAreWrittenAndCustomOnesDeclared() {
+        assertTrue(schema.contains("table Ordered (original_order, priority: 1) {\n  count:int (priority: 3, help: \"count\");\n}"),
+                schema);
+        assertTrue(schema.contains("struct Aligned (force_align: 16) {"), schema);
+        assertTrue(schema.contains("file_identifier \"FIX1\";\n\nattribute \"priority\";\nattribute \"help\";\n"), schema);
+    }
+
+    @Test
+    void boxedScalarsAreOptionalOnlyWhenEnabled() throws Exception {
+        assertTrue(schema.contains("table Optionals {\n  maybe:int;\n  flag:bool;"), "off by default:\n" + schema);
+
+        SchemaGenerator.Config config = new SchemaGenerator.Config(
+                null, List.of(PKG), true, true, null, List.of(), true, false, true, false, false, null, null, true);
+        Path dir = Files.createDirectories(tempDir.resolve("optional"));
+        new SchemaGenerator(config).generate("optional", "fix.ns", dir.toFile());
+        String content = Files.readString(dir.resolve("optional.fbs"));
+        assertTrue(content.contains("table Optionals {\n  maybe:int = null;\n  flag:bool = null;\n  plain:int;\n"
+                + "  with_default:int = 7;\n}"), content);
+        assertTrue(content.contains("  boxed_in_struct:int;\n}"), "never in structs:\n" + content);
+    }
+
+    @Test
     void includesComeBeforeAllOtherDeclarations() {
         int include = schema.indexOf("include \"other.fbs\";");
         assertTrue(include > 0, schema);

@@ -157,6 +157,11 @@ final class TypeMapper {
                 className.substring(dot + 1).replace('$', '_')), true);
     }
 
+    /** True for a boxed Java scalar ({@code Integer}, {@code Boolean}, ...), which can be null. */
+    static boolean isBoxedScalar(TypeSignature typeSig) {
+        return typeSig instanceof ClassRefTypeSignature ref && WRAPPERS.containsKey(ref.getFullyQualifiedClassName());
+    }
+
     /** {@code [element]}; null when the element is unsupported or itself a vector (FlatBuffers has no nested vectors). */
     private static SchemaType vectorOf(SchemaType element) {
         return element == null || element instanceof Vector ? null : new Vector(element);

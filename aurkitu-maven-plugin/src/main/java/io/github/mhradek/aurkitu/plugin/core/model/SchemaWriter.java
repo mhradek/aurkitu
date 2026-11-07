@@ -40,12 +40,29 @@ public final class SchemaWriter {
         return line("namespace " + namespace + ";").blankLine();
     }
 
-    /** Writes an optional comment line. */
+    /** Writes optional documentation as {@code ///} lines, which flatc copies into generated code. */
     public SchemaWriter comment(String comment) {
+        return docLines(comment, "");
+    }
+
+    /** As {@link #comment(String)}, indented (for fields, enum values and members). */
+    public SchemaWriter indentedComment(String comment) {
+        return docLines(comment, INDENT);
+    }
+
+    private SchemaWriter docLines(String comment, String indent) {
         if (!comment.isBlank()) {
-            line("// " + comment);
+            for (String line : comment.strip().split("\\R")) {
+                line(indent + ("/// " + line.strip()).strip());
+            }
         }
         return this;
+    }
+
+    /** {@code " (a, b)"} for attributes after a declaration name, or empty. */
+    public static String attributes(java.util.List<FieldAttribute> attributes) {
+        return attributes.isEmpty() ? ""
+                : " (" + String.join(", ", attributes.stream().map(FieldAttribute::write).toList()) + ")";
     }
 
     public String text() {

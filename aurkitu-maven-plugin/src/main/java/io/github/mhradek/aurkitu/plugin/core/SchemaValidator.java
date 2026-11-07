@@ -3,8 +3,12 @@ package io.github.mhradek.aurkitu.plugin.core;
 import io.github.mhradek.aurkitu.plugin.core.model.CompositeDeclaration;
 import io.github.mhradek.aurkitu.plugin.core.model.Declaration;
 import io.github.mhradek.aurkitu.plugin.core.model.EnumDeclaration;
+import io.github.mhradek.aurkitu.plugin.core.model.FieldAttribute;
+import io.github.mhradek.aurkitu.plugin.core.model.ScalarKind;
+import io.github.mhradek.aurkitu.plugin.core.model.RpcServiceDeclaration;
 import io.github.mhradek.aurkitu.plugin.core.model.Schema;
 import io.github.mhradek.aurkitu.plugin.core.model.StructDeclaration;
+import io.github.mhradek.aurkitu.plugin.core.model.TableDeclaration;
 import io.github.mhradek.aurkitu.plugin.core.model.TypeName;
 import io.github.mhradek.aurkitu.plugin.core.model.UnionDeclaration;
 
@@ -74,13 +78,12 @@ final class SchemaValidator {
                     }
                     rootSeen = true;
                 }
-            } else {
-                if (declaration instanceof EnumDeclaration enumDeclaration) {
-                    validate(enumDeclaration, issues);
-                } else if (declaration instanceof UnionDeclaration union) {
-                    validate(union, declared, checkReferences, issues);
-                }
-                valid.add(declaration);
+            } else if (declaration instanceof EnumDeclaration enumDeclaration) {
+                valid.add(validate(enumDeclaration, issues));
+            } else if (declaration instanceof UnionDeclaration union) {
+                valid.add(validate(union, declared, checkReferences, issues));
+            } else if (declaration instanceof RpcServiceDeclaration service) {
+                valid.add(validate(service, declared, checkReferences, issues));
             }
         }
         if (!rootSeen) {
@@ -106,20 +109,59 @@ final class SchemaValidator {
      * Union members name tables (flatc also accepts structs), resolved in the union's namespace.
      * An enum or union can never be a member.
      */
-    private static void validate(UnionDeclaration union, Map<TypeName, Declaration> declared, boolean checkReferences,
-                                 List<String> issues) {
+    private static UnionDeclaration validate(UnionDeclaration union, Map<TypeName, Declaration> declared,
+                                             boolean checkReferences, List<String> issues) {
         String name = union.name().name();
         if (union.members().isEmpty()) {
             issues.add("Union " + name + " has no members");
         }
-        for (String member : union.members()) {
-            Declaration target = declared.get(new TypeName(union.name().namespace(), member));
+        Set<String> labels = new HashSet<>();
+        for (UnionDeclaration.Member member : union.members()) {
+            String label = member.label();
+            if ("NONE".equals(label)) {
+                issues.add("Union " + name + " member NONE: the name is reserved (flatc adds NONE for no value)");
+            } else if (!labels.add(label)) {
+                issues.add("Union " + name + " has two members named " + label);
+            }
+            Declaration target = declared.get(member.type());
             if (target == null && checkReferences) {
-                issues.add("Union " + name + " member " + member + " is not declared in this schema");
-            } else if (target instanceof EnumDeclaration || target instanceof UnionDeclaration) {
-                issues.add("Union " + name + " member " + member + " is not a table");
+                issues.add("Union " + name + " member " + label + " is not declared in this schema");
+            } else if (target instanceof EnumDeclaration || target instanceof UnionDeclaration
+                    || target instanceof RpcServiceDeclaration) {
+                issues.add("Union " + name + " member " + label + " is not a table");
             }
         }
+        return union.withAttributes(CompositeValidator.validCustom(union.attributes(), "union " + name, issues));
+    }
+
+    /**
+     * RPC methods take one table and return one; methods with another signature are dropped. Request
+     * and response types must be declared tables (unless they may come from an include).
+     */
+    private static RpcServiceDeclaration validate(RpcServiceDeclaration service, Map<TypeName, Declaration> declared,
+                                                  boolean checkReferences, List<String> issues) {
+        String name = service.name().name();
+        List<RpcServiceDeclaration.Method> valid = new ArrayList<>();
+        for (RpcServiceDeclaration.Method method : service.methods()) {
+            String where = name + "." + method.name();
+            if (!method.valid()) {
+                issues.add("RPC method " + where + " skipped: it must take exactly one table and return a table");
+                continue;
+            }
+            for (TypeName type : List.of(method.request(), method.response())) {
+                Declaration target = declared.get(type);
+                if (target == null && checkReferences) {
+                    issues.add("RPC method " + where + " uses " + type.qualified() + ", which is not declared in this schema");
+                } else if (target != null && !(target instanceof TableDeclaration)) {
+                    issues.add("RPC method " + where + " uses " + type.qualified() + ", which is not a table");
+                }
+            }
+            valid.add(method);
+        }
+        if (valid.isEmpty()) {
+            issues.add("RPC service " + name + " has no methods");
+        }
+        return service.withMethods(valid);
     }
 
     /** Namespaces are dot-separated identifiers. */
@@ -134,7 +176,7 @@ final class SchemaValidator {
         }
     }
 
-    private static void validate(EnumDeclaration enumDeclaration, List<String> issues) {
+    private static EnumDeclaration validate(EnumDeclaration enumDeclaration, List<String> issues) {
         String name = enumDeclaration.name().name();
         if (enumDeclaration.values().isEmpty()) {
             issues.add("Enum " + name + " has no values");
@@ -156,5 +198,30 @@ final class SchemaValidator {
                         + enumDeclaration.underlying().keyword());
             }
         }
+        List<FieldAttribute> attributes = CompositeValidator.validCustom(enumDeclaration.attributes(), "enum " + name, issues);
+        if (enumDeclaration.bitFlags() && !bitFlagsValid(enumDeclaration, issues)) {
+            attributes = attributes.stream().filter(a -> !(a instanceof FieldAttribute.BitFlags)).toList();
+        }
+        return enumDeclaration.withAttributes(attributes);
+    }
+
+    /** bit_flags: an unsigned type, and each value (explicit, or its position) a bit of that width. */
+    private static boolean bitFlagsValid(EnumDeclaration enumDeclaration, List<String> issues) {
+        String name = enumDeclaration.name().name();
+        ScalarKind kind = enumDeclaration.underlying();
+        if (!kind.isUnsigned()) {
+            issues.add("bit_flags on enum " + name + " skipped: needs an unsigned enumType (UBYTE, USHORT, UINT, ULONG)");
+            return false;
+        }
+        int bits = kind.bits();
+        List<EnumDeclaration.Value> values = enumDeclaration.values();
+        for (int i = 0; i < values.size(); i++) {
+            long position = values.get(i).value() != null ? values.get(i).value() : i;
+            if (position < 0 || position >= bits) {
+                issues.add("Enum " + name + " value " + values.get(i).name() + " is bit " + position
+                        + ", but bit_flags on " + kind.keyword() + " allows bits 0 to " + (bits - 1));
+            }
+        }
+        return true;
     }
 }

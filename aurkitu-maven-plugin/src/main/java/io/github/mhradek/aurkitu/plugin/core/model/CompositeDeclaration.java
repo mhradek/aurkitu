@@ -15,6 +15,11 @@ public sealed interface CompositeDeclaration extends Declaration
     /** Whether the type was marked as the schema's root type. */
     boolean root();
 
+    /** Attributes written after the name (original_order, force_align, custom). */
+    List<FieldAttribute> attributes();
+
+    CompositeDeclaration withAttributes(List<FieldAttribute> attributes);
+
     CompositeDeclaration withFields(List<Field> fields);
 
     /** {@code table} or {@code struct}. */
@@ -23,7 +28,7 @@ public sealed interface CompositeDeclaration extends Declaration
     @Override
     default void write(SchemaWriter out) {
         out.comment(comment());
-        out.line(keyword() + " " + name().name() + " {");
+        out.line(keyword() + " " + name().name() + SchemaWriter.attributes(attributes()) + " {");
         for (Field field : fields()) {
             field.write(out);
         }

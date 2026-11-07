@@ -40,6 +40,15 @@ final class CompositeValidator {
     private static final Map<String, Integer> HASHES = Map.of(
             "fnv1_32", 32, "fnv1a_32", 32, "fnv1_64", 64, "fnv1a_64", 64);
 
+    /** Attributes flatc defines itself; a user-defined attribute cannot reuse these names. */
+    static final Set<String> BUILT_IN_ATTRIBUTES = Set.of(
+            "id", "deprecated", "required", "key", "shared", "hash", "force_align", "bit_flags", "original_order",
+            "nested_flatbuffer", "flexbuffer", "native_inline", "native_type", "native_default",
+            "native_custom_alloc", "cpp_type", "cpp_ptr_type", "cpp_ptr_type_get", "cpp_str_type",
+            "cpp_str_flex_ctor", "streaming", "idempotent", "private");
+
+    private static final Pattern IDENT = Pattern.compile("[a-zA-Z_][a-zA-Z0-9_]*");
+
     private static final Pattern INTEGER = Pattern.compile("[-+]?(0[xX][0-9a-fA-F]+|[0-9]+)");
     private static final Pattern FLOAT = Pattern.compile(
             "[-+]?((\\.[0-9]+|[0-9]+\\.[0-9]*|[0-9]+)([eE][-+]?[0-9]+)?"
@@ -103,7 +112,54 @@ final class CompositeValidator {
         if (!struct) {
             warnAboutInheritedFields((TableDeclaration) composite, valid);
         }
-        return composite.withFields(valid);
+        return composite.withFields(valid).withAttributes(typeAttributes(composite, struct));
+    }
+
+    /** original_order: tables only; force_align: structs only, a power of two; custom: valid names. */
+    private List<FieldAttribute> typeAttributes(CompositeDeclaration composite, boolean struct) {
+        String where = (struct ? "struct " : "table ") + composite.name().name();
+        List<FieldAttribute> valid = new ArrayList<>();
+        for (FieldAttribute attribute : composite.attributes()) {
+            String problem = null;
+            if (attribute instanceof FieldAttribute.OriginalOrder && struct) {
+                problem = "original_order on {} skipped: only tables";
+            } else if (attribute instanceof FieldAttribute.ForceAlign align) {
+                problem = !struct ? "force_align on {} skipped: only structs (on a table, put it on a vector field)"
+                        : Integer.bitCount(align.alignment()) != 1 ? "force_align on {} skipped: " + align.alignment()
+                        + " is not a power of two" : null;
+            } else if (attribute instanceof FieldAttribute.Custom custom) {
+                problem = customProblem(custom);
+            }
+            if (problem == null) {
+                valid.add(attribute);
+            } else {
+                issues.add(problem.replace("{}", where));
+            }
+        }
+        return valid;
+    }
+
+    /** Why a user-defined attribute is invalid (with {} for where it is), or null. */
+    static String customProblem(FieldAttribute.Custom custom) {
+        if (!IDENT.matcher(custom.name()).matches()) {
+            return "attribute \"" + custom.name() + "\" on {} skipped: not a valid name";
+        }
+        return BUILT_IN_ATTRIBUTES.contains(custom.name())
+                ? "attribute " + custom.name() + " on {} skipped: built in; use the annotation option instead" : null;
+    }
+
+    /** Custom attributes of {@code attributes} with valid names; the others are reported for {@code where}. */
+    static List<FieldAttribute> validCustom(List<FieldAttribute> attributes, String where, List<String> issues) {
+        List<FieldAttribute> valid = new ArrayList<>();
+        for (FieldAttribute attribute : attributes) {
+            String problem = attribute instanceof FieldAttribute.Custom custom ? customProblem(custom) : null;
+            if (problem == null) {
+                valid.add(attribute);
+            } else {
+                issues.add(problem.replace("{}", where));
+            }
+        }
+        return valid;
     }
 
     /**
@@ -195,6 +251,9 @@ final class CompositeValidator {
         if (attribute instanceof FieldAttribute.Hash hash) {
             return hashProblem(hash, type);
         }
+        if (attribute instanceof FieldAttribute.Custom custom) {
+            return customProblem(custom);
+        }
         return null;
     }
 
@@ -238,9 +297,12 @@ final class CompositeValidator {
         return field.withDefaultValue("");
     }
 
-    /** A table field of enum type defaults to 0, which flatc rejects if 0 is not a value of the enum. */
+    /**
+     * A table field of enum type defaults to 0, which flatc rejects if 0 is not a value of the enum
+     * (except for bit_flags, where 0 means no flags).
+     */
     private void checkEnumZero(EnumDeclaration enumType, String where) {
-        if (!enumType.values().isEmpty() && !enumValues(enumType).contains(0L)) {
+        if (!enumType.values().isEmpty() && !enumType.bitFlags() && !enumValues(enumType).contains(0L)) {
             issues.add("Field " + where + " needs a defaultValue: enum " + enumType.name().name()
                     + " has no value 0, which is the default otherwise");
         }

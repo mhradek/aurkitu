@@ -66,4 +66,12 @@ public @interface FlatBufferFieldOptions {
 
     /** For fixed-size arrays in structs: [type:N]. 0 to omit. */
     int fixedLength() default 0;
+
+    /**
+     * Custom attributes, e.g. {@code "priority: 1"} or {@code "help: \"text\""}, written after the
+     * field. Each name is declared in the schema with {@code attribute "name";}.
+     *
+     * @since 1.1.0
+     */
+    String[] attributes() default {};
 }

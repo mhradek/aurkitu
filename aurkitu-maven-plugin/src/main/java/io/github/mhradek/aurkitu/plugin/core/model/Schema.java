@@ -71,6 +71,25 @@ public record Schema(String namespace, List<String> includes, String fileIdentif
         }
     }
 
+    /** Names of the user-defined attributes used anywhere, in order of first use; each must be declared. */
+    public List<String> customAttributeNames() {
+        java.util.Set<String> names = new java.util.LinkedHashSet<>();
+        java.util.function.Consumer<List<FieldAttribute>> collect = attributes -> attributes.stream()
+                .filter(FieldAttribute.Custom.class::isInstance)
+                .forEach(a -> names.add(((FieldAttribute.Custom) a).name()));
+        for (Declaration declaration : declarations) {
+            if (declaration instanceof CompositeDeclaration composite) {
+                collect.accept(composite.attributes());
+                composite.fields().forEach(field -> collect.accept(field.attributes()));
+            } else if (declaration instanceof EnumDeclaration enumDeclaration) {
+                collect.accept(enumDeclaration.attributes());
+            } else if (declaration instanceof UnionDeclaration union) {
+                collect.accept(union.attributes());
+            }
+        }
+        return List.copyOf(names);
+    }
+
     /** Content hash of a schema body. */
     public static String version(String body) {
         return Integer.toHexString(body.hashCode());
@@ -94,6 +113,13 @@ public record Schema(String namespace, List<String> includes, String fileIdentif
         }
         if (fileExtension != null && !fileExtension.isBlank()) {
             out.line("file_extension \"" + fileExtension + "\";").blankLine();
+        }
+        List<String> customAttributes = customAttributeNames();
+        for (String attribute : customAttributes) {
+            out.line("attribute \"" + attribute + "\";");
+        }
+        if (!customAttributes.isEmpty()) {
+            out.blankLine();
         }
 
         for (Declaration declaration : declarations) {

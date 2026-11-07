@@ -128,7 +128,7 @@ class SchemaValidatorTest {
     @Test
     void structFieldsReferencingTablesOrUnionsAreNonScalar() {
         var result = validate(false,
-                new UnionDeclaration(name("Any"), "Any", "", List.of("Root")),
+                UnionDeclaration.of(name("Any"), "Any", "", List.of("Root")),
                 struct("S", field("table", new Reference(name("Root"))), field("union", new Reference(name("Any")))),
                 table("Root", true));
         assertEquals(List.of(
@@ -185,7 +185,7 @@ class SchemaValidatorTest {
     void unionMembersMustBeDeclaredTablesOrStructs() {
         EnumDeclaration color = new EnumDeclaration(name("Color"), "Color", "", ScalarKind.BYTE,
                 List.of(new EnumDeclaration.Value("RED", null)), null);
-        UnionDeclaration union = new UnionDeclaration(name("Any"), "Any", "", List.of("Root", "S", "Color", "Gone"));
+        UnionDeclaration union = UnionDeclaration.of(name("Any"), "Any", "", List.of("Root", "S", "Color", "Gone"));
         Declaration[] declarations = {color, union, struct("S", field("x", INT)), table("Root", true)};
         assertEquals(List.of(
                 "Union Any member Color is not a table",
@@ -193,7 +193,7 @@ class SchemaValidatorTest {
                 validate(false, declarations).issues());
         assertEquals(List.of("Union Any member Color is not a table"), validateWithInclude(declarations).issues());
         assertEquals(List.of("Union None has no members"),
-                validate(false, new UnionDeclaration(name("None"), "None", "", List.of()), table("Root", true)).issues());
+                validate(false, UnionDeclaration.of(name("None"), "None", "", List.of()), table("Root", true)).issues());
     }
 
     @Test

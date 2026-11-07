@@ -3,11 +3,16 @@ package io.github.mhradek.aurkitu.plugin.core;
 import io.github.classgraph.AnnotationInfo;
 import io.github.classgraph.ClassInfo;
 import io.github.classgraph.FieldInfo;
+import io.github.classgraph.MethodInfo;
+import io.github.classgraph.MethodTypeSignature;
+import io.github.classgraph.TypeSignature;
+import io.github.classgraph.ClassRefTypeSignature;
 import io.github.classgraph.ScanResult;
 import io.github.mhradek.aurkitu.annotations.FlatBufferComment;
 import io.github.mhradek.aurkitu.annotations.FlatBufferEnum;
 import io.github.mhradek.aurkitu.annotations.FlatBufferFieldOptions;
 import io.github.mhradek.aurkitu.annotations.FlatBufferIgnore;
+import io.github.mhradek.aurkitu.annotations.FlatBufferRpcService;
 import io.github.mhradek.aurkitu.annotations.FlatBufferTable;
 import io.github.mhradek.aurkitu.annotations.types.FieldType;
 import io.github.mhradek.aurkitu.plugin.core.model.CompositeDeclaration;
@@ -15,6 +20,7 @@ import io.github.mhradek.aurkitu.plugin.core.model.Declaration;
 import io.github.mhradek.aurkitu.plugin.core.model.Field;
 import io.github.mhradek.aurkitu.plugin.core.model.FieldAttribute;
 import io.github.mhradek.aurkitu.plugin.core.model.ScalarKind;
+import io.github.mhradek.aurkitu.plugin.core.model.RpcServiceDeclaration;
 import io.github.mhradek.aurkitu.plugin.core.model.Schema;
 import io.github.mhradek.aurkitu.plugin.core.model.SchemaType;
 import io.github.mhradek.aurkitu.plugin.core.model.SchemaType.FixedArray;
@@ -79,6 +85,9 @@ final class SchemaReader {
         }
         declarations.addAll(declarationOrder(composites));
         declarations.addAll(mapTables.values());
+        for (ClassInfo service : scanResult.getClassesWithAnnotation(FlatBufferRpcService.class.getName())) {
+            declarations.add(readRpcService(service));
+        }
         return new Schema(registry.defaultNamespace(), config.includes, config.fileIdentifier, config.fileExtension, declarations);
     }
 
@@ -91,14 +100,41 @@ final class SchemaReader {
 
         List<Field> fields = new ArrayList<>();
         for (FieldInfo field : collectFields(classInfo)) {
-            fields.add(readField(field, classInfo));
+            fields.add(readField(field, classInfo, struct));
         }
+        List<FieldAttribute> attributes = new ArrayList<>();
+        int forceAlign = intParam(table, "forceAlign");
+        addIf(attributes, flag(table, "originalOrder"), FieldAttribute.OriginalOrder::new);
+        addIf(attributes, forceAlign > 0, () -> new FieldAttribute.ForceAlign(forceAlign));
+        attributes.addAll(customAttributes(table));
         return struct
-                ? new StructDeclaration(name, classInfo.getName(), comment, fields, root)
-                : new TableDeclaration(name, classInfo.getName(), comment, fields, root);
+                ? new StructDeclaration(name, classInfo.getName(), comment, fields, root, attributes)
+                : new TableDeclaration(name, classInfo.getName(), comment, fields, root, attributes);
     }
 
-    private Field readField(FieldInfo field, ClassInfo owner) {
+    /** {@code rpc_service} from an interface: each abstract method taking and returning one class. */
+    private RpcServiceDeclaration readRpcService(ClassInfo service) {
+        List<RpcServiceDeclaration.Method> methods = new ArrayList<>();
+        for (MethodInfo method : service.getDeclaredMethodInfo()) {
+            if (!method.isAbstract() || method.isSynthetic() || method.hasAnnotation(FlatBufferIgnore.class.getName())) {
+                continue;
+            }
+            MethodTypeSignature signature = method.getTypeSignatureOrTypeDescriptor();
+            List<TypeSignature> parameters = java.util.Arrays.stream(method.getParameterInfo())
+                    .map(p -> p.getTypeSignatureOrTypeDescriptor()).toList();
+            TypeName request = parameters.size() == 1 ? classType(parameters.get(0)) : null;
+            methods.add(new RpcServiceDeclaration.Method(method.getName(), request, classType(signature.getResultType()),
+                    comment(method.getAnnotationInfo(FlatBufferComment.class.getName()))));
+        }
+        return new RpcServiceDeclaration(registry.nameOf(service.getName()), service.getName(),
+                comment(service.getAnnotationInfo(FlatBufferComment.class.getName())), methods);
+    }
+
+    private TypeName classType(TypeSignature type) {
+        return type instanceof ClassRefTypeSignature ref ? registry.nameOf(ref.getFullyQualifiedClassName()) : null;
+    }
+
+    private Field readField(FieldInfo field, ClassInfo owner, boolean inStruct) {
         AnnotationInfo options = field.getAnnotationInfo(FIELD_OPTIONS);
         boolean useFullName = Boolean.TRUE.equals(Naming.param(options, "useFullName"));
         SchemaType type = typeMapper.map(field.getTypeSignatureOrTypeDescriptor(), owner, field.getName(), useFullName);
@@ -115,10 +151,34 @@ final class SchemaReader {
                     : new FixedArray(type, length);
         }
 
+        List<FieldAttribute> attributes = attributes(options);
+        String defaultValue = Naming.stringParam(options, "defaultValue");
+        // optionalScalars: a boxed Java scalar (Integer, Boolean, ...) can be null, as can an optional scalar.
+        if (config.optionalScalars && !inStruct && defaultValue.isBlank() && type instanceof Scalar
+                && TypeMapper.isBoxedScalar(field.getTypeSignatureOrTypeDescriptor())
+                && attributes.stream().noneMatch(FieldAttribute.Required.class::isInstance)) {
+            defaultValue = "null";
+        }
         return new Field(field.getName(), Naming.fieldName(field.getName(), config.snakeCaseFields), type,
-                Naming.stringParam(options, "defaultValue"),
-                comment(field.getAnnotationInfo(FlatBufferComment.class.getName())),
-                attributes(options), field.getClassInfo().getName());
+                defaultValue, comment(field.getAnnotationInfo(FlatBufferComment.class.getName())),
+                attributes, field.getClassInfo().getName());
+    }
+
+    /**
+     * User-defined attributes from an annotation's {@code attributes} parameter: {@code "name"} or
+     * {@code "name: value"}. Names are checked by the validator.
+     */
+    static List<FieldAttribute> customAttributes(AnnotationInfo annotation) {
+        List<FieldAttribute> attributes = new ArrayList<>();
+        if (Naming.param(annotation, "attributes") instanceof Object[] values) {
+            for (Object value : values) {
+                String text = String.valueOf(value).strip();
+                int colon = text.indexOf(':');
+                attributes.add(colon < 0 ? new FieldAttribute.Custom(text, "")
+                        : new FieldAttribute.Custom(text.substring(0, colon).strip(), text.substring(colon + 1).strip()));
+            }
+        }
+        return attributes;
     }
 
     /**
@@ -152,6 +212,7 @@ final class SchemaReader {
         addIf(attributes, !nested.isBlank(), () -> new FieldAttribute.NestedFlatbuffer(nested));
         addIf(attributes, flag(options, "flexbuffer"), FieldAttribute.Flexbuffer::new);
         addIf(attributes, forceAlign > 0, () -> new FieldAttribute.ForceAlign(forceAlign));
+        attributes.addAll(customAttributes(options));
         return attributes;
     }
 
