@@ -22,13 +22,13 @@ jobs:
         # The minimum supported Java (17, what the release is built with) and the current LTS versions.
         java: [ '17', '21', '25' ]
     env:
-      # Coverage is uploaded once, from the Java 17 build.
-      UPLOAD_COVERAGE: ${{ matrix.java == '17' }}
+      # Coverage is uploaded once, from the Java 17 build. Not from Dependabot or fork PRs: GitHub gives them
+      # no repository secrets, so the uploads would fail although the build and tests passed.
+      UPLOAD_COVERAGE: ${{ matrix.java == '17' && github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
     steps:
-      - uses: actions/checkout@v5
-
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
       - name: Set up JDK ${{ matrix.java }}
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
         with:
           java-version: ${{ matrix.java }}
           distribution: 'temurin'
@@ -63,7 +63,7 @@ jobs:
 
       - name: Upload coverage to Codecov
         if: env.UPLOAD_COVERAGE == 'true'
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5.5.5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: >-
@@ -74,7 +74,7 @@ jobs:
 
       - name: Upload coverage to Coveralls
         if: env.UPLOAD_COVERAGE == 'true'
-        uses: coverallsapp/github-action@v2
+        uses: coverallsapp/github-action@8d6379e14d29928660c4ba802d8e85393440b329 # v2.3.8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           # Both modules, as for Codecov and Codacy.
@@ -86,7 +86,7 @@ jobs:
       - name: Upload coverage to Codacy
         if: env.UPLOAD_COVERAGE == 'true'
         continue-on-error: true
-        uses: codacy/codacy-coverage-reporter-action@v1.3.0
+        uses: codacy/codacy-coverage-reporter-action@89d6c85cfafaec52c72b6c5e8b2878d33104c699 # v1.3.0
         with:
           project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
           coverage-reports: >-
