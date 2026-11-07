@@ -615,6 +615,7 @@ Publishing a GitHub release runs `.github/workflows/publish.yml`, which builds t
 - **Coveralls** receives both modules' coverage.
 
 Output changes to expect when upgrading from 1.0.1:
+
 - `//` comments become `///`.
 - Fields, attributes and defaults that `flatc` rejects are left out and reported. These include references to undeclared types (without `includes`) and struct fields that are not scalars.
 - `force_align` on a scalar is left out, with a warning.

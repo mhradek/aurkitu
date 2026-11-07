@@ -65,11 +65,7 @@ final class SchemaValidator {
         Map<TypeName, Declaration> declared = declarations(schema, issues);
         declared.keySet().removeAll(removed);
 
-        String id = schema.fileIdentifier();
-        if (id != null && !id.isBlank() && id.length() != 4) {
-            issues.add("file_identifier \"" + id + "\" must be exactly 4 characters");
-        }
-
+        checkFileIdentifier(schema.fileIdentifier(), issues);
         checkNamespaces(schema, issues);
         boolean checkReferences = schema.includes().isEmpty(); // included types cannot be resolved here
         CompositeValidator composites = new CompositeValidator(declared, removed, checkReferences, issues, warnings);
@@ -100,6 +96,12 @@ final class SchemaValidator {
     }
 
     /** Declarations by name; reports names declared twice. */
+    private static void checkFileIdentifier(String id, List<String> issues) {
+        if (id != null && !id.isBlank() && id.length() != 4) {
+            issues.add("file_identifier \"" + id + "\" must be exactly 4 characters");
+        }
+    }
+
     /** One declaration checked and corrected; null if it is left out. */
     private Declaration validate(Declaration declaration, CompositeValidator composites, Map<TypeName, Declaration> declared,
                                  Set<TypeName> removed, boolean checkReferences, List<String> issues) {
