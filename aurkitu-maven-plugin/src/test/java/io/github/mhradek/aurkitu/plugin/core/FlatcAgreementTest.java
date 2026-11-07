@@ -50,6 +50,9 @@ class FlatcAgreementTest {
     private static final TypeName ROOT = name("Root");
     private static final TypeName STRUCT = name("S");
     private static final Scalar INT = new Scalar(ScalarKind.INT);
+    /** An enum without a 0 value, and a bit_flags enum without bit 0. */
+    private static final Reference CODE = new Reference(name("Code"));
+    private static final Reference FLAGS = new Reference(name("Flags"));
 
     /** Field types, with a default value of the right form for each. */
     private static final Map<String, SchemaType> TYPES = Map.of(
@@ -119,8 +122,9 @@ class FlatcAgreementTest {
         List<String> problems = new ArrayList<>();
         for (Outcome o : outcomes) {
             String label = o.testCase().label();
-            o.cleanedRejection().ifPresent(error -> problems.add("WRITTEN-REJECTED | " + label + " | flatc: " + error
-                    + " | issues: " + o.issues()));
+            o.cleanedRejection().filter(error -> !keptOnPurpose(o.issues(), error))
+                    .ifPresent(error -> problems.add("WRITTEN-REJECTED | " + label + " | flatc: " + error
+                            + " | issues: " + o.issues()));
             boolean reported = o.issues().stream().anyMatch(issue -> STRICTER.stream().noneMatch(issue::contains));
             if (o.rawRejection().isPresent() && o.issues().isEmpty()) {
                 problems.add("MISSED | " + label + " | flatc: " + o.rawRejection().get());
@@ -131,6 +135,17 @@ class FlatcAgreementTest {
         Collections.sort(problems);
         assertTrue(problems.isEmpty(), problems.size() + " disagreements in " + outcomes.size() + " cases:\n"
                 + String.join("\n", problems));
+    }
+
+    /**
+     * The one documented exception to "the written schema compiles": a table enum field whose enum has no 0 value,
+     * with no default or one that is not a value, is reported but kept, since choosing a default would change what
+     * an absent field means. Only those issues, with exactly flatc's matching complaint, are excused.
+     */
+    static boolean keptOnPurpose(List<String> issues, String flatcError) {
+        return issues.stream().anyMatch(issue -> issue.contains("needs a defaultValue: enum")
+                        || issue.contains("which has no value 0: set a defaultValue"))
+                && flatcError.contains("is not part of enum");
     }
 
     /** Every field type in a table and in a struct, with no attribute, each attribute, and each pair; then multi-field cases. */
@@ -174,7 +189,15 @@ class FlatcAgreementTest {
                 table("union id 2 after id 0", a.withAttributes(List.of(new FieldAttribute.Id(0))),
                         new Field("s", "s", union, "", "", List.of(new FieldAttribute.Id(2)))),
                 table("union id 1 after id 0 (overlap)", a.withAttributes(List.of(new FieldAttribute.Id(0))),
-                        new Field("s", "s", union, "", "", List.of(new FieldAttribute.Id(1)))));
+                        new Field("s", "s", union, "", "", List.of(new FieldAttribute.Id(1)))),
+                // Enums without a 0 value: a table field needs a default that is one of the values.
+                table("enum without 0 and no default", Field.of("c", CODE)),
+                table("enum without 0 and default LOW", new Field("c", "c", CODE, "LOW", "", List.of())),
+                table("enum without 0 and default 10", new Field("c", "c", CODE, "10", "", List.of())),
+                table("enum without 0 and default 0", new Field("c", "c", CODE, "0", "", List.of())),
+                table("enum without 0, optional (= null)", new Field("c", "c", CODE, "null", "", List.of())),
+                table("enum without 0 in a vector", Field.of("c", new Vector(CODE))),
+                table("bit_flags enum without bit 0 and no default", Field.of("p", FLAGS)));
     }
 
     private static Case table(String label, Field... fields) {
@@ -238,7 +261,12 @@ class FlatcAgreementTest {
                         List.of(new EnumDeclaration.Value("RED", null), new EnumDeclaration.Value("GREEN", null)), null),
                 new StructDeclaration(name("Vec"), "Vec", "", List.of(Field.of("x", new Scalar(ScalarKind.FLOAT))), false),
                 new TableDeclaration(name("Other"), "Other", "", List.of(Field.of("v", INT)), false),
-                UnionDeclaration.of(name("Shape"), "Shape", "", List.of("Other")));
+                UnionDeclaration.of(name("Shape"), "Shape", "", List.of("Other")),
+                new EnumDeclaration(name("Code"), "Code", "", ScalarKind.INT,
+                        List.of(new EnumDeclaration.Value("LOW", 10L), new EnumDeclaration.Value("HIGH", 20L)), null),
+                new EnumDeclaration(name("Flags"), "Flags", "", ScalarKind.UBYTE,
+                        List.of(new EnumDeclaration.Value("A", 1L), new EnumDeclaration.Value("B", 2L)), null,
+                        List.of(new FieldAttribute.BitFlags())));
     }
 
     /** Compiles the schema with flatc for Java and C++; the error output if it is rejected. */
@@ -261,12 +289,17 @@ class FlatcAgreementTest {
     void casesCoverEveryTypeAttributeAndPair() {
         // 10 types x 2 places x (1 + 11 + 55)
         List<Case> cases = cases();
-        assertEquals(11 + 10 * 2 * (1 + 11 + 55), cases.size());
+        assertEquals(18 + 10 * 2 * (1 + 11 + 55), cases.size());
         assertEquals(cases.size(), cases.stream().map(Case::label).distinct().count());
         for (Case c : cases) {
             SchemaValidator.Result result = assertDoesNotThrow(() -> new SchemaValidator().validate(c.schema()), c.label());
             assertDoesNotThrow(() -> result.schema().write("// test", false, result.issues()), c.label());
         }
+        // The exception is narrow: only the "needs a defaultValue" issue with flatc's enum complaint.
+        assertTrue(keptOnPurpose(List.of("Field Root.c needs a defaultValue: enum Code has no value 0, which is the default"
+                + " otherwise"), "error: default value of `0` for field `c` is not part of enum `Code`."));
+        assertFalse(keptOnPurpose(List.of("Unsupported field type: Root.c"), "is not part of enum"));
+        assertFalse(keptOnPurpose(List.of("Field Root.c needs a defaultValue: enum Code"), "some other error"));
         // A baseline (no attributes) is valid wherever the type is allowed.
         Case baseline = cases.stream().filter(c -> c.label().equals("bool in table with nothing")).findFirst().orElseThrow();
         assertEquals(List.of(), new SchemaValidator().validate(baseline.schema()).issues(), baseline.label());

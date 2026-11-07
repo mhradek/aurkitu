@@ -82,6 +82,7 @@ public class Player extends Entity {
     private Achievement[] achievements;
     private Map<String, Integer> stats;
     private Map<String, Map<String, Integer>> levels;
+    private Map<String, Status> statusByName;    // Status has no 0 value: the map value defaults to ACTIVE
 
     // Binary data
     private byte[] thumbnail;

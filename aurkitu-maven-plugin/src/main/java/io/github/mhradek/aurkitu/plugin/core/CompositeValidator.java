@@ -316,7 +316,15 @@ final class CompositeValidator {
             return field;
         }
         if (enumType != null && !struct && !field.has(FieldAttribute.Required.class)) {
-            issues.add("Field " + where + " default " + value + " is not a value of enum " + enumType.name().name());
+            // Without a default the field is 0: fine when 0 is a value (or bit_flags), so the bad default is left
+            // out. Otherwise no default would be valid either, so the field is kept for the user to fix.
+            if (enumType.bitFlags() || enumValues(enumType).contains(0L)) {
+                issues.add("Field " + where + " default " + value + " is not a value of enum " + enumType.name().name()
+                        + "; default left out");
+                return field.withDefaultValue("");
+            }
+            issues.add("Field " + where + " default " + value + " is not a value of enum " + enumType.name().name()
+                    + ", which has no value 0: set a defaultValue that is one of its values");
             return field;
         }
         issues.add("default " + value + " on " + where + " skipped: " + problem);

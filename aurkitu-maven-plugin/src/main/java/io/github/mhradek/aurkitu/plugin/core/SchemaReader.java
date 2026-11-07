@@ -17,6 +17,7 @@ import io.github.mhradek.aurkitu.annotations.FlatBufferTable;
 import io.github.mhradek.aurkitu.annotations.types.FieldType;
 import io.github.mhradek.aurkitu.plugin.core.model.CompositeDeclaration;
 import io.github.mhradek.aurkitu.plugin.core.model.Declaration;
+import io.github.mhradek.aurkitu.plugin.core.model.EnumDeclaration;
 import io.github.mhradek.aurkitu.plugin.core.model.Field;
 import io.github.mhradek.aurkitu.plugin.core.model.FieldAttribute;
 import io.github.mhradek.aurkitu.plugin.core.model.ScalarKind;
@@ -84,7 +85,9 @@ final class SchemaReader {
             }
         }
         declarations.addAll(declarationOrder(composites));
-        declarations.addAll(mapTables.values());
+        for (TableDeclaration mapTable : mapTables.values()) {
+            declarations.add(withEnumDefaults(mapTable, declarations));
+        }
         for (ClassInfo service : scanResult.getClassesWithAnnotation(FlatBufferRpcService.class.getName())) {
             declarations.add(readRpcService(service));
         }
@@ -110,6 +113,44 @@ final class SchemaReader {
         return struct
                 ? new StructDeclaration(name, classInfo.getName(), comment, fields, root, attributes)
                 : new TableDeclaration(name, classInfo.getName(), comment, fields, root, attributes);
+    }
+
+    /**
+     * flatc requires a table enum field's default to be a value of the enum, and it is 0 unless given. The key
+     * and value of a map table cannot be annotated, and a map entry always has both, so for an enum without a 0
+     * value the lowest value is a safe default.
+     */
+    private static TableDeclaration withEnumDefaults(TableDeclaration mapTable, List<Declaration> declarations) {
+        List<Field> fields = new ArrayList<>();
+        for (Field field : mapTable.fields()) {
+            EnumDeclaration enumType = field.defaultValue().isEmpty() ? enumOf(field.type(), declarations) : null;
+            String lowest = enumType == null ? null : lowestValueIfNoZero(enumType);
+            fields.add(lowest == null ? field : field.withDefaultValue(lowest));
+        }
+        return mapTable.withFields(fields);
+    }
+
+    private static EnumDeclaration enumOf(SchemaType type, List<Declaration> declarations) {
+        if (type instanceof Reference reference) {
+            for (Declaration declaration : declarations) {
+                if (declaration instanceof EnumDeclaration enumDeclaration && declaration.name().equals(reference.target())) {
+                    return enumDeclaration;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * The name of the enum's lowest value when none is 0 (explicit values only), else null. Not for bit_flags,
+     * where 0 means no flags and is always valid.
+     */
+    private static String lowestValueIfNoZero(EnumDeclaration enumDeclaration) {
+        List<EnumDeclaration.Value> values = enumDeclaration.values();
+        if (enumDeclaration.bitFlags() || values.isEmpty() || values.stream().anyMatch(v -> v.value() == null || v.value() == 0)) {
+            return null; // implicit values start at 0
+        }
+        return values.get(0).name(); // explicit values are in ascending order
     }
 
     /** {@code rpc_service} from an interface: each abstract method taking and returning one class. */

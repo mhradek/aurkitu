@@ -183,11 +183,16 @@ class SchemaValidatorTest {
                 new Field("b", "b", color, "GREEN", "", List.of()),          // by name: ok
                 new Field("c", "c", status, "10", "", List.of()),            // by value: ok
                 field("d", status),                                         // no 0, no default
-                new Field("e", "e", color, "PURPLE", "", List.of()),         // not a member
-                field("f", new Vector(status))));                           // vectors have no default: ok
+                new Field("e", "e", color, "PURPLE", "", List.of()),         // not a member; 0 is, so it can go
+                field("f", new Vector(status)),                             // vectors have no default: ok
+                new Field("g", "g", status, "0", "", List.of())));           // not a member; nothing valid without it
         assertEquals(List.of(
                 "Field Root.d needs a defaultValue: enum Status has no value 0, which is the default otherwise",
-                "Field Root.e default PURPLE is not a value of enum Color"), result.issues());
+                "Field Root.e default PURPLE is not a value of enum Color; default left out",
+                "Field Root.g default 0 is not a value of enum Status, which has no value 0: set a defaultValue that is"
+                        + " one of its values"), result.issues());
+        assertEquals("", fieldsOf(result, "Root").get(4).defaultValue(), "e: left out, so the field defaults to RED (0)");
+        assertEquals("0", fieldsOf(result, "Root").get(6).defaultValue(), "g: kept for the user to fix");
     }
 
     @Test

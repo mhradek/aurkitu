@@ -474,7 +474,8 @@ With `validate` on (the default), problems are listed as comments at the end of 
 - Attributes on the wrong kind of field: `required` on scalars, enums or struct fields; `deprecated` on struct fields; `key` on anything but a string, scalar, enum or struct (or, in a struct, a fixed-length array), on a deprecated field, or a second `key`; `hash` with an unknown algorithm or not on an integer (or vector of integers) of its width; `nested_flatbuffer` and `flexbuffer` not on `[ubyte]`, or `nested_flatbuffer` naming a table that is not declared. The attribute is left out.
 - Defaults that `flatc` rejects: on strings, vectors, tables or struct fields, together with `required`, or not fitting the type (`300` on a `ubyte`, `abc` on an `int`). The default is left out. `= null` is valid on scalars and enums.
 - `fixedLength` outside a struct (written as a vector), two fields written with the same name (`fooBar` and `foo_bar` with `snakeCaseFields`), and a field clashing with a union's hidden `<name>_type` field. The later field is left out.
-- Enum problems: no values, duplicate or out-of-range values, more than one `@FlatBufferEnumTypeField`, a value field that cannot be read, table enum fields whose default is not an enum value, and `bit_flags` on a signed type or with a bit position that does not fit.
+- Enum problems: no values, duplicate or out-of-range values, more than one `@FlatBufferEnumTypeField`, a value field that cannot be read, table enum fields whose default is not an enum value, and `bit_flags` on a signed type or with a bit position that does not fit. A default that is not a value is left out when the enum has a `0` value (the field then defaults to it).
+- **Kept for you to fix:** a table field of an enum with no `0` value, with no `defaultValue` or one that is not a value. Without a default the field would be `0`, which is not a value of the enum, and choosing one for you would change what an absent field means. The schema does not compile until you set `defaultValue` to one of the enum's values. This is the one issue whose field is not left out. (Generated map tables are different: their enum key or value gets the enum's lowest value, because a map entry always has both.)
 - Union members that are enums or unions, named `NONE` or twice, or (without `includes`) not declared; vectors of unions (C++ only).
 - `original_order` on a struct, `force_align` on a table or not a power of two, and custom attribute names that are invalid or built in.
 - RPC methods that do not take and return one declared table.
@@ -482,7 +483,7 @@ With `validate` on (the default), problems are listed as comments at the end of 
 
 **Warnings** are listed after the issues and logged, but never fail the build. They flag schemas `flatc` accepts but that are risky or do not do what they say: inherited fields that existing data depends on (see [Schema evolution](#schema-evolution)), and `force_align` on a field that is not a vector, which `flatc` ignores (it is left out).
 
-The rules are checked against `flatc` itself: a test compiles every field type, in a table and in a struct, with each attribute and each pair of attributes, and requires an issue exactly when `flatc` rejects the schema, and the written schema to compile every time.
+The rules are checked against `flatc` itself: a test compiles every field type, in a table and in a struct, with each attribute and each pair of attributes, and requires an issue exactly when `flatc` rejects the schema, and the written schema to compile in every case except the enum default above.
 
 `flatcPath` adds a full check by `flatc` itself.
 
@@ -602,7 +603,7 @@ Publishing a GitHub release runs `.github/workflows/publish.yml`, which builds t
 
 ## What's new in 1.1.0
 
-- **Validation** of the FlatBuffers schema rules Aurkitu used to write without checking: `required`, defaults, struct-only and vector-only attributes, field ids, `key`, `hash`, `nested_flatbuffer`, duplicate field names, union `_type` clashes, empty structs and more (see [Validation](#validation)). Invalid parts are reported and left out, so the written schema always compiles. The rules are tested against `flatc` itself.
+- **Validation** of the FlatBuffers schema rules Aurkitu used to write without checking: `required`, defaults, struct-only and vector-only attributes, field ids, `key`, `hash`, `nested_flatbuffer`, duplicate field names, union `_type` clashes, empty structs and more (see [Validation](#validation)). Invalid parts are reported and left out, so the written schema compiles; the one exception is a table enum field whose enum has no `0` value and that needs a `defaultValue`, which is reported for you to fix. The rules are tested against `flatc` itself.
 - **Warnings** for schemas `flatc` accepts but that are risky: inherited fields in tables without field ids ([Schema evolution](#schema-evolution)), and `force_align` on a field that is not a vector (`flatc` ignores it).
 - **Documentation comments**: `@FlatBufferComment` writes `///` comments, which `flatc` copies into generated code, and now also works on enum constants, union members and RPC methods.
 - **New features**: optional scalars (`optionalScalars`), `bit_flags` enums, union aliases (`@FlatBufferUnionMember`), RPC services (`@FlatBufferRpcService`), custom attributes (`attributes`), `original_order` and struct `force_align`.
@@ -612,6 +613,8 @@ Publishing a GitHub release runs `.github/workflows/publish.yml`, which builds t
   - A non-scalar struct field was left in unless `failOnValidationIssues` was set. It is now always left out.
   - Two fields written with the same name, or a field named like a union's hidden `_type` field, were reported but both written, which `flatc` rejects. The later one is now left out.
   - An optional enum field (`= null`) was reported as an invalid default.
+  - A map value of an enum type without a `0` value (`Map<String, Status>`) got an issue that could not be fixed, because the generated field cannot be annotated. It now defaults to the enum's lowest value (`value:Status = ACTIVE;`).
+  - An enum default that is not a value was kept even when the enum has a `0` value. It is now left out, so the field defaults to `0`.
 - **Tests**: every generator option (including `schemaNamespace`) on and off in all 4096 combinations, on models that probe how the options affect one another; validation compared with `flatc` for every field type and attribute pair; an opt-in `pitest` profile for mutation testing.
 - **Coveralls** receives both modules' coverage.
 
