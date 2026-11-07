@@ -46,8 +46,8 @@ class AurkituMojoConfigTest {
         assertTrue(content.contains("file_identifier \"AB12\";"));
         assertTrue(content.contains("// @version:"));
         assertTrue(content.contains("table SampleRootTable"));
-        // snake_case default
-        assertTrue(content.contains("nested_map:") || content.contains("base_id:"));
+        assertTrue(content.contains("  nested_map:[MapValueSet_SampleRootTable_nested_map];\n"), content);
+        assertTrue(content.contains("  base_id:long;\n"), content);
     }
 
     @Test
@@ -70,8 +70,10 @@ class AurkituMojoConfigTest {
         generator.generate("camel", "test.camel", out);
 
         String content = Files.readString(out.toPath().resolve("camel.fbs"));
-        assertTrue(content.contains("nestedMap:") || content.contains("baseId:"));
-        assertFalse(content.contains("nested_map:"));
+        assertTrue(content.contains("  nestedMap:[MapValueSet_SampleRootTable_nestedMap];\n"), content);
+        assertTrue(content.contains("  baseId:long;\n"), content);
+        assertFalse(content.contains("nested_map"), content);
+        assertFalse(content.contains("base_id"), content);
     }
 
     @Test
@@ -114,8 +116,9 @@ class AurkituMojoConfigTest {
                 null); // failOnValidationIssues = true
         SchemaGenerator generator = new SchemaGenerator(config);
 
-        assertThrows(SchemaGenerationException.class, () ->
+        SchemaGenerationException e = assertThrows(SchemaGenerationException.class, () ->
                 generator.generate("fail", "test.fail", tempDir.toFile()));
+        assertEquals("Schema validation failed with 1 issue(s). See schema comments.", e.getMessage());
     }
 
     @Test
@@ -144,10 +147,15 @@ class AurkituMojoConfigTest {
     @Test
     void cacheStillValidates() throws Exception {
         File out = tempDir.toFile();
+        Path schema = out.toPath().resolve("cached.fbs");
         new SchemaGenerator(cachingConfig(false)).generate("cached", "test.cache", out);
-        // Same, unchanged output: failOnValidationIssues must still apply.
+        String generated = Files.readString(schema);
+        assertTrue(generated.contains("// Validation issues:\n"), "the test models must have issues:\n" + generated);
+        // Same, unchanged output (so the cache skips the write): failOnValidationIssues must still apply.
         SchemaGenerator strict = new SchemaGenerator(cachingConfig(true));
-        assertThrows(SchemaGenerationException.class, () -> strict.generate("cached", "test.cache", out));
+        SchemaGenerationException e = assertThrows(SchemaGenerationException.class, () -> strict.generate("cached", "test.cache", out));
+        assertEquals("Schema validation failed with 2 issue(s). See schema comments.", e.getMessage());
+        assertEquals(generated, Files.readString(schema));
     }
 
     private static SchemaGenerator.Config cachingConfig(boolean failOnValidationIssues) {

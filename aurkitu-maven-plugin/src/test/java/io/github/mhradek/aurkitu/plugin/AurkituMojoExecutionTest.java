@@ -69,7 +69,9 @@ class AurkituMojoExecutionTest {
         Thread mojoThread = Thread.currentThread();
         Thread interrupter = new Thread(() -> {
             try {
-                while (!Files.exists(started)) {
+                // Gives up (and the test fails) rather than hanging if the script never starts.
+                long deadline = System.nanoTime() + 30_000_000_000L;
+                while (!Files.exists(started) && System.nanoTime() < deadline) {
                     Thread.sleep(10);
                 }
                 mojoThread.interrupt();
@@ -94,12 +96,15 @@ class AurkituMojoExecutionTest {
 
     @Test
     void flatcIsSkippedWhenValidationIsOffOrNoPathIsSet() throws Exception {
+        Path schema = tempDir.resolve("out/models.fbs");
         AurkituMojo noValidation = mojo("/nonexistent/flatc");
         set(noValidation, "validate", false);
         noValidation.execute(); // would fail if flatc were run
+        assertTrue(Files.exists(schema));
 
-        mojo("   ").execute();
-        assertTrue(Files.exists(tempDir.resolve("out/models.fbs")));
+        Files.delete(schema);
+        mojo("   ").execute(); // a blank path would fail too
+        assertTrue(Files.exists(schema));
     }
 
     @Test
@@ -108,7 +113,8 @@ class AurkituMojoExecutionTest {
         set(mojo, "failOnValidationIssues", true);
 
         MojoFailureException e = assertThrows(MojoFailureException.class, mojo::execute);
-        assertTrue(e.getMessage().startsWith("Schema validation failed with"), e.getMessage());
+        assertEquals("Schema validation failed with 2 issue(s). See schema comments.", e.getMessage());
+        assertInstanceOf(io.github.mhradek.aurkitu.plugin.core.SchemaGenerationException.class, e.getCause());
     }
 
     @Test

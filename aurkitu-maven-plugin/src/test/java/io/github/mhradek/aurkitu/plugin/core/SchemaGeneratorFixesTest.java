@@ -1,7 +1,7 @@
 package io.github.mhradek.aurkitu.plugin.core;
 
 import io.github.mhradek.aurkitu.plugin.core.model.Schema;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -20,12 +20,13 @@ class SchemaGeneratorFixesTest {
     private static final String PKG = "io.github.mhradek.aurkitu.plugin.core.fixes";
 
     @TempDir
-    static Path tempDir;
+    Path tempDir;
 
-    private static String schema;
+    /** Generated for every test, so each test (and mutation testing) really runs the generator. */
+    private String schema;
 
-    @BeforeAll
-    static void generate() throws Exception {
+    @BeforeEach
+    void generate() throws Exception {
         SchemaGenerator.Config config = new SchemaGenerator.Config(
                 null, List.of(PKG), true, true, "FIX1", List.of("other.fbs"),
                 true, false, true, false, false, null);
@@ -65,6 +66,13 @@ class SchemaGeneratorFixesTest {
     }
 
     @Test
+    void mapWithAnUnsupportedValueIsReportedAndGetsNoTable() {
+        assertTrue(schema.contains("Unsupported field type: Holder.optionalMap"), schema);
+        assertFalse(schema.contains("optional_map"), schema);
+        assertFalse(schema.contains("null"), schema);
+    }
+
+    @Test
     void userTypeNamedLikeACollectionIsAReference() {
         assertTrue(schema.contains("  players:PlayerList;"), schema);
     }
@@ -86,7 +94,7 @@ class SchemaGeneratorFixesTest {
     @Test
     void syntheticFieldsAreSkipped() {
         assertTrue(schema.contains("table Attached {\n  value:int;\n}"), schema);
-        assertFalse(schema.contains("this"), schema);
+        assertFalse(schema.contains("this$"), schema);
     }
 
     @Test

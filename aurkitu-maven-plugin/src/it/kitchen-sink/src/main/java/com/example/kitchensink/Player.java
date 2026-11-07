@@ -81,6 +81,7 @@ public class Player extends Entity {
     private List<Item> inventory;
     private Achievement[] achievements;
     private Map<String, Integer> stats;
+    private Map<String, Map<String, Integer>> levels;
 
     // Binary data
     private byte[] thumbnail;

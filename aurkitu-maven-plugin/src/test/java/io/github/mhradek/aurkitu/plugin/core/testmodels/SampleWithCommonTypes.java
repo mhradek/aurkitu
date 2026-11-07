@@ -18,4 +18,6 @@ public class SampleWithCommonTypes {
     private Set<String> tags;
     private Collection<Integer> numbers;
     private byte[] bytes;
+    /** Left out unless ignoreStaticMembers is false. */
+    static int instances;
 }

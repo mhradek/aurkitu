@@ -120,6 +120,7 @@ table Player {
   inventory:[Item];
   achievements:[Achievement];
   stats:[MapValueSet_Player_stats];
+  levels:[MapValueSet_Player_levels];
   thumbnail:[ubyte];
   featured_item:[ubyte] (nested_flatbuffer: "Item");
   extras:[ubyte] (flexbuffer);
@@ -151,6 +152,16 @@ table Versioned {
 }
 
 table MapValueSet_Player_stats {
+  key:string;
+  value:int;
+}
+
+table MapValueSet_Player_levels {
+  key:string;
+  value:[MapValueSet_Player_levels_value];
+}
+
+table MapValueSet_Player_levels_value {
   key:string;
   value:int;
 }

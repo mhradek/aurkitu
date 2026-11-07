@@ -417,6 +417,8 @@ table MapValueSet_Account_scores {
 }
 ```
 
+A map whose values are maps gets one table per level: `Map<String, Map<String, Integer>> levels` becomes `levels:[MapValueSet_Account_levels]`, whose `value` is `[MapValueSet_Account_levels_value]`.
+
 ---
 
 ## Sample output

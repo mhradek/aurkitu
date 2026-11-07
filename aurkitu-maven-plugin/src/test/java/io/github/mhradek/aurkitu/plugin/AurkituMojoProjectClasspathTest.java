@@ -83,13 +83,22 @@ class AurkituMojoProjectClasspathTest {
         mojo.execute();
 
         String schema = Files.readString(out.resolve("project.fbs"));
-        assertTrue(schema.contains("enum ProjectColor : byte {"), schema);
-        assertTrue(schema.contains("RED"), schema);
-        assertTrue(schema.contains("table ProjectUser {"), schema);
-        assertTrue(schema.contains("display_name:string;"), schema);
-        assertTrue(schema.contains("color:ProjectColor;"), schema);
-        assertTrue(schema.contains("root_type ProjectUser;"), schema);
-        assertFalse(schema.contains("No root type defined"), schema);
+        assertTrue(schema.endsWith("""
+                namespace e2e.fb;
+
+                enum ProjectColor : byte {
+                  RED,
+                  GREEN,
+                }
+
+                table ProjectUser {
+                  id:long;
+                  display_name:string;
+                  color:ProjectColor;
+                }
+
+                root_type ProjectUser;
+                """), schema);
     }
 
     @SuppressWarnings("PMD.AvoidAccessibilityAlteration")

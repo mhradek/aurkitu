@@ -7,6 +7,7 @@ public class EnumTypeTest {
 
     @Test
     public void testDefaults() {
+        assertEquals(8, EnumType.values().length, "every value is checked below");
         for (EnumType type : EnumType.values()) {
             switch (type) {
                 case BYTE:

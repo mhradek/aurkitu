@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @FlatBufferTable(rootType = true)
@@ -18,6 +19,7 @@ public class Holder {
     private ArrayList<Integer> ids;
     private List<String> names;
     private Map<String, Long> counts;
+    private Map<String, Optional<String>> optionalMap;
     private int[][] grid;
     private List<List<String>> nested;
     private Outer.Inner inner;
