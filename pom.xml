@@ -41,7 +41,7 @@
 
         <junit.version>5.10.2</junit.version>
         <lombok.version>1.18.42</lombok.version>
-        <classgraph.version>4.8.174</classgraph.version>
+        <classgraph.version>6.0.1</classgraph.version>
         <maven.plugin.annotations.version>3.13.1</maven.plugin.annotations.version>
         <maven.version>3.9.6</maven.version>
         <jacoco.version>0.8.14</jacoco.version>
