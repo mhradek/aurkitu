@@ -103,6 +103,7 @@ Run `mvn process-classes` (or any later phase, such as `mvn package`) to generat
 | `generateVersion` | `aurkitu.generateVersion` | `false` | Emit `// @version: <hash>`, a hash of the schema body. The header and validation comments are excluded, so it changes only when the schema does. |
 | `flatcPath` | `aurkitu.flatcPath` | — | Path to a `flatc` binary. When set (and `validate` is on), the schema is checked with `flatc --binary --schema` and the build fails if `flatc` rejects it. |
 | `cacheEnabled` | `aurkitu.cacheEnabled` | `false` | Only rewrite the schema file when its content changes, keeping its timestamp for downstream steps. The schema is still generated and validated every time. |
+| `optionalScalars` | `aurkitu.optionalScalars` | `false` | Write boxed Java scalars (`Integer`, `Boolean`, …) in tables as [optional scalars](#optional-scalars) (`= null`). Since 1.1.0. |
 
 The plugin scans the project's compile classpath (its compiled classes plus compile-scope dependencies), so annotated models can live in the project itself or in a dependency jar.
 
@@ -185,7 +186,73 @@ private int version;
   version:int (id: 1);
 ```
 
-Other options: `defaultValue`, `deprecated`, `key`, `hash` (e.g. `"fnv1a_32"`), `nestedFlatbuffer` and `flexbuffer` (on `[ubyte]` fields), `forceAlign` (on vectors), `fixedLength` (in structs), and `useFullName` (reference a type by its fully qualified Java name). Ids are written only when every field in the table has one. Comments come from `@FlatBufferComment(comment = "...")` on classes and fields.
+Other options: `defaultValue`, `deprecated`, `key` (one per table), `hash` (`fnv1_32`, `fnv1a_32`, `fnv1_64`, `fnv1a_64`, on 32/64-bit integers), `nestedFlatbuffer` and `flexbuffer` (on `[ubyte]` fields), `forceAlign` (on vectors), `fixedLength` (in structs), `useFullName` (reference a type by its fully qualified Java name), and `attributes` (see [Custom attributes](#custom-attributes)). Ids are written only when every field in the table has one; they must be unique and contiguous from 0, and a union field also takes the id before its own.
+
+### Documentation comments
+
+`@FlatBufferComment(comment = "...")` on a class, field, enum constant, union member or RPC method is written as `///` lines, which `flatc` copies into the generated code. Each line of text becomes one `///` line:
+
+```java
+@FlatBufferComment(comment = "A player.\nStored by PlayerStore.")
+@FlatBufferTable(rootType = true, originalOrder = true)
+public class Player { ... }
+```
+
+```idl
+/// A player.
+/// Stored by PlayerStore.
+table Player (original_order) {
+```
+
+Before 1.1.0 these were `//` comments, which `flatc` ignores.
+
+### Optional scalars
+
+A scalar table field that is not set reads as its default (`0` unless given). FlatBuffers' optional scalars (`= null`) read as null instead, which matches a boxed Java field. With `<optionalScalars>true</optionalScalars>`, boxed scalars (`Integer`, `Boolean`, `Long`, …) in tables are written that way, unless they have a `defaultValue` or are `required`; struct fields are never optional:
+
+```java
+private Integer rank;
+private Boolean verified;
+private int score;
+```
+
+```idl
+  rank:int = null;
+  verified:bool = null;
+  score:int;
+```
+
+`defaultValue = "null"` makes a single field optional, including an enum field.
+
+### Custom attributes
+
+`attributes` on `@FlatBufferFieldOptions`, `@FlatBufferTable` and `@FlatBufferEnum` adds user-defined attributes, `"name"` or `"name: value"`, for your own tools to read from the schema. Each name is declared once with `attribute "name";`:
+
+```java
+@FlatBufferFieldOptions(fieldType = FieldType.INT, attributes = {"priority: 1"})
+private int score;
+```
+
+```idl
+attribute "priority";
+...
+  score:int (priority: 1);
+```
+
+Names must be identifiers and cannot be FlatBuffers' own attributes (such as `key`); use the annotation option for those.
+
+### Table and struct attributes
+
+`@FlatBufferTable(originalOrder = true)` keeps a table's fields in declaration order in the buffer (`original_order`). `@FlatBufferTable(value = STRUCT, forceAlign = 16)` raises a struct's alignment (`force_align`, a power of two):
+
+```idl
+struct Vec4 (force_align: 16) {
+  x:float;
+  y:float;
+  z:float;
+  w:float;
+}
+```
 
 ### Enums
 
@@ -232,7 +299,70 @@ A table field of enum type defaults to `0`. If the enum has no value `0`, as `Pr
 private Priority priority;
 ```
 
-Unions use `@FlatBufferEnum(FlatBufferEnum.EnumStructureType.UNION)`; each constant names a table.
+`@FlatBufferEnum(enumType = EnumType.UBYTE, bitFlags = true)` writes a `bit_flags` enum (unsigned types only): values are bit positions, so implicit values give 1, 2, 4, … and a field may default to `0`, meaning no flags:
+
+```java
+@FlatBufferEnum(enumType = EnumType.UBYTE, bitFlags = true)
+public enum Permission {
+    @FlatBufferComment(comment = "May read")
+    READ,
+    WRITE,
+    ADMIN
+}
+```
+
+```idl
+enum Permission : ubyte (bit_flags) {
+  /// May read
+  READ,
+  WRITE,
+  ADMIN,
+}
+```
+
+### Unions
+
+Unions use `@FlatBufferEnum(FlatBufferEnum.EnumStructureType.UNION)`; each constant names a table, which is looked up in the union's namespace first and qualified when it is declared elsewhere. `@FlatBufferUnionMember(Table.class)` makes the constant an alias, so one table can appear under several names:
+
+```java
+@FlatBufferEnum(FlatBufferEnum.EnumStructureType.UNION)
+public enum Position {
+    @FlatBufferUnionMember(MarkerPosition.class)
+    Start,
+    PointPosition,
+    @FlatBufferUnionMember(MarkerPosition.class)
+    Finish
+}
+```
+
+```idl
+union Position {
+  Start:MarkerPosition,
+  PointPosition,
+  Finish:MarkerPosition,
+}
+```
+
+A union field adds a hidden `<name>_type` field, so no other field may have that name. Vectors of unions are supported by `flatc` only for C++.
+
+### RPC services
+
+`@FlatBufferRpcService` on an interface declares an `rpc_service`. Each abstract method taking one table and returning one becomes a method; mark a method `@FlatBufferIgnore` to leave it out. `flatc --grpc` generates code for it:
+
+```java
+@FlatBufferRpcService
+public interface PlayerStore {
+    @FlatBufferComment(comment = "Saves a player")
+    PointPosition save(Player player);
+}
+```
+
+```idl
+rpc_service PlayerStore {
+  /// Saves a player
+  save(Player):PointPosition;
+}
+```
 
 ### Nested types
 
@@ -291,16 +421,16 @@ table MapValueSet_Account_scores {
 
 ## Sample output
 
-From an annotated `Account` table and `Status` enum, with `fileIdentifier = ACCT` and `generateVersion = true`:
+From an annotated `Account` table and `Status` enum, with `fileIdentifier = ACCT` and `generateVersion = true`. This is 1.1.0 output; 1.0.1 writes the comment as `// Account state`, which also changes the hash:
 
 ```idl
-// Aurkitu 1.0.1 automatically generated FlatBuffer schema
-// @version: 3de77678
+// Aurkitu 1.1.0 automatically generated FlatBuffer schema
+// @version: edf69fb7
 namespace com.example;
 
 file_identifier "ACCT";
 
-// Account state
+/// Account state
 enum Status : byte {
   ACTIVE,
   SUSPENDED,
@@ -336,13 +466,29 @@ With `validate` on (the default), problems are listed as comments at the end of 
 - References to types the schema does not declare. This is not checked when `includes` are set, since included schemas are not read.
 - Struct fields that are not scalars, enums, structs or fixed-length arrays of those. They are left out when `failOnValidationIssues` is set.
 - A struct marked as the root type (`root_type` must be a table); no root type; more than one root type.
-- Ids on only some fields of a table (all ids are then left out).
-- Attributes on fields of the wrong type: `nested_flatbuffer` and `flexbuffer` need `[ubyte]`, `force_align` needs a vector. The attribute is left out.
-- Enum problems: no values, duplicate or out-of-range values, more than one `@FlatBufferEnumTypeField`, a value field that cannot be read, and table enum fields whose default is not an enum value.
-- Union members that are enums or unions, or (without `includes`) are not declared.
+- Field ids on only some fields of a table, repeated ids, gaps, or a union field without the id before its own free (all ids are then left out).
+- Attributes on the wrong kind of field: `required` on scalars, enums or struct fields; `deprecated` on struct fields; `key` on anything but a string, scalar or enum, or a second `key`; `hash` with an unknown algorithm or on the wrong integer width; `nested_flatbuffer` and `flexbuffer` not on `[ubyte]`, or `nested_flatbuffer` naming a table that is not declared; `force_align` not on a vector. The attribute is left out.
+- Defaults that `flatc` rejects: on strings, vectors, tables or struct fields, together with `required`, or not fitting the type (`300` on a `ubyte`, `abc` on an `int`). The default is left out. `= null` is valid on scalars and enums.
+- `fixedLength` outside a struct (written as a vector), two fields written with the same name (`fooBar` and `foo_bar`), and a field clashing with a union's hidden `<name>_type` field.
+- Enum problems: no values, duplicate or out-of-range values, more than one `@FlatBufferEnumTypeField`, a value field that cannot be read, table enum fields whose default is not an enum value, and `bit_flags` on a signed type or with a bit position that does not fit.
+- Union members that are enums or unions, named `NONE` or twice, or (without `includes`) not declared; vectors of unions (C++ only).
+- `original_order` on a struct, `force_align` on a table or not a power of two, and custom attribute names that are invalid or built in.
+- RPC methods that do not take and return one declared table.
 - Namespaces that are not dot-separated identifiers, two types with the same name in one namespace, and a `file_identifier` that is not 4 characters.
 
+**Warnings** are listed after the issues and logged, but never fail the build. They flag risks to data already written with the schema; see [Schema evolution](#schema-evolution).
+
 `flatcPath` adds a full check by `flatc` itself.
+
+---
+
+## Schema evolution
+
+FlatBuffers stores table fields by position, so a schema must change only in compatible ways ([Evolution](https://flatbuffers.dev/evolution/)): add new fields at the end, never remove or reorder fields (mark them `deprecated` instead), and do not change types or defaults. Aurkitu writes fields in Java declaration order, so the same rules apply to your Java classes:
+
+- Add new fields after the existing ones; do not reorder or delete fields, or mark them `@FlatBufferIgnore` once data exists. Use `@FlatBufferFieldOptions(deprecated = true)` to retire a field.
+- Inherited fields are written after the class's own fields, so adding a field to a subclass moves them. Aurkitu warns about tables with inherited fields and no field ids.
+- `fieldId` on every field of a table fixes each field's position, so fields can then be reordered in Java safely.
 
 ---
 
@@ -351,7 +497,8 @@ With `validate` on (the default), problems are listed as comments at the end of 
 - **Maps** need a small translation layer in clients (`MapValueSet_*` tables).
 - **Includes** are written but not read, so types from included schemas are not resolved or validated.
 - **One schema file** per execution; per-type namespaces are written into that file.
-- **Not generated**: `rpc_service` and `///` documentation comments (`@FlatBufferComment` writes `//` comments).
+- **Field names**: consecutive capitals are split letter by letter (`userID` becomes `user_i_d`).
+- **Map keys** are always written as `string`, whatever the Java key type.
 - **Scanning** without `specifiedPackages` scans the whole compile classpath, which is slower.
 
 ---
@@ -447,6 +594,15 @@ Publishing a GitHub release runs `.github/workflows/publish.yml`, which builds t
 
 ---
 
+## What's new in 1.1.0 (unreleased)
+
+- **Validation** of the FlatBuffers schema rules Aurkitu used to write without checking: `required`, defaults, struct-only and vector-only attributes, field ids, `key`, `hash`, `nested_flatbuffer`, duplicate field names, union `_type` clashes and more (see [Validation](#validation)). Invalid parts are reported and left out.
+- **Warnings** for risks to existing data, starting with inherited fields in tables without field ids ([Schema evolution](#schema-evolution)).
+- **Fix**: an optional enum field (`= null`) was reported as an invalid default.
+- **Documentation comments**: `@FlatBufferComment` writes `///` comments, which `flatc` copies into generated code, and now also works on enum constants, union members and RPC methods. Output change: `//` comments become `///`.
+- **New features**: optional scalars (`optionalScalars`), `bit_flags` enums, union aliases (`@FlatBufferUnionMember`), RPC services (`@FlatBufferRpcService`), custom attributes (`attributes`), `original_order` and struct `force_align`.
+- **Coveralls** receives both modules' coverage.
+
 ## What's new in 1.0.1
 
 1.0.0 generated an empty schema in real builds. 1.0.1 fixes that and corrects the generated output in many places, checked by end-to-end builds and `flatc`:
@@ -522,7 +678,8 @@ Output changes to expect when upgrading from 1.0.0: explicit enum values are wri
 | Medium | Published Javadoc site | Javadoc jars are on Maven Central |
 | Low | Schema include resolution | Includes are written, not read |
 | Low | Multiple schema files (one per namespace) | One file per execution |
-| Low | `rpc_service` and `///` doc comments | Not generated |
+| Low | Acronym-aware snake_case (`userID` → `user_id`) | Changes field names, so opt-in |
+| Low | Typed map keys and a `(key)` attribute on `MapValueSet_*` keys | Keys are written as `string` |
 | Low | Remove deprecated `@FlatBufferOptions` | Planned for 2.0 |
 
 ## License
