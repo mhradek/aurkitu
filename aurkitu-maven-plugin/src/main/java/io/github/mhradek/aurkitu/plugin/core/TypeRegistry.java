@@ -4,6 +4,7 @@ import io.github.classgraph.ClassInfo;
 import io.github.classgraph.ScanResult;
 import io.github.mhradek.aurkitu.annotations.FlatBufferEnum;
 import io.github.mhradek.aurkitu.annotations.FlatBufferIgnore;
+import io.github.mhradek.aurkitu.annotations.FlatBufferRpcService;
 import io.github.mhradek.aurkitu.annotations.FlatBufferTable;
 import io.github.mhradek.aurkitu.plugin.core.model.TypeName;
 
@@ -35,6 +36,7 @@ final class TypeRegistry {
         TypeRegistry registry = new TypeRegistry(defaultNamespace);
         registry.register(scanResult.getClassesWithAnnotation(FlatBufferEnum.class.getName()), FlatBufferEnum.class.getName());
         registry.register(scanResult.getClassesWithAnnotation(FlatBufferTable.class.getName()), FlatBufferTable.class.getName());
+        registry.register(scanResult.getClassesWithAnnotation(FlatBufferRpcService.class.getName()), FlatBufferRpcService.class.getName());
         for (ClassInfo outer : scanResult.getClassesWithAnnotation(FlatBufferTable.class.getName())) {
             for (ClassInfo nested : nestedTypes(outer)) {
                 registry.names.putIfAbsent(nested.getName(),
@@ -72,6 +74,16 @@ final class TypeRegistry {
 
     String defaultNamespace() {
         return defaultNamespace;
+    }
+
+    /**
+     * The declared type named {@code simpleName}: the one in {@code preferredNamespace} if there is one,
+     * else the only one; otherwise (none or ambiguous) that name in {@code preferredNamespace}.
+     */
+    TypeName resolve(String simpleName, String preferredNamespace) {
+        List<TypeName> matches = names.values().stream().filter(n -> n.name().equals(simpleName)).distinct().toList();
+        return matches.stream().filter(n -> n.namespace().equals(preferredNamespace)).findFirst()
+                .orElse(matches.size() == 1 ? matches.get(0) : new TypeName(preferredNamespace, simpleName));
     }
 
     /** The schema name of a class; classes that are not annotated are assumed to be in the default namespace. */

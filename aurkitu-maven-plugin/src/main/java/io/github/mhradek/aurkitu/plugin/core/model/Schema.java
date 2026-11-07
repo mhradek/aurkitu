@@ -44,19 +44,50 @@ public record Schema(String namespace, List<String> includes, String fileIdentif
      * @param validationIssues issues to list in a trailing comment block (empty for none)
      */
     public String write(String header, boolean includeVersion, List<String> validationIssues) {
+        return write(header, includeVersion, validationIssues, List.of());
+    }
+
+    /**
+     * As {@link #write(String, boolean, List)}, followed by a block of warnings (empty for none).
+     */
+    public String write(String header, boolean includeVersion, List<String> validationIssues, List<String> warnings) {
         String body = writeBody();
         StringBuilder out = new StringBuilder(header).append('\n');
         if (includeVersion) {
             out.append("// @version: ").append(version(body)).append('\n');
         }
         out.append(body);
-        if (!validationIssues.isEmpty()) {
-            out.append("\n// Validation issues:\n");
-            for (String issue : validationIssues) {
-                out.append("// - ").append(issue).append('\n');
+        appendBlock(out, "Validation issues", validationIssues);
+        appendBlock(out, "Warnings", warnings);
+        return out.toString();
+    }
+
+    private static void appendBlock(StringBuilder out, String title, List<String> lines) {
+        if (!lines.isEmpty()) {
+            out.append("\n// ").append(title).append(":\n");
+            for (String line : lines) {
+                out.append("// - ").append(line).append('\n');
             }
         }
-        return out.toString();
+    }
+
+    /** Names of the user-defined attributes used anywhere, in order of first use; each must be declared. */
+    public List<String> customAttributeNames() {
+        java.util.Set<String> names = new java.util.LinkedHashSet<>();
+        java.util.function.Consumer<List<FieldAttribute>> collect = attributes -> attributes.stream()
+                .filter(FieldAttribute.Custom.class::isInstance)
+                .forEach(a -> names.add(((FieldAttribute.Custom) a).name()));
+        for (Declaration declaration : declarations) {
+            if (declaration instanceof CompositeDeclaration composite) {
+                collect.accept(composite.attributes());
+                composite.fields().forEach(field -> collect.accept(field.attributes()));
+            } else if (declaration instanceof EnumDeclaration enumDeclaration) {
+                collect.accept(enumDeclaration.attributes());
+            } else if (declaration instanceof UnionDeclaration union) {
+                collect.accept(union.attributes());
+            }
+        }
+        return List.copyOf(names);
     }
 
     /** Content hash of a schema body. */
@@ -83,17 +114,27 @@ public record Schema(String namespace, List<String> includes, String fileIdentif
         if (fileExtension != null && !fileExtension.isBlank()) {
             out.line("file_extension \"" + fileExtension + "\";").blankLine();
         }
+        List<String> customAttributes = customAttributeNames();
+        for (String attribute : customAttributes) {
+            out.line("attribute \"" + attribute + "\";");
+        }
+        if (!customAttributes.isEmpty()) {
+            out.blankLine();
+        }
 
+        // A namespace statement applies to everything after it: switch only when the namespace changes,
+        // and restore the default before root_type.
+        String current = namespace;
         for (Declaration declaration : declarations) {
-            // A namespace statement applies to everything after it, so restore the default straight away.
             String ns = declaration.name().namespace();
-            if (ns.equals(namespace)) {
-                declaration.write(out);
-            } else {
+            if (!ns.equals(current)) {
                 out.namespace(ns);
-                declaration.write(out);
-                out.namespace(namespace);
+                current = ns;
             }
+            declaration.write(out);
+        }
+        if (!current.equals(namespace)) {
+            out.namespace(namespace);
         }
 
         root().ifPresent(root -> out.line("root_type " + root.name().referenceFrom(namespace) + ";"));

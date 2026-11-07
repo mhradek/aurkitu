@@ -39,6 +39,11 @@ public enum ScalarKind {
         return min != null;
     }
 
+    /** Width in bits of an integral kind (8, 16, 32 or 64). */
+    public int bits() {
+        return isIntegral() ? max.subtract(min).bitLength() : 0;
+    }
+
     public boolean isUnsigned() {
         return isIntegral() && min.signum() == 0;
     }

@@ -7,11 +7,23 @@ file_identifier "KTCH";
 
 file_extension "ktch";
 
-// Primary colours
+attribute "help";
+attribute "priority";
+
+/// Primary colours.
+/// Written as /// lines, one per line of text.
 enum Color : byte {
+  /// The default
   RED,
   GREEN,
   BLUE,
+}
+
+enum Perm : ubyte (bit_flags) {
+  /// May read
+  READ,
+  WRITE,
+  ADMIN,
 }
 
 enum Priority : short {
@@ -23,6 +35,8 @@ enum Priority : short {
 union Shape {
   Circle,
   Square,
+  /// A square under another name
+  Box:Square,
 }
 
 enum Status : uint {
@@ -36,13 +50,13 @@ enum Mood : byte {
   ANGRY,
 }
 
-struct Vec3 {
+struct Vec3 (force_align: 16) {
   x:float;
   y:float;
   z:float;
 }
 
-// Position, rotation quaternion and render layer
+/// Position, rotation quaternion and render layer
 struct Transform {
   position:Vec3;
   rotation:[float:4];
@@ -63,12 +77,12 @@ table Circle {
   radius:float;
 }
 
-table Item {
+table Item (original_order, help: "An inventory item") {
   name:string (key);
   quantity:int;
 }
 
-// A player profile; balances are in $
+/// A player profile; balances are in $
 table Player {
   active:bool;
   mood:byte;
@@ -77,12 +91,12 @@ table Player {
   xp:long;
   speed:float;
   ratio:double;
-  verified:bool;
-  rank:int;
-  rating:double;
+  verified:bool = null;
+  rank:int = null;
+  rating:double = null;
   name:string (required);
-  // Starting health
-  health:int = 100;
+  /// Starting health
+  health:int = 100 (priority: 2);
   level:ubyte;
   port:ushort;
   name_hash:uint (hash: "fnv1a_32");
@@ -92,6 +106,7 @@ table Player {
   status:Status = ACTIVE;
   priority:Priority = LOW;
   avatar:Shape;
+  permissions:Perm;
   temper:Mood;
   spawn:Vec3;
   transform:Transform;
@@ -105,6 +120,8 @@ table Player {
   inventory:[Item];
   achievements:[Achievement];
   stats:[MapValueSet_Player_stats];
+  levels:[MapValueSet_Player_levels];
+  status_by_name:[MapValueSet_Player_status_by_name];
   thumbnail:[ubyte];
   featured_item:[ubyte] (nested_flatbuffer: "Item");
   extras:[ubyte] (flexbuffer);
@@ -140,4 +157,29 @@ table MapValueSet_Player_stats {
   value:int;
 }
 
+table MapValueSet_Player_levels {
+  key:string;
+  value:[MapValueSet_Player_levels_value];
+}
+
+table MapValueSet_Player_levels_value {
+  key:string;
+  value:int;
+}
+
+table MapValueSet_Player_status_by_name {
+  key:string;
+  value:Status = ACTIVE;
+}
+
+/// Player lookups
+rpc_service PlayerService {
+  /// Finds a player by item
+  find(Item):Player;
+  version(Player):Versioned;
+}
+
 root_type Player;
+
+// Warnings:
+// - Table Player has inherited fields (from Entity) after its own; adding a field to Player moves them and breaks existing data. Give every field a fieldId to fix their positions.

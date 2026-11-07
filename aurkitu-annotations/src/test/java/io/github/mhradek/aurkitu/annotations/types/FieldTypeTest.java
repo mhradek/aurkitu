@@ -7,6 +7,7 @@ public class FieldTypeTest {
 
     @Test
     public void testDefaults() {
+        assertEquals(15, FieldType.values().length, "every value is checked below");
         for (FieldType type : FieldType.values()) {
             switch (type) {
                 case BOOL:

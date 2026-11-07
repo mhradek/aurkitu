@@ -3,15 +3,10 @@ package io.github.mhradek.aurkitu.plugin.core;
 import io.github.mhradek.aurkitu.plugin.core.model.CompositeDeclaration;
 import io.github.mhradek.aurkitu.plugin.core.model.Declaration;
 import io.github.mhradek.aurkitu.plugin.core.model.EnumDeclaration;
-import io.github.mhradek.aurkitu.plugin.core.model.Field;
 import io.github.mhradek.aurkitu.plugin.core.model.FieldAttribute;
+import io.github.mhradek.aurkitu.plugin.core.model.ScalarKind;
+import io.github.mhradek.aurkitu.plugin.core.model.RpcServiceDeclaration;
 import io.github.mhradek.aurkitu.plugin.core.model.Schema;
-import io.github.mhradek.aurkitu.plugin.core.model.SchemaType;
-import io.github.mhradek.aurkitu.plugin.core.model.SchemaType.FixedArray;
-import io.github.mhradek.aurkitu.plugin.core.model.SchemaType.Reference;
-import io.github.mhradek.aurkitu.plugin.core.model.SchemaType.Scalar;
-import io.github.mhradek.aurkitu.plugin.core.model.SchemaType.Unsupported;
-import io.github.mhradek.aurkitu.plugin.core.model.SchemaType.Vector;
 import io.github.mhradek.aurkitu.plugin.core.model.StructDeclaration;
 import io.github.mhradek.aurkitu.plugin.core.model.TableDeclaration;
 import io.github.mhradek.aurkitu.plugin.core.model.TypeName;
@@ -23,42 +18,57 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
- * Checks a schema against FlatBuffers rules. A pure function: it returns a copy with
- * everything that cannot be written removed, plus the issues found, listed in schema order.
+ * Checks a schema against the FlatBuffers rules (https://flatbuffers.dev/schema/). A pure
+ * function: it returns a copy with everything that cannot be written removed, plus the issues
+ * and warnings found, listed in schema order. Fields are checked by {@link CompositeValidator}.
  *
- * <p>Corrections: unsupported fields are dropped; ids are dropped from a table where only
- * some fields have one; attributes on fields of the wrong type are dropped; non-scalar
- * struct fields are dropped when {@code dropInvalidStructFields} is set; a struct marked as
- * root loses the mark (flatc only accepts a table as root).</p>
+ * <p>Corrections: unsupported fields are dropped; invalid ids, attributes and defaults are
+ * dropped; fixed-length arrays outside structs become vectors; non-scalar struct fields are
+ * dropped; a struct marked as root loses the mark
+ * (flatc only accepts a table as root).</p>
  */
 final class SchemaValidator {
 
-    record Result(Schema schema, List<String> issues) {}
+    /**
+     * @param issues   problems flatc would reject (or that lose information); they can fail the build
+     * @param warnings risks to compatibility with existing data; reported, never fatal
+     */
+    record Result(Schema schema, List<String> issues, List<String> warnings) {}
 
     private static final Pattern NAMESPACE = Pattern.compile("[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*");
 
-    private final boolean dropInvalidStructFields;
-
-    SchemaValidator(boolean dropInvalidStructFields) {
-        this.dropInvalidStructFields = dropInvalidStructFields;
+    Result validate(Schema schema) {
+        // flatc rejects empty structs: one whose fields are all invalid is left out, with the fields that use it,
+        // which can empty another struct, so validate until none is left empty.
+        Set<TypeName> removed = new HashSet<>();
+        while (true) {
+            Result result = validate(schema, removed);
+            Set<TypeName> empty = result.schema().declarations().stream()
+                    .filter(d -> d instanceof StructDeclaration struct && struct.fields().isEmpty())
+                    .map(Declaration::name).collect(Collectors.toSet());
+            if (empty.isEmpty()) {
+                return result;
+            }
+            removed.addAll(empty);
+        }
     }
 
-    Result validate(Schema schema) {
+    private Result validate(Schema schema, Set<TypeName> removed) {
         List<String> issues = new ArrayList<>();
+        List<String> warnings = new ArrayList<>();
         Map<TypeName, Declaration> declared = declarations(schema, issues);
+        declared.keySet().removeAll(removed);
 
-        String id = schema.fileIdentifier();
-        if (id != null && !id.isBlank() && id.length() != 4) {
-            issues.add("file_identifier \"" + id + "\" must be exactly 4 characters");
-        }
-
+        checkFileIdentifier(schema.fileIdentifier(), issues);
         checkNamespaces(schema, issues);
         boolean checkReferences = schema.includes().isEmpty(); // included types cannot be resolved here
+        CompositeValidator composites = new CompositeValidator(declared, removed, checkReferences, issues, warnings);
 
         List<Declaration> valid = new ArrayList<>();
         boolean rootSeen = false;
@@ -68,30 +78,51 @@ final class SchemaValidator {
                 declaration = new StructDeclaration(struct.name(), struct.source(), struct.comment(), struct.fields(), false);
                 rootSeen = true; // reported above; not also "No root type defined"
             }
-            if (declaration instanceof CompositeDeclaration composite) {
-                valid.add(validate(composite, declared, checkReferences, issues));
-                if (composite.root()) {
-                    if (rootSeen) {
-                        issues.add("Multiple root types; last used: " + composite.name().name());
-                    }
-                    rootSeen = true;
+            if (declaration instanceof CompositeDeclaration composite && composite.root()) {
+                if (rootSeen) {
+                    issues.add("Multiple root types; last used: " + composite.name().name());
                 }
-            } else {
-                if (declaration instanceof EnumDeclaration enumDeclaration) {
-                    validate(enumDeclaration, issues);
-                } else if (declaration instanceof UnionDeclaration union) {
-                    validate(union, declared, checkReferences, issues);
-                }
-                valid.add(declaration);
+                rootSeen = true;
+            }
+            Declaration checked = validate(declaration, composites, declared, removed, checkReferences, issues);
+            if (checked != null) {
+                valid.add(checked);
             }
         }
         if (!rootSeen) {
             issues.add("No root type defined");
         }
-        return new Result(schema.withDeclarations(valid), List.copyOf(issues));
+        return new Result(schema.withDeclarations(valid), List.copyOf(issues), List.copyOf(warnings));
     }
 
     /** Declarations by name; reports names declared twice. */
+    private static void checkFileIdentifier(String id, List<String> issues) {
+        if (id != null && !id.isBlank() && id.length() != 4) {
+            issues.add("file_identifier \"" + id + "\" must be exactly 4 characters");
+        }
+    }
+
+    /** One declaration checked and corrected; null if it is left out. */
+    private Declaration validate(Declaration declaration, CompositeValidator composites, Map<TypeName, Declaration> declared,
+                                 Set<TypeName> removed, boolean checkReferences, List<String> issues) {
+        if (declaration instanceof CompositeDeclaration composite) {
+            CompositeDeclaration checked = composites.validate(composite);
+            if (removed.contains(checked.name())) {
+                issues.add("Struct " + checked.name().name() + " has no valid fields and is left out (flatc does not"
+                        + " allow empty structs)");
+                return null;
+            }
+            return checked;
+        }
+        if (declaration instanceof EnumDeclaration enumDeclaration) {
+            return validate(enumDeclaration, issues);
+        }
+        if (declaration instanceof UnionDeclaration union) {
+            return validate(union, declared, checkReferences, issues);
+        }
+        return declaration instanceof RpcServiceDeclaration service ? validate(service, declared, checkReferences, issues) : declaration;
+    }
+
     private static Map<TypeName, Declaration> declarations(Schema schema, List<String> issues) {
         Map<TypeName, Declaration> declared = new HashMap<>();
         for (Declaration declaration : schema.declarations()) {
@@ -104,103 +135,63 @@ final class SchemaValidator {
         return declared;
     }
 
-    private CompositeDeclaration validate(CompositeDeclaration composite, Map<TypeName, Declaration> declared,
-                                          boolean checkReferences, List<String> issues) {
-        String owner = composite.name().name();
-        long withId = composite.fields().stream().filter(f -> f.has(FieldAttribute.Id.class)).count();
-        boolean partialIds = withId > 0 && withId < composite.fields().size();
-        if (partialIds) {
-            issues.add("Partial field ids on " + owner + "; ids omitted (all fields or none must have an id)");
-        }
-
-        List<Field> valid = new ArrayList<>();
-        for (Field field : composite.fields()) {
-            if (field.type() instanceof Unsupported) {
-                issues.add("Unsupported field type: " + owner + "." + field.javaName());
-                continue;
-            }
-            Field checked = field.withAttributes(validAttributes(field, owner, partialIds, issues));
-            if (composite instanceof TableDeclaration) {
-                checkEnumDefault(checked, owner, declared, issues);
-            }
-            if (checkReferences) {
-                checkReferenceDeclared(checked, owner, declared, issues);
-            }
-            if (composite instanceof StructDeclaration && !isStructCompatible(checked.type(), declared)) {
-                issues.add("Struct " + owner + " field " + field.javaName()
-                        + " is non-scalar; structs may only contain scalars or other structs");
-                if (dropInvalidStructFields) {
-                    continue;
-                }
-            }
-            valid.add(checked);
-        }
-        return composite.withFields(valid);
-    }
-
-    /**
-     * A table field of enum type defaults to 0 unless a default is given, and flatc rejects a
-     * default that is not one of the enum's values. Reported rather than guessed, since picking
-     * a default would change what an absent field means.
-     */
-    private static void checkEnumDefault(Field field, String owner, Map<TypeName, Declaration> declared, List<String> issues) {
-        if (!(field.type() instanceof Reference reference)
-                || !(declared.get(reference.target()) instanceof EnumDeclaration enumDeclaration)
-                || enumDeclaration.values().isEmpty()) {
-            return;
-        }
-        Set<String> names = new HashSet<>();
-        Set<Long> values = new HashSet<>();
-        List<EnumDeclaration.Value> constants = enumDeclaration.values();
-        for (int i = 0; i < constants.size(); i++) {
-            names.add(constants.get(i).name());
-            values.add(constants.get(i).value() != null ? constants.get(i).value() : i); // implicit: 0, 1, 2...
-        }
-        String enumName = enumDeclaration.name().name();
-        String where = owner + "." + field.javaName();
-        String defaultValue = field.defaultValue().trim();
-        if (defaultValue.isEmpty()) {
-            if (!values.contains(0L)) {
-                issues.add("Field " + where + " needs a defaultValue: enum " + enumName
-                        + " has no value 0, which is the default otherwise");
-            }
-        } else if (!names.contains(defaultValue) && !values.contains(parseLong(defaultValue))) {
-            issues.add("Field " + where + " default " + defaultValue + " is not a value of enum " + enumName);
-        }
-    }
-
-    /** A referenced type must be declared in this schema (unless it may come from an include). */
-    private static void checkReferenceDeclared(Field field, String owner, Map<TypeName, Declaration> declared, List<String> issues) {
-        SchemaType type = field.type();
-        if (type instanceof Vector vector) {
-            type = vector.element();
-        } else if (type instanceof FixedArray array) {
-            type = array.element();
-        }
-        if (type instanceof Reference reference && !declared.containsKey(reference.target())) {
-            issues.add("Field " + owner + "." + field.javaName() + " references " + reference.target().qualified()
-                    + ", which is not declared in this schema; annotate it, or include the schema that declares it");
-        }
-    }
-
     /**
      * Union members name tables (flatc also accepts structs), resolved in the union's namespace.
      * An enum or union can never be a member.
      */
-    private static void validate(UnionDeclaration union, Map<TypeName, Declaration> declared, boolean checkReferences,
-                                 List<String> issues) {
+    private static UnionDeclaration validate(UnionDeclaration union, Map<TypeName, Declaration> declared,
+                                             boolean checkReferences, List<String> issues) {
         String name = union.name().name();
         if (union.members().isEmpty()) {
             issues.add("Union " + name + " has no members");
         }
-        for (String member : union.members()) {
-            Declaration target = declared.get(new TypeName(union.name().namespace(), member));
+        Set<String> labels = new HashSet<>();
+        for (UnionDeclaration.Member member : union.members()) {
+            String label = member.label();
+            if ("NONE".equals(label)) {
+                issues.add("Union " + name + " member NONE: the name is reserved (flatc adds NONE for no value)");
+            } else if (!labels.add(label)) {
+                issues.add("Union " + name + " has two members named " + label);
+            }
+            Declaration target = declared.get(member.type());
             if (target == null && checkReferences) {
-                issues.add("Union " + name + " member " + member + " is not declared in this schema");
-            } else if (target instanceof EnumDeclaration || target instanceof UnionDeclaration) {
-                issues.add("Union " + name + " member " + member + " is not a table");
+                issues.add("Union " + name + " member " + label + " is not declared in this schema");
+            } else if (target instanceof EnumDeclaration || target instanceof UnionDeclaration
+                    || target instanceof RpcServiceDeclaration) {
+                issues.add("Union " + name + " member " + label + " is not a table");
             }
         }
+        return union.withAttributes(CompositeValidator.validCustom(union.attributes(), "union " + name, issues));
+    }
+
+    /**
+     * RPC methods take one table and return one; methods with another signature are dropped. Request
+     * and response types must be declared tables (unless they may come from an include).
+     */
+    private static RpcServiceDeclaration validate(RpcServiceDeclaration service, Map<TypeName, Declaration> declared,
+                                                  boolean checkReferences, List<String> issues) {
+        String name = service.name().name();
+        List<RpcServiceDeclaration.Method> valid = new ArrayList<>();
+        for (RpcServiceDeclaration.Method method : service.methods()) {
+            String where = name + "." + method.name();
+            if (!method.valid()) {
+                issues.add("RPC method " + where + " skipped: it must take exactly one table and return a table");
+                continue;
+            }
+            for (TypeName type : List.of(method.request(), method.response())) {
+                Declaration target = declared.get(type);
+                if (target == null && checkReferences) {
+                    issues.add("RPC method " + where + " uses " + type.qualified() + ", which is not declared in this schema");
+                } else if (target != null && !(target instanceof TableDeclaration)) {
+                    issues.add("RPC method " + where + " uses " + type.qualified() + ", which is not a table");
+                }
+            }
+            valid.add(method);
+        }
+        if (valid.isEmpty()) {
+            issues.add("RPC service " + name + " has no methods");
+        }
+        return service.withMethods(valid);
     }
 
     /** Namespaces are dot-separated identifiers. */
@@ -215,58 +206,7 @@ final class SchemaValidator {
         }
     }
 
-    private static Long parseLong(String text) {
-        try {
-            return Long.parseLong(text);
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
-    private static List<FieldAttribute> validAttributes(Field field, String owner, boolean dropIds, List<String> issues) {
-        List<FieldAttribute> valid = new ArrayList<>();
-        String where = owner + "." + field.javaName();
-        for (FieldAttribute attribute : field.attributes()) {
-            if (attribute instanceof FieldAttribute.Id && dropIds) {
-                continue;
-            }
-            if (attribute instanceof FieldAttribute.NestedFlatbuffer && !SchemaType.isByteVector(field.type())) {
-                issues.add("nested_flatbuffer on " + where + " skipped: type must be [ubyte]");
-                continue;
-            }
-            if (attribute instanceof FieldAttribute.Flexbuffer && !SchemaType.isByteVector(field.type())) {
-                issues.add("flexbuffer on " + where + " skipped: type must be [ubyte]");
-                continue;
-            }
-            if (attribute instanceof FieldAttribute.ForceAlign
-                    && !(field.type() instanceof Vector || field.type() instanceof FixedArray)) {
-                issues.add("force_align on " + where + " skipped: only valid on vectors");
-                continue;
-            }
-            valid.add(attribute);
-        }
-        return valid;
-    }
-
-    /**
-     * Structs may contain scalars, enums, other structs and fixed-length arrays of those.
-     * References to types not declared in this schema (e.g. from an include) are given the benefit of the doubt.
-     */
-    private static boolean isStructCompatible(SchemaType type, Map<TypeName, Declaration> declared) {
-        if (type instanceof FixedArray array) {
-            return !(array.element() instanceof FixedArray) && isStructCompatible(array.element(), declared);
-        }
-        if (type instanceof Scalar) {
-            return true;
-        }
-        if (type instanceof Reference reference) {
-            Declaration target = declared.get(reference.target());
-            return target == null || target instanceof StructDeclaration || target instanceof EnumDeclaration;
-        }
-        return false; // string, vector
-    }
-
-    private static void validate(EnumDeclaration enumDeclaration, List<String> issues) {
+    private static EnumDeclaration validate(EnumDeclaration enumDeclaration, List<String> issues) {
         String name = enumDeclaration.name().name();
         if (enumDeclaration.values().isEmpty()) {
             issues.add("Enum " + name + " has no values");
@@ -288,5 +228,30 @@ final class SchemaValidator {
                         + enumDeclaration.underlying().keyword());
             }
         }
+        List<FieldAttribute> attributes = CompositeValidator.validCustom(enumDeclaration.attributes(), "enum " + name, issues);
+        if (enumDeclaration.bitFlags() && !bitFlagsValid(enumDeclaration, issues)) {
+            attributes = attributes.stream().filter(a -> !(a instanceof FieldAttribute.BitFlags)).toList();
+        }
+        return enumDeclaration.withAttributes(attributes);
+    }
+
+    /** bit_flags: an unsigned type, and each value (explicit, or its position) a bit of that width. */
+    private static boolean bitFlagsValid(EnumDeclaration enumDeclaration, List<String> issues) {
+        String name = enumDeclaration.name().name();
+        ScalarKind kind = enumDeclaration.underlying();
+        if (!kind.isUnsigned()) {
+            issues.add("bit_flags on enum " + name + " skipped: needs an unsigned enumType (UBYTE, USHORT, UINT, ULONG)");
+            return false;
+        }
+        int bits = kind.bits();
+        List<EnumDeclaration.Value> values = enumDeclaration.values();
+        for (int i = 0; i < values.size(); i++) {
+            long position = values.get(i).value() != null ? values.get(i).value() : i;
+            if (position < 0 || position >= bits) {
+                issues.add("Enum " + name + " value " + values.get(i).name() + " is bit " + position
+                        + ", but bit_flags on " + kind.keyword() + " allows bits 0 to " + (bits - 1));
+            }
+        }
+        return true;
     }
 }

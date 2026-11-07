@@ -4,7 +4,7 @@ package io.github.mhradek.aurkitu.plugin.core.model;
  * A top-level schema declaration. Each declaration writes itself.
  */
 public sealed interface Declaration
-        permits CompositeDeclaration, EnumDeclaration, UnionDeclaration {
+        permits CompositeDeclaration, EnumDeclaration, UnionDeclaration, RpcServiceDeclaration {
 
     TypeName name();
 

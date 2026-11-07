@@ -130,12 +130,16 @@ final class TypeMapper {
      * written at the end of the schema in the default namespace.
      */
     private SchemaType mapTable(TypeSignature valueSig, ClassInfo owner, String fieldName, boolean useFullName) {
-        SchemaType valueType = map(valueSig, owner, fieldName, useFullName);
-        if (valueType == null) {
-            return null;
-        }
         TypeName mapTable = new TypeName(registry.defaultNamespace(),
                 MAP_TABLE_PREFIX + Naming.typeName(owner.getName()) + "_" + Naming.fieldName(fieldName, snakeCaseFields));
+        // Reserves this table's place, so it is written before the table of a map nested in it.
+        mapTables.put(mapTable.name(), null);
+        // A map value that is itself a map gets its own table, MapValueSet_<Owner>_<field>_value.
+        SchemaType valueType = map(valueSig, owner, fieldName + "Value", useFullName);
+        if (valueType == null) {
+            mapTables.remove(mapTable.name());
+            return null;
+        }
         mapTables.put(mapTable.name(), new TableDeclaration(mapTable, owner.getName(), "",
                 List.of(Field.of("key", StringType.INSTANCE), Field.of("value", valueType)), false));
         return new Vector(new Reference(mapTable));
@@ -155,6 +159,11 @@ final class TypeMapper {
         int dot = className.lastIndexOf('.');
         return new Reference(new TypeName(dot < 0 ? "" : className.substring(0, dot),
                 className.substring(dot + 1).replace('$', '_')), true);
+    }
+
+    /** True for a boxed Java scalar ({@code Integer}, {@code Boolean}, ...), which can be null. */
+    static boolean isBoxedScalar(TypeSignature typeSig) {
+        return typeSig instanceof ClassRefTypeSignature ref && WRAPPERS.containsKey(ref.getFullyQualifiedClassName());
     }
 
     /** {@code [element]}; null when the element is unsupported or itself a vector (FlatBuffers has no nested vectors). */

@@ -5,11 +5,11 @@ import java.lang.annotation.*;
 /**
  * @author m.hradek
  * <p>
- * Applied to either a Field or a Type, this will cause the parsing to ignore these during schema generation.
+ * Applied to a field, a nested type or an RPC method, this leaves it out of the schema.
  */
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
-@Target(value = {ElementType.FIELD, ElementType.TYPE})
+@Target(value = {ElementType.FIELD, ElementType.TYPE, ElementType.METHOD})
 public @interface FlatBufferIgnore {
 
 }

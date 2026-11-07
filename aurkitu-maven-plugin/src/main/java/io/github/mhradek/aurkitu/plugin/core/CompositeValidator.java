@@ -1,0 +1,505 @@
+package io.github.mhradek.aurkitu.plugin.core;
+
+import io.github.mhradek.aurkitu.plugin.core.model.CompositeDeclaration;
+import io.github.mhradek.aurkitu.plugin.core.model.Declaration;
+import io.github.mhradek.aurkitu.plugin.core.model.EnumDeclaration;
+import io.github.mhradek.aurkitu.plugin.core.model.Field;
+import io.github.mhradek.aurkitu.plugin.core.model.FieldAttribute;
+import io.github.mhradek.aurkitu.plugin.core.model.ScalarKind;
+import io.github.mhradek.aurkitu.plugin.core.model.SchemaType;
+import io.github.mhradek.aurkitu.plugin.core.model.SchemaType.FixedArray;
+import io.github.mhradek.aurkitu.plugin.core.model.SchemaType.Reference;
+import io.github.mhradek.aurkitu.plugin.core.model.SchemaType.Scalar;
+import io.github.mhradek.aurkitu.plugin.core.model.SchemaType.StringType;
+import io.github.mhradek.aurkitu.plugin.core.model.SchemaType.Unsupported;
+import io.github.mhradek.aurkitu.plugin.core.model.SchemaType.Vector;
+import io.github.mhradek.aurkitu.plugin.core.model.StructDeclaration;
+import io.github.mhradek.aurkitu.plugin.core.model.TableDeclaration;
+import io.github.mhradek.aurkitu.plugin.core.model.TypeName;
+import io.github.mhradek.aurkitu.plugin.core.model.UnionDeclaration;
+
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.regex.Pattern;
+
+/**
+ * Checks the fields of one table or struct against the FlatBuffers schema rules
+ * (https://flatbuffers.dev/schema/), returning a corrected copy. Problems flatc would reject
+ * are issues; risks to compatibility with existing data are warnings.
+ */
+final class CompositeValidator {
+
+    /** Hash algorithms flatc accepts, by the integer width they produce. */
+    private static final Map<String, Integer> HASHES = Map.of(
+            "fnv1_32", 32, "fnv1a_32", 32, "fnv1_64", 64, "fnv1a_64", 64);
+
+    /** Attributes flatc defines itself; a user-defined attribute cannot reuse these names. */
+    static final Set<String> BUILT_IN_ATTRIBUTES = Set.of(
+            "id", "deprecated", "required", "key", "shared", "hash", "force_align", "bit_flags", "original_order",
+            "nested_flatbuffer", "flexbuffer", "native_inline", "native_type", "native_default",
+            "native_custom_alloc", "cpp_type", "cpp_ptr_type", "cpp_ptr_type_get", "cpp_str_type",
+            "cpp_str_flex_ctor", "streaming", "idempotent", "private");
+
+    private static final Pattern IDENT = Pattern.compile("[a-zA-Z_][a-zA-Z0-9_]*");
+
+    private static final Pattern INTEGER = Pattern.compile("[-+]?(0[xX][0-9a-fA-F]+|[0-9]+)");
+    private static final Pattern FLOAT = Pattern.compile(
+            "[-+]?((\\.[0-9]+|[0-9]+\\.[0-9]*|[0-9]+)([eE][-+]?[0-9]+)?"
+                    + "|0[xX](\\.[0-9a-fA-F]+|[0-9a-fA-F]+\\.[0-9a-fA-F]*|[0-9a-fA-F]+)[pP][-+]?[0-9]+"
+                    + "|nan|inf|infinity)");
+
+    private final Map<TypeName, Declaration> declared;
+    private final boolean checkReferences;
+    private final List<String> issues;
+    private final List<String> warnings;
+    /** Declarations left out (empty structs): references to them are left out too. */
+    private final Set<TypeName> removed;
+
+    CompositeValidator(Map<TypeName, Declaration> declared, Set<TypeName> removed, boolean checkReferences,
+                       List<String> issues, List<String> warnings) {
+        this.declared = declared;
+        this.removed = removed;
+        this.checkReferences = checkReferences;
+        this.issues = issues;
+        this.warnings = warnings;
+    }
+
+    CompositeDeclaration validate(CompositeDeclaration composite) {
+        String owner = composite.name().name();
+        boolean struct = composite instanceof StructDeclaration;
+        boolean dropIds = !idsValid(composite, owner);
+
+        List<Field> valid = new ArrayList<>();
+        String key = "";
+        for (Field field : composite.fields()) {
+            Field checked = checkField(field, owner, struct, dropIds, key);
+            if (checked != null) {
+                if (checked.has(FieldAttribute.Key.class)) {
+                    key = field.javaName();
+                }
+                valid.add(checked);
+            }
+        }
+        List<Field> unique = uniqueNames(owner, valid);
+        if (!struct) {
+            warnAboutInheritedFields((TableDeclaration) composite, unique);
+        }
+        return composite.withFields(unique).withAttributes(typeAttributes(composite, struct));
+    }
+
+    /** The field with its problems reported and corrected, or null if it must be left out. */
+    private Field checkField(Field field, String owner, boolean struct, boolean dropIds, String key) {
+        String where = owner + "." + field.javaName();
+        if (field.type() instanceof Unsupported) {
+            issues.add("Unsupported field type: " + where);
+            return null;
+        }
+        Field typed = field;
+        if (!struct && field.type() instanceof FixedArray array) {
+            // Converted first, so the attributes are checked against the type that is written.
+            issues.add("fixedLength on " + where + " ignored: fixed-length arrays are only allowed in structs;"
+                    + " written as a vector");
+            typed = field.withType(new Vector(array.element()));
+        }
+        Field checked = checkDefault(typed.withAttributes(validAttributes(typed, where, struct, dropIds, key)), where, struct);
+        if (!referenceDeclared(checked, where)) {
+            return null;
+        }
+        if (struct && !isStructCompatible(checked.type())) {
+            issues.add("Struct " + owner + " field " + field.javaName()
+                    + " is non-scalar; structs may only contain scalars or other structs");
+            return null;
+        }
+        if (!struct && isUnion(elementOf(checked.type())) && checked.type() instanceof Vector) {
+            issues.add("Field " + where + " is a vector of unions, which flatc supports only for C++");
+        }
+        return checked;
+    }
+
+    /** original_order: tables only; force_align: structs only, a power of two; custom: valid names. */
+    private List<FieldAttribute> typeAttributes(CompositeDeclaration composite, boolean struct) {
+        String where = (struct ? "struct " : "table ") + composite.name().name();
+        List<FieldAttribute> valid = new ArrayList<>();
+        for (FieldAttribute attribute : composite.attributes()) {
+            String problem = null;
+            if (attribute instanceof FieldAttribute.OriginalOrder && struct) {
+                problem = "original_order on {} skipped: only tables";
+            } else if (attribute instanceof FieldAttribute.ForceAlign align) {
+                problem = !struct ? "force_align on {} skipped: only structs (on a table, put it on a vector field)"
+                        : Integer.bitCount(align.alignment()) != 1 ? "force_align on {} skipped: " + align.alignment()
+                        + " is not a power of two" : null;
+            } else if (attribute instanceof FieldAttribute.Custom custom) {
+                problem = customProblem(custom);
+            }
+            if (problem == null) {
+                valid.add(attribute);
+            } else {
+                issues.add(problem.replace("{}", where));
+            }
+        }
+        return valid;
+    }
+
+    /** Why a user-defined attribute is invalid (with {} for where it is), or null. */
+    static String customProblem(FieldAttribute.Custom custom) {
+        if (!IDENT.matcher(custom.name()).matches()) {
+            return "attribute \"" + custom.name() + "\" on {} skipped: not a valid name";
+        }
+        return BUILT_IN_ATTRIBUTES.contains(custom.name())
+                ? "attribute " + custom.name() + " on {} skipped: built in; use the annotation option instead" : null;
+    }
+
+    /** Custom attributes of {@code attributes} with valid names; the others are reported for {@code where}. */
+    static List<FieldAttribute> validCustom(List<FieldAttribute> attributes, String where, List<String> issues) {
+        List<FieldAttribute> valid = new ArrayList<>();
+        for (FieldAttribute attribute : attributes) {
+            String problem = attribute instanceof FieldAttribute.Custom custom ? customProblem(custom) : null;
+            if (problem == null) {
+                valid.add(attribute);
+            } else {
+                issues.add(problem.replace("{}", where));
+            }
+        }
+        return valid;
+    }
+
+    /**
+     * Ids must be on all fields or none, unique and contiguous from 0; a union field also takes
+     * the id before its own (for its hidden type field). Otherwise all ids are dropped.
+     */
+    private boolean idsValid(CompositeDeclaration composite, String owner) {
+        List<Field> fields = composite.fields();
+        List<Field> withId = fields.stream().filter(f -> f.has(FieldAttribute.Id.class)).toList();
+        if (withId.isEmpty()) {
+            return true;
+        }
+        if (withId.size() < fields.size()) {
+            issues.add("Partial field ids on " + owner + "; ids omitted (all fields or none must have an id)");
+            return false;
+        }
+        TreeSet<Integer> used = new TreeSet<>();
+        boolean unique = true;
+        for (Field field : fields) {
+            int id = idOf(field);
+            unique &= used.add(id);
+            if (isUnion(field.type())) {
+                unique &= id > 0 && used.add(id - 1);
+            }
+        }
+        boolean contiguous = used.first() == 0 && used.last() == used.size() - 1;
+        if (!unique || !contiguous) {
+            issues.add("Field ids on " + owner + " must be unique and contiguous from 0, and a union field also"
+                    + " takes the id before its own; ids omitted (used: " + used + ")");
+            return false;
+        }
+        return true;
+    }
+
+    private static int idOf(Field field) {
+        return field.attributes().stream().filter(FieldAttribute.Id.class::isInstance)
+                .map(a -> ((FieldAttribute.Id) a).value()).findFirst().orElse(-1);
+    }
+
+    private List<FieldAttribute> validAttributes(Field field, String where, boolean struct, boolean dropIds, String key) {
+        List<FieldAttribute> valid = new ArrayList<>();
+        SchemaType type = field.type();
+        boolean deprecated = !struct && field.has(FieldAttribute.Deprecated.class);
+        for (FieldAttribute attribute : field.attributes()) {
+            if (attribute instanceof FieldAttribute.ForceAlign && !(type instanceof Vector || type instanceof FixedArray)) {
+                // flatc accepts it and ignores it, so it is a warning, not an issue.
+                warnings.add("force_align on " + where + " has no effect: only vectors are aligned (align a struct with"
+                        + " @FlatBufferTable(forceAlign)); left out");
+                continue;
+            }
+            String problem = problem(attribute, type, struct, dropIds, deprecated ? null : key);
+            if (problem == null) {
+                valid.add(attribute);
+            } else if (!problem.isEmpty()) {
+                issues.add(problem.replace("{}", where));
+            }
+        }
+        return valid;
+    }
+
+    /**
+     * Why an attribute cannot stay (with {} for the field), "" to drop it silently, or null to keep it.
+     * {@code key} is the field already holding the key ("" if none), or null if this field is deprecated.
+     */
+    private String problem(FieldAttribute attribute, SchemaType type, boolean struct, boolean dropIds, String key) {
+        String problem = null;
+        if (attribute instanceof FieldAttribute.Id) {
+            problem = dropIds ? "" : null;
+        } else if (attribute instanceof FieldAttribute.NestedFlatbuffer nested) {
+            problem = nestedFlatbufferProblem(nested, type);
+        } else if (attribute instanceof FieldAttribute.Flexbuffer) {
+            problem = SchemaType.isByteVector(type) ? null : "flexbuffer on {} skipped: type must be [ubyte]";
+        } else if (attribute instanceof FieldAttribute.Required) {
+            problem = requiredProblem(type, struct);
+        } else if (attribute instanceof FieldAttribute.Deprecated) {
+            problem = struct ? "deprecated on {} skipped: struct fields cannot be deprecated" : null;
+        } else if (attribute instanceof FieldAttribute.Key) {
+            problem = keyProblem(type, key);
+        } else if (attribute instanceof FieldAttribute.Hash hash) {
+            problem = hashProblem(hash, type);
+        } else if (attribute instanceof FieldAttribute.Custom custom) {
+            problem = customProblem(custom);
+        }
+        return problem;
+    }
+
+    private String nestedFlatbufferProblem(FieldAttribute.NestedFlatbuffer nested, SchemaType type) {
+        if (!SchemaType.isByteVector(type)) {
+            return "nested_flatbuffer on {} skipped: type must be [ubyte]";
+        }
+        return checkReferences && findTable(nested.rootType()) == null
+                ? "nested_flatbuffer on {} skipped: " + nested.rootType() + " is not a table declared in this schema"
+                : null;
+    }
+
+    private String requiredProblem(SchemaType type, boolean struct) {
+        if (struct) {
+            return "required on {} skipped: struct fields are always present";
+        }
+        return isScalarLike(type) ? "required on {} skipped: only strings, vectors, tables and structs can be required" : null;
+    }
+
+    /** A key is a string, scalar, enum, struct or (in a struct) fixed-length array, on one non-deprecated field. */
+    private String keyProblem(SchemaType type, String key) {
+        if (!(type instanceof StringType || type instanceof FixedArray || isScalarLike(type) || isStruct(type))) {
+            return "key on {} skipped: a key must be a string, scalar, enum or struct";
+        }
+        if (key == null) {
+            return "key on {} skipped: a deprecated field cannot be the key";
+        }
+        return key.isEmpty() ? null : "key on {} skipped: only one key is allowed (already on " + key + ")";
+    }
+
+    private static String hashProblem(FieldAttribute.Hash hash, SchemaType type) {
+        Integer width = HASHES.get(hash.algorithm());
+        if (width == null) {
+            return "hash on {} skipped: " + hash.algorithm() + " is not one of " + new TreeSet<>(HASHES.keySet());
+        }
+        // On a vector, each element is hashed.
+        SchemaType hashed = type instanceof Vector vector ? vector.element() : type;
+        boolean matches = hashed instanceof Scalar s && switch (s.kind()) {
+            case INT, UINT -> width == 32;
+            case LONG, ULONG -> width == 64;
+            default -> false;
+        };
+        return matches ? null : "hash on {} skipped: " + hash.algorithm() + " needs a " + width + "-bit integer field or vector";
+    }
+
+    /** Defaults: only on scalars and enums in tables, never with required, and the value must fit the type. */
+    private Field checkDefault(Field field, String where, boolean struct) {
+        String value = field.defaultValue().trim();
+        EnumDeclaration enumType = enumOf(field.type());
+        if (value.isEmpty()) {
+            if (!struct && enumType != null) {
+                checkEnumZero(enumType, where);
+            }
+            return field;
+        }
+        String problem = struct ? "struct fields cannot have defaults"
+                : field.has(FieldAttribute.Required.class) ? "a required field cannot have a default"
+                : !isScalarLike(field.type()) ? "only scalar and enum fields can have defaults"
+                : "null".equals(value) ? null // optional scalar or enum
+                : enumType != null ? enumDefaultProblem(enumType, value)
+                : scalarDefaultProblem(((Scalar) field.type()).kind(), value);
+        if (problem == null) {
+            return field;
+        }
+        if (enumType != null && !struct && !field.has(FieldAttribute.Required.class)) {
+            return invalidEnumDefault(field, where, enumType, value);
+        }
+        issues.add("default " + value + " on " + where + " skipped: " + problem);
+        return field.withDefaultValue("");
+    }
+
+    /**
+     * A table field of enum type defaults to 0, which flatc rejects if 0 is not a value of the enum
+     * (except for bit_flags, where 0 means no flags).
+     */
+    private void checkEnumZero(EnumDeclaration enumType, String where) {
+        if (!enumType.values().isEmpty() && !enumType.bitFlags() && !enumValues(enumType).contains(0L)) {
+            issues.add("Field " + where + " needs a defaultValue: enum " + enumType.name().name()
+                    + " has no value 0, which is the default otherwise");
+        }
+    }
+
+    private static String enumDefaultProblem(EnumDeclaration enumType, String value) {
+        boolean name = enumType.values().stream().anyMatch(v -> v.name().equals(value));
+        Long number = INTEGER.matcher(value).matches() ? parseInteger(value).longValue() : null;
+        return name || enumValues(enumType).contains(number) ? null : "not a value of the enum";
+    }
+
+    /**
+     * A table enum field whose default is not a value. Without a default the field is 0: fine when 0 is a value
+     * (or bit_flags), so the bad default is left out. Otherwise no default would be valid either, so the field is
+     * kept for the user to fix.
+     */
+    private Field invalidEnumDefault(Field field, String where, EnumDeclaration enumType, String value) {
+        String problem = "Field " + where + " default " + value + " is not a value of enum " + enumType.name().name();
+        if (enumType.bitFlags() || enumValues(enumType).contains(0L)) {
+            issues.add(problem + "; default left out");
+            return field.withDefaultValue("");
+        }
+        issues.add(problem + ", which has no value 0: set a defaultValue that is one of its values");
+        return field;
+    }
+
+    private static Set<Long> enumValues(EnumDeclaration enumType) {
+        Set<Long> values = new HashSet<>();
+        List<EnumDeclaration.Value> constants = enumType.values();
+        for (int i = 0; i < constants.size(); i++) {
+            values.add(constants.get(i).value() != null ? constants.get(i).value() : i); // implicit: 0, 1, 2...
+        }
+        return values;
+    }
+
+    static String scalarDefaultProblem(ScalarKind kind, String value) {
+        if (kind == ScalarKind.BOOL) {
+            return value.equals("true") || value.equals("false") || value.equals("0") || value.equals("1")
+                    ? null : "not a bool (true or false)";
+        }
+        if (kind.isIntegral()) {
+            if (!INTEGER.matcher(value).matches()) {
+                return "not an integer";
+            }
+            return kind.contains(parseInteger(value)) ? null : "out of range for " + kind.keyword();
+        }
+        return FLOAT.matcher(value.toLowerCase()).matches() ? null : "not a number";
+    }
+
+    private static BigInteger parseInteger(String value) {
+        String digits = value.replaceFirst("^[+]", "");
+        boolean negative = digits.startsWith("-");
+        String unsigned = negative ? digits.substring(1) : digits;
+        BigInteger magnitude = unsigned.toLowerCase().startsWith("0x")
+                ? new BigInteger(unsigned.substring(2), 16) : new BigInteger(unsigned);
+        return negative ? magnitude.negate() : magnitude;
+    }
+
+    /** A referenced type must be declared in this schema (unless it may come from an include). */
+    /** False (reported) if the field refers to a type that is not declared here and cannot come from an include. */
+    private boolean referenceDeclared(Field field, String where) {
+        if (!(elementOf(field.type()) instanceof Reference reference) || declared.containsKey(reference.target())) {
+            return true;
+        }
+        if (removed.contains(reference.target())) {
+            issues.add("Field " + where + " references " + reference.target().qualified() + ", which is left out; field left out");
+            return false;
+        }
+        if (!checkReferences) {
+            return true; // may be declared in an included schema
+        }
+        issues.add("Field " + where + " references " + reference.target().qualified()
+                + ", which is not declared in this schema; annotate it, or include the schema that declares it");
+        return false;
+    }
+
+    /**
+     * Field names must be unique, including the hidden {@code <name>_type} field of each union field. A field
+     * written with a name already taken is reported and left out (flatc rejects the schema otherwise).
+     */
+    private List<Field> uniqueNames(String owner, List<Field> fields) {
+        Map<String, String> byName = new HashMap<>();
+        for (Field field : fields) {
+            if (isUnion(field.type())) {
+                byName.putIfAbsent(field.name() + "_type", field.javaName() + " (its hidden type field)");
+            }
+        }
+        List<Field> unique = new ArrayList<>();
+        for (Field field : fields) {
+            String previous = byName.putIfAbsent(field.name(), field.javaName());
+            if (previous == null) {
+                unique.add(field);
+            } else if (previous.endsWith(" (its hidden type field)")) {
+                issues.add("Field " + owner + "." + field.javaName() + " clashes with the hidden " + field.name()
+                        + " field flatc adds for union field " + previous.substring(0, previous.indexOf(' ')) + "; left out");
+            } else {
+                issues.add("Fields " + owner + "." + previous + " and " + owner + "." + field.javaName()
+                        + " are both written as " + field.name() + "; " + field.javaName() + " left out");
+            }
+        }
+        return unique;
+    }
+
+    /**
+     * Inherited fields are written after the class's own fields, so adding a field to the class moves
+     * them and existing data no longer reads correctly. Field ids fix each field's position.
+     */
+    private void warnAboutInheritedFields(TableDeclaration table, List<Field> fields) {
+        boolean ids = !fields.isEmpty() && fields.stream().allMatch(f -> f.has(FieldAttribute.Id.class));
+        Set<String> parents = new LinkedHashSet<>();
+        for (Field field : fields) {
+            if (!field.declaredIn().isEmpty() && !field.declaredIn().equals(table.source())) {
+                parents.add(Naming.typeName(field.declaredIn()));
+            }
+        }
+        if (!ids && !parents.isEmpty()) {
+            warnings.add("Table " + table.name().name() + " has inherited fields (from " + String.join(", ", parents)
+                    + ") after its own; adding a field to " + Naming.typeName(table.source())
+                    + " moves them and breaks existing data. Give every field a fieldId to fix their positions.");
+        }
+    }
+
+    /**
+     * Structs may contain scalars, enums, other structs and fixed-length arrays of those.
+     * References to types not declared in this schema (e.g. from an include) are given the benefit of the doubt.
+     */
+    private boolean isStructCompatible(SchemaType type) {
+        if (type instanceof FixedArray array) {
+            return !(array.element() instanceof FixedArray) && isStructCompatible(array.element());
+        }
+        if (type instanceof Scalar) {
+            return true;
+        }
+        if (type instanceof Reference reference) {
+            Declaration target = declared.get(reference.target());
+            return target == null || target instanceof StructDeclaration || target instanceof EnumDeclaration;
+        }
+        return false; // string, vector
+    }
+
+    /** Scalars and enums: the types that take defaults and cannot be required. */
+    private boolean isScalarLike(SchemaType type) {
+        return type instanceof Scalar || enumOf(type) != null;
+    }
+
+    private EnumDeclaration enumOf(SchemaType type) {
+        return type instanceof Reference reference && declared.get(reference.target()) instanceof EnumDeclaration e ? e : null;
+    }
+
+    private boolean isStruct(SchemaType type) {
+        return type instanceof Reference reference && declared.get(reference.target()) instanceof StructDeclaration;
+    }
+
+    private boolean isUnion(SchemaType type) {
+        return type instanceof Reference reference && declared.get(reference.target()) instanceof UnionDeclaration;
+    }
+
+    private static SchemaType elementOf(SchemaType type) {
+        if (type instanceof Vector vector) {
+            return vector.element();
+        }
+        return type instanceof FixedArray array ? array.element() : type;
+    }
+
+    /** A declared table named {@code name}, simple or qualified. */
+    private TableDeclaration findTable(String name) {
+        for (Declaration declaration : declared.values()) {
+            if (declaration instanceof TableDeclaration table
+                    && (table.name().qualified().equals(name) || table.name().name().equals(name))) {
+                return table;
+            }
+        }
+        return null;
+    }
+}

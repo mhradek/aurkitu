@@ -10,425 +10,324 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Generator output for the {@code testmodels}, {@code validation} and {@code attrs} packages.
+ * Declarations are compared whole (see {@link #block}), so a stray, missing or reordered
+ * field fails the test instead of slipping past a substring check.
+ */
 class SchemaGeneratorTest {
+
+    private static final String MODELS = "io.github.mhradek.aurkitu.plugin.core.testmodels";
 
     @TempDir
     Path tempDir;
 
     @Test
-    void generatesSchemaFile() throws Exception {
-        SchemaGenerator generator = new SchemaGenerator(null, List.of(), true);
-        File out = tempDir.toFile();
-        generator.generate("test", "generated.flatbuffers", out);
-
-        Path schema = out.toPath().resolve("test.fbs");
-        assertTrue(Files.exists(schema), "Schema file should be written");
-        String content = Files.readString(schema);
-        assertTrue(content.contains("namespace generated.flatbuffers"), "Namespace should be present");
-        assertTrue(content.startsWith(AurkituVersion.schemaHeader()), "Header should be present");
+    void generatesHeaderAndNamespaceWhenNothingIsAnnotated() throws Exception {
+        String content = generate(new SchemaGenerator(null, List.of("java.lang"), true), "test");
+        assertEquals(AurkituVersion.schemaHeader() + "\nnamespace test.test;\n\n\n"
+                + "// Validation issues:\n// - No root type defined\n", content);
     }
 
     @Test
-    void generatesTablesEnumsMapsAndLists() throws Exception {
-        SchemaGenerator generator = new SchemaGenerator(
-                null,
-                List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
-                true);
-        File out = tempDir.toFile();
-        generator.generate("models", "test.models", out);
+    void anEmptyPackageListScansTheWholeClasspath() throws Exception {
+        String content = generate(new SchemaGenerator(null, List.of(), true), "all");
+        assertTrue(content.contains("table SampleRootTable {"), content); // testmodels
+        assertTrue(content.contains("table WarnChild {"), content);       // warnings
+        assertTrue(content.contains("enum BadEnum : byte {"), content);   // fixes
+    }
 
-        Path schemaPath = out.toPath().resolve("models.fbs");
-        assertTrue(Files.exists(schemaPath));
-        String content = Files.readString(schemaPath);
+    @Test
+    void generatesTablesStructsEnumsAndUnions() throws Exception {
+        String content = generate(defaults(), "models");
 
-        assertTrue(content.contains("namespace test.models;"));
-        assertTrue(content.startsWith(AurkituVersion.schemaHeader()));
-        assertTrue(content.contains("table SampleRootTable {"));
-        assertTrue(content.contains("root_type SampleRootTable;"));
-        assertTrue(content.contains("id:long;"));
-        assertTrue(content.contains("name:string;"));
-        assertTrue(content.contains("active:bool;"));
-        assertTrue(content.contains("level:int = 42") || content.contains("level:int=42"));
-        assertFalse(content.contains("ignored:") && !content.contains("// - "));
-        assertTrue(content.contains("tags:[string]") || content.contains("tags:[String]"));
-        assertTrue(content.contains("scores:[MapValueSet_SampleRootTable_scores]"));
-        assertTrue(content.contains("table MapValueSet_SampleRootTable_scores {"));
-        assertTrue(content.contains("nested_map:[MapValueSet_SampleRootTable_nested_map]"));
-        assertTrue(content.contains("table MapValueSet_SampleRootTable_nested_map {"));
-        assertTrue(content.contains("enum SampleEnum : byte {"));
-        assertTrue(content.contains("ALPHA"));
-        assertTrue(content.contains("BETA"));
-        assertTrue(content.contains("GAMMA"));
-        assertTrue(content.contains("table SampleUnsigned {"));
-        assertTrue(content.contains("flags:ubyte"));
-        assertTrue(content.contains("port:ushort"));
-        assertTrue(content.contains("count:uint"));
-        assertTrue(content.contains("id:ulong") || content.contains(":ulong"));
-        assertTrue(content.contains("struct SampleStruct {"));
-        assertTrue(content.contains("x:float"));
-        assertTrue(content.contains("union SampleUnion {"));
-        assertTrue(content.contains("SampleRootTable"));
-        assertTrue(content.contains("table SampleWithOptions {"));
-        assertTrue(content.contains("// A table with various field options"));
-        assertTrue(content.contains("// Required identifier"));
-        assertTrue(content.contains("code:string (required)"));
-        assertTrue(content.contains("legacy_value:int = 0 (deprecated)") || content.contains("legacy_value:int=0 (deprecated)"));
-        assertTrue(content.contains("base_id:long"));
-        assertTrue(content.contains("base_name:string"));
+        assertTrue(content.startsWith(AurkituVersion.schemaHeader() + "\nnamespace test.models;\n\n"), content);
+        assertEquals("""
+                table SampleRootTable {
+                  id:long;
+                  name:string;
+                  active:bool;
+                  level:int = 42;
+                  tags:[string];
+                  scores:[MapValueSet_SampleRootTable_scores];
+                  nested_map:[MapValueSet_SampleRootTable_nested_map];
+                  status:SampleEnum;
+                }
+                """, block(content, "table SampleRootTable {"));
+        assertFalse(content.contains("ignored"), "@FlatBufferIgnore field is left out");
+        assertEquals("enum SampleEnum : byte {\n  ALPHA,\n  BETA,\n  GAMMA,\n}\n", block(content, "enum SampleEnum : byte {"));
+        assertEquals("struct SampleStruct {\n  x:float;\n  y:float;\n  z:float;\n}\n", block(content, "struct SampleStruct {"));
+        assertEquals("union SampleUnion {\n  SampleRootTable,\n  SampleStruct,\n}\n", block(content, "union SampleUnion {"));
+        assertEquals("""
+                table SampleUnsigned {
+                  flags:ubyte;
+                  port:ushort;
+                  count:uint;
+                  id:ulong;
+                }
+                """, block(content, "table SampleUnsigned {"));
+        assertTrue(content.endsWith("root_type SampleRootTable;\n\n// Validation issues:\n"
+                + "// - Partial field ids on SampleWithPartialIds; ids omitted (all fields or none must have an id)\n"
+                + "// - Unsupported field type: SampleWithUnsupported.maybe\n\n// Warnings:\n"
+                + "// - Table SampleWithOptions has inherited fields (from BaseEntity) after its own; adding a field to"
+                + " SampleWithOptions moves them and breaks existing data. Give every field a fieldId to fix their positions.\n"),
+                content);
+    }
+
+    @Test
+    void mapsBecomeVectorsOfGeneratedTablesAndMapsOfMapsGetTheirOwn() throws Exception {
+        String content = generate(defaults(), "maps");
+        assertEquals("table MapValueSet_SampleRootTable_scores {\n  key:string;\n  value:int;\n}\n",
+                block(content, "table MapValueSet_SampleRootTable_scores {"));
+        assertEquals("table MapValueSet_SampleRootTable_nested_map {\n  key:string;\n"
+                        + "  value:[MapValueSet_SampleRootTable_nested_map_value];\n}\n",
+                block(content, "table MapValueSet_SampleRootTable_nested_map {"));
+        assertEquals("table MapValueSet_SampleRootTable_nested_map_value {\n  key:string;\n  value:bool;\n}\n",
+                block(content, "table MapValueSet_SampleRootTable_nested_map_value {"));
+        assertTrue(content.indexOf("table MapValueSet_SampleRootTable_nested_map {")
+                < content.indexOf("table MapValueSet_SampleRootTable_nested_map_value {"), "outer map table first");
+    }
+
+    @Test
+    void fieldOptionsInheritanceAndCommentsAreWritten() throws Exception {
+        String content = generate(defaults(), "options");
+        assertEquals("""
+                /// A table with various field options
+                table SampleWithOptions {
+                  /// Required identifier
+                  code:string (required);
+                  legacy_value:int = 0 (deprecated);
+                  base_id:long;
+                  base_name:string;
+                }
+                """, block(content, "/// A table with various field options"));
     }
 
     @Test
     void emitsEnumUnderlyingTypes() throws Exception {
-        SchemaGenerator generator = new SchemaGenerator(
-                null,
-                List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
-                true);
-        File out = tempDir.toFile();
-        generator.generate("enums", "test.enums", out);
-
-        String content = Files.readString(out.toPath().resolve("enums.fbs"));
-        assertTrue(content.contains("enum SampleEnumShort : short {"));
-        assertTrue(content.contains("enum SampleEnumInt : int {"));
-        assertTrue(content.contains("enum SampleEnumLong : long {"));
-        assertTrue(content.contains("// A commented enum"));
-        assertTrue(content.contains("enum SampleEnumWithComment : byte {"));
+        String content = generate(defaults(), "enums");
+        assertEquals("enum SampleEnumShort : short {\n  ALPHA,\n  BETA,\n  GAMMA,\n}\n", block(content, "enum SampleEnumShort"));
+        assertEquals("enum SampleEnumInt : int {\n  ONE,\n  TWO,\n  THREE,\n}\n", block(content, "enum SampleEnumInt"));
+        assertEquals("enum SampleEnumLong : long {\n  A,\n  B,\n  C,\n}\n", block(content, "enum SampleEnumLong"));
+        assertEquals("/// A commented enum\nenum SampleEnumWithComment : byte {\n  YES,\n  NO,\n}\n",
+                block(content, "/// A commented enum"));
     }
 
     @Test
-    void emitsCommonTypesAndWrappers() throws Exception {
-        SchemaGenerator generator = new SchemaGenerator(
-                null,
-                List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
-                true);
-        File out = tempDir.toFile();
-        generator.generate("common", "test.common", out);
-
-        String content = Files.readString(out.toPath().resolve("common.fbs"));
-        assertTrue(content.contains("table SampleWithCommonTypes {"));
-        assertTrue(content.contains("created:string"));
-        assertTrue(content.contains("link:string"));
-        assertTrue(content.contains("amount:string"));
-        assertTrue(content.contains("flag:bool"));
-        assertTrue(content.contains("count:int"));
-        assertTrue(content.contains("tags:[string]"));
-        assertTrue(content.contains("numbers:[int]"));
-        assertTrue(content.contains("bytes:[ubyte];"), content);
-    }
-
-    @Test
-    void emitsFieldIdsWhenAllFieldsHaveThem() throws Exception {
-        SchemaGenerator generator = new SchemaGenerator(
-                null,
-                List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
-                true);
-        File out = tempDir.toFile();
-        generator.generate("ids", "test.ids", out);
-
-        String content = Files.readString(out.toPath().resolve("ids.fbs"));
-        assertTrue(content.contains("table SampleWithAllIds {"));
-        assertTrue(content.contains("id:string (id: 0)") || content.contains("(id: 0)"));
-        assertTrue(content.contains("version:int (id: 1)") || content.contains("(id: 1)"));
-    }
-
-    @Test
-    void omitsPartialFieldIdsAndReportsIssue() throws Exception {
-        SchemaGenerator generator = new SchemaGenerator(
-                null,
-                List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
-                true);
-        File out = tempDir.toFile();
-        generator.generate("partial", "test.partial", out);
-
-        String content = Files.readString(out.toPath().resolve("partial.fbs"));
-        assertTrue(content.contains("table SampleWithPartialIds {"));
-        assertTrue(content.contains("Partial field ids") || content.contains("ids omitted"));
-        // Scope the check to the SampleWithPartialIds table so SampleWithAllIds
-        // (which legitimately emits id attributes) does not interfere.
-        int start = content.indexOf("table SampleWithPartialIds {");
-        int end = content.indexOf("}", start);
-        String tableBlock = content.substring(start, end);
-        assertFalse(tableBlock.contains("(id:"), "Partial table should not emit id attributes: " + tableBlock);
-    }
-
-    @Test
-    void reportsNonScalarStructField() throws Exception {
-        SchemaGenerator generator = new SchemaGenerator(
-                null,
-                List.of("io.github.mhradek.aurkitu.plugin.core.validation"),
-                true);
-        File out = tempDir.toFile();
-        generator.generate("struct", "test.struct", out);
-
-        String content = Files.readString(out.toPath().resolve("struct.fbs"));
-        assertTrue(content.contains("struct SampleStructWithString {"));
-        assertTrue(content.contains("non-scalar") || content.contains("SampleStructWithString"));
-    }
-
-    @Test
-    void emitsPerTypeNamespaceOverride() throws Exception {
-        SchemaGenerator generator = new SchemaGenerator(
-                null,
-                List.of("io.github.mhradek.aurkitu.plugin.core.validation"),
-                true);
-        File out = tempDir.toFile();
-        generator.generate("ns", "test.ns", out);
-
-        String content = Files.readString(out.toPath().resolve("ns.fbs"));
-        assertTrue(content.contains("namespace other.ns;"));
-        assertTrue(content.contains("table SampleWithNamespace {"));
-    }
-
-    @Test
-    void reportsUnsupportedFieldType() throws Exception {
-        SchemaGenerator generator = new SchemaGenerator(
-                null,
-                List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
-                true);
-        File out = tempDir.toFile();
-        generator.generate("unsup", "test.unsup", out);
-
-        String content = Files.readString(out.toPath().resolve("unsup.fbs"));
-        assertTrue(content.contains("Unsupported field type") || content.contains("SampleWithUnsupported"));
-    }
-
-    @Test
-    void emitsFieldAttributesAndFixedArray() throws Exception {
-        SchemaGenerator generator = new SchemaGenerator(
-                null,
-                List.of("io.github.mhradek.aurkitu.plugin.core.attrs"),
-                true);
-        File out = tempDir.toFile();
-        generator.generate("attrs", "test.attrs", out);
-
-        String content = Files.readString(out.toPath().resolve("attrs.fbs"));
-        assertTrue(content.contains("table SampleWithAttributes {"));
-        assertTrue(content.contains("key"));
-        assertTrue(content.contains("hash: \"fnv1_32\""));
-        assertTrue(content.contains("nested:[ubyte] (nested_flatbuffer: \"Nested\")"), content);
-        assertTrue(content.contains("flex:[ubyte] (flexbuffer)"), content);
-        // force_align is only valid on vectors: skipped (and reported) on a scalar.
-        assertTrue(content.contains("aligned:int;"), content);
-        assertTrue(content.contains("force_align on SampleWithAttributes.aligned skipped"), content);
-        assertTrue(content.contains("aligned_bytes:[ubyte] (force_align: 16)"), content);
-        assertTrue(content.contains("struct FixedStruct {"), "Schema was:\n" + content);
-        assertTrue(content.contains("values:[int:4]"), "Expected fixed array. Schema was:\n" + content);
-    }
-
-    @Test
-    void emitsFileIdentifierAndIncludes() throws Exception {
-        SchemaGenerator.Config config = new SchemaGenerator.Config(
-                null,
-                List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
-                true,
-                true,
-                "AB12",
-                List.of("common.fbs", "types.fbs"),
-                true,
-                false,
-                true,
-                false,
-                false,
-                null);
-        SchemaGenerator generator = new SchemaGenerator(config);
-        File out = tempDir.toFile();
-        generator.generate("config", "test.config", out);
-
-        String content = Files.readString(out.toPath().resolve("config.fbs"));
-        assertTrue(content.contains("file_identifier \"AB12\";"));
-        assertTrue(content.contains("include \"common.fbs\";"));
-        assertTrue(content.contains("include \"types.fbs\";"));
-    }
-
-    @Test
-    void emitsFileExtension() throws Exception {
-        SchemaGenerator.Config config = new SchemaGenerator.Config(
-                null,
-                List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
-                true,
-                true,
-                null,
-                List.of(),
-                true,
-                false,
-                true,
-                false,
-                false,
-                "bin");
-        SchemaGenerator generator = new SchemaGenerator(config);
-        File out = tempDir.toFile();
-        generator.generate("ext", "test.ext", out);
-
-        String content = Files.readString(out.toPath().resolve("ext.fbs"));
-        assertTrue(content.contains("file_extension \"bin\";"));
-    }
-
-    @Test
-    void reportsMissingRootTypeWhenNonePresent() throws Exception {
-        SchemaGenerator generator = new SchemaGenerator(
-                null,
-                List.of("java.lang"),
-                true);
-        File out = tempDir.toFile();
-        generator.generate("empty", "test.empty", out);
-
-        String content = Files.readString(out.toPath().resolve("empty.fbs"));
-        assertTrue(content.contains("// Validation issues:"));
-        assertTrue(content.contains("No root type defined"));
-    }
-
-    @Test
-    void emptyPackageListStillGeneratesHeader() throws Exception {
-        SchemaGenerator generator = new SchemaGenerator(null, List.of(), true);
-        File out = tempDir.toFile();
-        generator.generate("blank", "ns.blank", out);
-        String content = Files.readString(out.toPath().resolve("blank.fbs"));
-        assertTrue(content.contains("namespace ns.blank;"));
-        assertTrue(content.startsWith(AurkituVersion.schemaHeader()));
-    }
-
-    @Test
-    void failOnValidationIssuesThrowsWhenIssuesExist() {
-        SchemaGenerator.Config config = new SchemaGenerator.Config(
-                null,
-                List.of("java.lang"),
-                true,
-                true,
-                null,
-                List.of(),
-                true,
-                false,
-                true,
-                false,
-                true,
-                null);
-        SchemaGenerator generator = new SchemaGenerator(config);
-        File out = tempDir.toFile();
-
-        SchemaGenerationException ex = assertThrows(SchemaGenerationException.class,
-                () -> generator.generate("fail", "test.fail", out));
-        assertTrue(ex.getMessage().contains("validation failed"));
-    }
-
-    @Test
-    void snakeCaseFieldsCanBeDisabled() throws Exception {
-        SchemaGenerator.Config config = new SchemaGenerator.Config(
-                null,
-                List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
-                true,
-                true,
-                null,
-                List.of(),
-                true,
-                false,
-                false,
-                false,
-                false,
-                null);
-        SchemaGenerator generator = new SchemaGenerator(config);
-        File out = tempDir.toFile();
-        generator.generate("nosnake", "test.nosnake", out);
-
-        String content = Files.readString(out.toPath().resolve("nosnake.fbs"));
-        assertTrue(content.contains("nestedMap:") || content.contains("nestedMap"));
-        assertFalse(content.contains("nested_map:"));
-    }
-
-    @Test
-    void generateVersionEmitsContentHash() throws Exception {
-        SchemaGenerator.Config config = new SchemaGenerator.Config(
-                null,
-                List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
-                true,
-                true,
-                null,
-                List.of(),
-                true,
-                false,
-                true,
-                true,
-                false,
-                null);
-        SchemaGenerator generator = new SchemaGenerator(config);
-        File out = tempDir.toFile();
-        generator.generate("versioned", "test.versioned", out);
-
-        String content = Files.readString(out.toPath().resolve("versioned.fbs"));
-        assertTrue(content.contains("// @version: "));
-        generator.generate("versioned2", "test.versioned", out);
-        String content2 = Files.readString(out.toPath().resolve("versioned2.fbs"));
-        String v1 = extractVersion(content);
-        String v2 = extractVersion(content2);
-        assertEquals(v1, v2, "Version hash should be stable for identical inputs");
-    }
-
-    @Test
-    void cacheHitSkipsRegeneration() throws Exception {
-        SchemaGenerator.Config config = new SchemaGenerator.Config(
-                null,
-                List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
-                true,
-                true,
-                null,
-                List.of(),
-                true,
-                true,
-                true,
-                false,
-                false,
-                null);
-        SchemaGenerator generator = new SchemaGenerator(config);
-        File out = tempDir.toFile();
-
-        generator.generate("cached", "test.cached", out);
-        Path schema = out.toPath().resolve("cached.fbs");
-        assertTrue(Files.exists(schema));
-
-        String first = Files.readString(schema);
-        generator.generate("cached", "test.cached", out);
-        String second = Files.readString(schema);
-        assertEquals(first, second);
-    }
-
-    @Test
-    void ignoresStaticMembersByDefault() throws Exception {
-        SchemaGenerator generator = new SchemaGenerator(
-                null,
-                List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
-                true);
-        File out = tempDir.toFile();
-        generator.generate("staticcheck", "test.static", out);
-
-        String content = Files.readString(out.toPath().resolve("staticcheck.fbs"));
-        assertFalse(content.contains("static "));
+    void emitsCommonTypesWrappersCollectionsAndBinary() throws Exception {
+        String content = generate(defaults(), "common");
+        assertEquals("""
+                table SampleWithCommonTypes {
+                  created:string;
+                  link:string;
+                  amount:string;
+                  flag:bool;
+                  count:int;
+                  tags:[string];
+                  numbers:[int];
+                  bytes:[ubyte];
+                }
+                """, block(content, "table SampleWithCommonTypes {"));
     }
 
     @Test
     void mapCommonTypesCanBeDisabled() throws Exception {
-        SchemaGenerator.Config config = new SchemaGenerator.Config(
-                null,
-                List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
-                false,
-                true,
-                null,
-                List.of(),
-                false,
-                false,
-                true,
-                false,
-                false,
-                null);
-        SchemaGenerator generator = new SchemaGenerator(config);
-        File out = tempDir.toFile();
-        generator.generate("nocommon", "test.nocommon", out);
-
-        String content = Files.readString(out.toPath().resolve("nocommon.fbs"));
-        assertTrue(content.contains("table SampleRootTable"));
+        String content = generate(config(false, true, true, false, false, null), "nocommon");
+        assertEquals("""
+                table SampleWithCommonTypes {
+                  flag:bool;
+                  count:int;
+                  tags:[string];
+                  numbers:[int];
+                  bytes:[ubyte];
+                }
+                """, block(content, "table SampleWithCommonTypes {"));
+        assertTrue(content.contains("// - Unsupported field type: SampleWithCommonTypes.created\n"
+                + "// - Unsupported field type: SampleWithCommonTypes.link\n"
+                + "// - Unsupported field type: SampleWithCommonTypes.amount\n"), content);
     }
 
-    private static String extractVersion(String content) {
-        int start = content.indexOf("// @version: ");
-        assertTrue(start >= 0);
-        int end = content.indexOf('\n', start);
-        return content.substring(start, end).trim();
+    @Test
+    void emitsFieldIdsWhenAllFieldsHaveThem() throws Exception {
+        String content = generate(defaults(), "ids");
+        assertEquals("table SampleWithAllIds {\n  id:string (id: 0);\n  version:int (id: 1);\n}\n",
+                block(content, "table SampleWithAllIds {"));
+    }
+
+    @Test
+    void omitsPartialFieldIdsAndReportsIssue() throws Exception {
+        String content = generate(defaults(), "partial");
+        assertEquals("table SampleWithPartialIds {\n  id:string;\n  name:string;\n}\n",
+                block(content, "table SampleWithPartialIds {"));
+        assertTrue(content.contains(
+                "// - Partial field ids on SampleWithPartialIds; ids omitted (all fields or none must have an id)\n"), content);
+    }
+
+    @Test
+    void unsupportedFieldTypeIsLeftOutAndReported() throws Exception {
+        String content = generate(defaults(), "unsup");
+        assertEquals("table SampleWithUnsupported {\n}\n", block(content, "table SampleWithUnsupported {"));
+        assertTrue(content.contains("// - Unsupported field type: SampleWithUnsupported.maybe\n"), content);
+    }
+
+    @Test
+    void reportsNonScalarStructFieldAndWritesPerTypeNamespaces() throws Exception {
+        SchemaGenerator generator = new SchemaGenerator(null, List.of("io.github.mhradek.aurkitu.plugin.core.validation"), true);
+        String content = generate(generator, "struct");
+        assertEquals(AurkituVersion.schemaHeader() + "\n" + """
+                namespace test.struct;
+
+                struct SampleStructWithString {
+                  value:int;
+                }
+
+                namespace other.ns;
+
+                table SampleWithNamespace {
+                  value:int;
+                }
+
+                namespace test.struct;
+
+
+                // Validation issues:
+                // - Struct SampleStructWithString field name is non-scalar; structs may only contain scalars or other structs
+                // - No root type defined
+                """, content);
+    }
+
+    @Test
+    void emitsFieldAttributesAndFixedArray() throws Exception {
+        SchemaGenerator generator = new SchemaGenerator(null, List.of("io.github.mhradek.aurkitu.plugin.core.attrs"), true);
+        String content = generate(generator, "attrs");
+        assertEquals("""
+                table SampleWithAttributes {
+                  id:string (key);
+                  hash_field:int (hash: "fnv1_32");
+                  nested:[ubyte] (nested_flatbuffer: "Nested");
+                  flex:[ubyte] (flexbuffer);
+                  aligned:int;
+                  aligned_bytes:[ubyte] (force_align: 16);
+                  fixed_struct:FixedStruct;
+                }
+                """, block(content, "table SampleWithAttributes {"));
+        assertEquals("struct FixedStruct {\n  values:[int:4];\n}\n", block(content, "struct FixedStruct {"));
+        // flatc ignores force_align on a scalar: left out, with a warning.
+        assertTrue(content.contains("// Warnings:\n// - force_align on SampleWithAttributes.aligned has no effect: only vectors"
+                + " are aligned (align a struct with @FlatBufferTable(forceAlign)); left out\n"), content);
+        // A reference to a type outside the schema (and no include) is left out.
+        assertTrue(content.contains("// - Field SampleWithAttributes.fullNameEnum references"
+                + " io.github.mhradek.aurkitu.plugin.core.testmodels.SampleEnum, which is not declared in this schema;"), content);
+    }
+
+    @Test
+    void emitsFileIdentifierIncludesAndExtensionInOrder() throws Exception {
+        SchemaGenerator.Config config = new SchemaGenerator.Config(null, List.of(MODELS), true, true, "AB12",
+                List.of("common.fbs", "types.fbs"), true, false, true, false, false, "bin");
+        String content = generate(new SchemaGenerator(config), "config");
+        assertTrue(content.startsWith(AurkituVersion.schemaHeader() + "\ninclude \"common.fbs\";\ninclude \"types.fbs\";\n\n"
+                + "namespace test.config;\n\nfile_identifier \"AB12\";\n\nfile_extension \"bin\";\n\nenum SampleEnum"), content);
+    }
+
+    @Test
+    void noFileIdentifierExtensionOrIncludesByDefault() throws Exception {
+        String content = generate(defaults(), "plain");
+        assertFalse(content.contains("include "), content);
+        assertFalse(content.contains("file_identifier"), content);
+        assertFalse(content.contains("file_extension"), content);
+        assertFalse(content.contains("// @version:"), content);
+    }
+
+    @Test
+    void failOnValidationIssuesThrowsAfterWritingTheSchemaWithItsIssues() throws Exception {
+        SchemaGenerator generator = (config(true, true, true, false, true, null));
+        SchemaGenerationException ex = assertThrows(SchemaGenerationException.class,
+                () -> generator.generate("fail", "test.fail", tempDir.toFile()));
+        assertEquals("Schema validation failed with 2 issue(s). See schema comments.", ex.getMessage());
+        assertTrue(Files.readString(tempDir.resolve("fail.fbs")).contains("// Validation issues:\n"));
+    }
+
+    @Test
+    void warningsAloneDoNotFailTheBuild() throws Exception {
+        SchemaGenerator.Config config = new SchemaGenerator.Config(null,
+                List.of("io.github.mhradek.aurkitu.plugin.core.warnings"), true, true, null, List.of(),
+                true, false, true, false, true, null);
+        String content = generate(new SchemaGenerator(config), "warn");
+        assertFalse(content.contains("// Validation issues:"), content);
+        assertTrue(content.endsWith("root_type WarnChild;\n\n// Warnings:\n// - Table WarnChild has inherited fields"
+                + " (from WarnBase) after its own; adding a field to WarnChild moves them and breaks existing data."
+                + " Give every field a fieldId to fix their positions.\n"), content);
+    }
+
+    @Test
+    void validationOffWritesNoCommentsAndNeverFails() throws Exception {
+        SchemaGenerator.Config config = new SchemaGenerator.Config(null, List.of(MODELS), false, true, null, List.of(),
+                true, false, true, false, true, null);
+        String content = generate(new SchemaGenerator(config), "novalidate");
+        assertTrue(content.endsWith("root_type SampleRootTable;\n"), content);
+    }
+
+    @Test
+    void snakeCaseFieldsCanBeDisabled() throws Exception {
+        String content = generate(config(true, true, false, false, false, null), "nosnake");
+        assertTrue(content.contains("  nestedMap:[MapValueSet_SampleRootTable_nestedMap];\n"), content);
+        assertTrue(content.contains("table MapValueSet_SampleRootTable_nestedMapValue {"), content);
+        assertTrue(content.contains("  legacyValue:int = 0 (deprecated);\n  baseId:long;\n  baseName:string;\n"), content);
+        assertFalse(content.contains("_map"), content);
+        assertFalse(content.contains("base_id"), content);
+    }
+
+    @Test
+    void generateVersionEmitsAStableContentHash() throws Exception {
+        SchemaGenerator generator = (config(true, true, true, true, false, null));
+        String first = generate(generator, "versioned", "test.versioned");
+        String again = generate(generator, "versioned2", "test.versioned");
+        String other = generate(generator, "versioned3", "test.other");
+
+        assertTrue(versionLine(first).matches("// @version: [0-9a-f]{1,8}"), versionLine(first));
+        assertEquals(versionLine(first), versionLine(again), "stable for identical inputs");
+        assertNotEquals(versionLine(first), versionLine(other), "changes with the content");
+    }
+
+    @Test
+    void staticMembersAreIgnoredUnlessConfigured() throws Exception {
+        assertFalse(generate(defaults(), "static").contains("instances"));
+
+        SchemaGenerator.Config keep = new SchemaGenerator.Config(null, List.of(MODELS), true, false, null, List.of(),
+                true, false, true, false, false, null);
+        assertTrue(generate(new SchemaGenerator(keep), "nostatic").contains("  bytes:[ubyte];\n  instances:int;\n}"));
+    }
+
+    /** The declaration starting at {@code start}, through its closing brace line. */
+    static String block(String content, String start) {
+        int from = content.indexOf(start);
+        assertTrue(from >= 0, "missing '" + start + "' in:\n" + content);
+        int end = content.indexOf("\n}\n", from);
+        assertTrue(end >= 0, "unterminated '" + start + "' in:\n" + content);
+        return content.substring(from, end + 3);
+    }
+
+    private SchemaGenerator defaults() {
+        return new SchemaGenerator(null, List.of(MODELS), true);
+    }
+
+    private static SchemaGenerator config(boolean mapCommonTypes, boolean ignoreStatic, boolean snakeCase,
+                                          boolean version, boolean failOnIssues, String extension) {
+        return new SchemaGenerator(new SchemaGenerator.Config(null, List.of(MODELS), true, ignoreStatic, null, List.of(),
+                mapCommonTypes, false, snakeCase, version, failOnIssues, extension));
+    }
+
+    private String generate(SchemaGenerator generator, String name) throws Exception {
+        return generate(generator, name, "test." + name);
+    }
+
+    private String generate(SchemaGenerator generator, String name, String namespace) throws Exception {
+        File out = tempDir.toFile();
+        generator.generate(name, namespace, out);
+        return Files.readString(out.toPath().resolve(name + ".fbs"));
+    }
+
+    private static String versionLine(String content) {
+        return content.lines().filter(l -> l.startsWith("// @version: ")).findFirst().orElseThrow(() -> new AssertionError(content));
     }
 }

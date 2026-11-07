@@ -1,5 +1,6 @@
 package io.github.mhradek.aurkitu.plugin;
 
+import io.github.mhradek.aurkitu.plugin.core.SchemaGenerationException;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -9,6 +10,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.lang.reflect.Field;
 import java.nio.file.Files;
@@ -69,7 +72,9 @@ class AurkituMojoExecutionTest {
         Thread mojoThread = Thread.currentThread();
         Thread interrupter = new Thread(() -> {
             try {
-                while (!Files.exists(started)) {
+                // Gives up (and the test fails) rather than hanging if the script never starts.
+                long deadline = System.nanoTime() + 30_000_000_000L;
+                while (!Files.exists(started) && System.nanoTime() < deadline) {
                     Thread.sleep(10);
                 }
                 mojoThread.interrupt();
@@ -94,12 +99,55 @@ class AurkituMojoExecutionTest {
 
     @Test
     void flatcIsSkippedWhenValidationIsOffOrNoPathIsSet() throws Exception {
+        Path schema = tempDir.resolve("out/models.fbs");
         AurkituMojo noValidation = mojo("/nonexistent/flatc");
         set(noValidation, "validate", false);
         noValidation.execute(); // would fail if flatc were run
+        assertTrue(Files.exists(schema));
 
-        mojo("   ").execute();
-        assertTrue(Files.exists(tempDir.resolve("out/models.fbs")));
+        Files.delete(schema);
+        mojo("   ").execute(); // a blank path would fail too
+        assertTrue(Files.exists(schema));
+    }
+
+    /**
+     * validate x failOnValidationIssues x cacheEnabled x flatcPath (unset, blank, set), on models with issues:
+     * the build fails exactly when validate and failOnValidationIssues are both on (before flatc), and flatc
+     * runs exactly when validate is on, a path is set and the build has not failed; cached or not.
+     */
+    @ParameterizedTest
+    @CsvSource({
+            "false,false,false,none", "false,false,false,blank", "false,false,false,script",
+            "false,false,true,none", "false,false,true,blank", "false,false,true,script",
+            "false,true,false,none", "false,true,false,blank", "false,true,false,script",
+            "false,true,true,none", "false,true,true,blank", "false,true,true,script",
+            "true,false,false,none", "true,false,false,blank", "true,false,false,script",
+            "true,false,true,none", "true,false,true,blank", "true,false,true,script",
+            "true,true,false,none", "true,true,false,blank", "true,true,false,script",
+            "true,true,true,none", "true,true,true,blank", "true,true,true,script"})
+    @DisabledOnOs(OS.WINDOWS)
+    void validationFailureAndFlatcInteract(boolean validate, boolean failOnIssues, boolean cache, String flatc) throws Exception {
+        Path ran = tempDir.resolve("flatc-ran");
+        String path = switch (flatc) {
+            case "none" -> null;
+            case "blank" -> " ";
+            default -> script("flatc-record", "touch '" + ran + "'\nexit 0\n").toString();
+        };
+        for (int run = 1; run <= 2; run++) { // the second run finds an unchanged schema
+            Files.deleteIfExists(ran);
+            AurkituMojo mojo = mojo(path);
+            set(mojo, "validate", validate);
+            set(mojo, "failOnValidationIssues", failOnIssues);
+            set(mojo, "cacheEnabled", cache);
+            String label = "validate=" + validate + " failOn=" + failOnIssues + " cache=" + cache + " flatc=" + flatc + " run=" + run;
+            if (validate && failOnIssues) {
+                assertThrows(MojoFailureException.class, mojo::execute, label);
+            } else {
+                mojo.execute();
+            }
+            assertTrue(Files.exists(tempDir.resolve("out/models.fbs")), label);
+            assertEquals(validate && !failOnIssues && "script".equals(flatc), Files.exists(ran), label);
+        }
     }
 
     @Test
@@ -108,7 +156,8 @@ class AurkituMojoExecutionTest {
         set(mojo, "failOnValidationIssues", true);
 
         MojoFailureException e = assertThrows(MojoFailureException.class, mojo::execute);
-        assertTrue(e.getMessage().startsWith("Schema validation failed with"), e.getMessage());
+        assertEquals("Schema validation failed with 2 issue(s). See schema comments.", e.getMessage());
+        assertInstanceOf(SchemaGenerationException.class, e.getCause());
     }
 
     @Test

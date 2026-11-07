@@ -42,15 +42,42 @@ class AurkituMojoIntegrationTest {
 
         mojo.execute();
 
-        Path schema = tempDir.resolve("user.fbs");
-        assertTrue(Files.exists(schema), "Schema file should be written");
-        String content = Files.readString(schema);
-        assertTrue(content.contains("namespace com.example;"));
-        assertTrue(content.contains("file_identifier \"USER\";"));
-        assertTrue(content.contains("include \"shared.fbs\";"));
-        assertTrue(content.contains("// @version:"));
-        assertTrue(content.contains("table SampleRootTable"));
-        assertTrue(content.contains("nested_map:") || content.contains("base_id:"));
+        String content = Files.readString(tempDir.resolve("user.fbs"));
+        assertTrue(content.matches("(?s)// Aurkitu [^\n]+\n// @version: [0-9a-f]{1,8}\ninclude \"shared.fbs\";\n\n"
+                + "namespace com\\.example;\n\nfile_identifier \"USER\";\n\nfile_extension \"bin\";\n\n.*"), content);
+        assertTrue(content.contains("  base_id:long;\n"), content);
+        assertTrue(content.contains("  created:string;\n"), content);
+        assertTrue(content.contains("  flag:bool;\n"), "optionalScalars is off:\n" + content);
+        assertFalse(content.contains("instances"), content);
+        assertTrue(content.contains("// Validation issues:\n"), content);
+    }
+
+    @Test
+    void everyNonDefaultSettingReachesTheGenerator() throws Exception {
+        // Each flag flipped from its default; a swapped constructor argument would show here.
+        AurkituMojo mojo = new AurkituMojo();
+        set(mojo, "schemaName", "flipped");
+        set(mojo, "schemaNamespace", "com.flipped");
+        set(mojo, "outputDirectory", tempDir.toFile());
+        set(mojo, "specifiedPackages", List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"));
+        set(mojo, "validate", false);
+        set(mojo, "ignoreStaticMembers", false);
+        set(mojo, "mapCommonTypes", false);
+        set(mojo, "snakeCaseFields", false);
+        set(mojo, "generateVersion", false);
+        set(mojo, "failOnValidationIssues", true); // no effect while validate is off
+        set(mojo, "optionalScalars", true);
+        set(mojo, "cacheEnabled", true);
+
+        mojo.execute();
+
+        String content = Files.readString(tempDir.resolve("flipped.fbs"));
+        assertTrue(content.contains("table SampleWithCommonTypes {\n  flag:bool = null;\n  count:int = null;\n"
+                + "  tags:[string];\n  numbers:[int];\n  bytes:[ubyte];\n  instances:int;\n}"), content);
+        assertTrue(content.contains("  baseId:long;\n"), content);
+        assertFalse(content.contains("// @version:"), content);
+        assertFalse(content.contains("// Validation issues:"), content);
+        assertTrue(content.endsWith("root_type SampleRootTable;\n"), content);
     }
 
     @Test
@@ -113,6 +140,21 @@ class AurkituMojoIntegrationTest {
         assertTrue(xml.contains("<name>generateVersion</name>"));
         assertTrue(xml.contains("<name>failOnValidationIssues</name>"));
         assertTrue(xml.contains("<name>flatcPath</name>"));
+        assertTrue(xml.contains("<name>optionalScalars</name>"));
+        // Defaults as documented in the README.
+        for (String line : List.of(
+                "<cacheEnabled implementation=\"boolean\" default-value=\"false\">${aurkitu.cacheEnabled}</cacheEnabled>",
+                "<failOnValidationIssues implementation=\"boolean\" default-value=\"false\">${aurkitu.failOnValidationIssues}</failOnValidationIssues>",
+                "<generateVersion implementation=\"boolean\" default-value=\"false\">${aurkitu.generateVersion}</generateVersion>",
+                "<ignoreStaticMembers implementation=\"boolean\" default-value=\"true\">${aurkitu.ignoreStaticMembers}</ignoreStaticMembers>",
+                "<mapCommonTypes implementation=\"boolean\" default-value=\"true\">${aurkitu.mapCommonTypes}</mapCommonTypes>",
+                "<optionalScalars implementation=\"boolean\" default-value=\"false\">${aurkitu.optionalScalars}</optionalScalars>",
+                "<outputDirectory implementation=\"java.io.File\" default-value=\"${project.build.directory}/aurkitu/schemas\">${aurkitu.outputDir}</outputDirectory>",
+                "<schemaNamespace implementation=\"java.lang.String\" default-value=\"generated.flatbuffers\">${aurkitu.schemaNamespace}</schemaNamespace>",
+                "<snakeCaseFields implementation=\"boolean\" default-value=\"true\">${aurkitu.snakeCaseFields}</snakeCaseFields>",
+                "<validate implementation=\"boolean\" default-value=\"true\">${aurkitu.validate}</validate>")) {
+            assertTrue(xml.contains(line), line);
+        }
     }
 
     @SuppressWarnings("PMD.AvoidAccessibilityAlteration")

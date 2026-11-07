@@ -18,7 +18,10 @@ def assertSchemaMatches = { File projectDir, String name ->
     String e = normalise(expected.text)
     if (a != e) {
         List<String> al = a.readLines(), el = e.readLines()
-        int line = (0..<Math.max(al.size(), el.size())).find { i -> al[i] != el[i] }
+        Integer line = (0..<Math.max(al.size(), el.size())).find { i -> al[i] != el[i] }
+        if (line == null) {
+            throw new AssertionError("Generated ${name}.fbs differs from expected/${name}.fbs only in trailing newlines")
+        }
         throw new AssertionError("""Generated ${name}.fbs differs from expected/${name}.fbs at line ${line + 1}:
   expected: ${el[line]}
   actual:   ${al[line]}

@@ -40,6 +40,8 @@ public class SchemaGenerator {
          * plugin's own classpath and does not contain the project's classes.
          */
         public final List<String> classpathElements;
+        /** Write boxed Java scalars (Integer, Boolean, ...) in tables as optional scalars ({@code = null}). */
+        public final boolean optionalScalars;
 
         @SuppressWarnings("PMD.ExcessiveParameterList")
         public Config(MavenProject project, List<String> specifiedPackages, boolean validate,
@@ -57,6 +59,17 @@ public class SchemaGenerator {
                       boolean mapCommonTypes, boolean cacheEnabled, boolean snakeCaseFields,
                       boolean generateVersion, boolean failOnValidationIssues, String fileExtension,
                       List<String> classpathElements) {
+            this(project, specifiedPackages, validate, ignoreStaticMembers, fileIdentifier, includes,
+                    mapCommonTypes, cacheEnabled, snakeCaseFields, generateVersion, failOnValidationIssues,
+                    fileExtension, classpathElements, false);
+        }
+
+        @SuppressWarnings("PMD.ExcessiveParameterList")
+        public Config(MavenProject project, List<String> specifiedPackages, boolean validate,
+                      boolean ignoreStaticMembers, String fileIdentifier, List<String> includes,
+                      boolean mapCommonTypes, boolean cacheEnabled, boolean snakeCaseFields,
+                      boolean generateVersion, boolean failOnValidationIssues, String fileExtension,
+                      List<String> classpathElements, boolean optionalScalars) {
             this.project = project;
             this.specifiedPackages = specifiedPackages;
             this.validate = validate;
@@ -70,6 +83,7 @@ public class SchemaGenerator {
             this.failOnValidationIssues = failOnValidationIssues;
             this.fileExtension = fileExtension;
             this.classpathElements = classpathElements;
+            this.optionalScalars = optionalScalars;
         }
 
         // Convenience constructor for tests
@@ -99,6 +113,7 @@ public class SchemaGenerator {
                 .enableAnnotationInfo()
                 .enableClassInfo()
                 .enableFieldInfo()
+                .enableMethodInfo()
                 .ignoreFieldVisibility()
                 .acceptPackages(config.specifiedPackages != null && !config.specifiedPackages.isEmpty()
                         ? config.specifiedPackages.toArray(new String[0])
@@ -106,10 +121,11 @@ public class SchemaGenerator {
                 .scan()) {
 
             Schema schema = new SchemaReader(config, TypeRegistry.build(scanResult, namespace)).read(scanResult);
-            SchemaValidator.Result validation = new SchemaValidator(config.failOnValidationIssues).validate(schema);
+            SchemaValidator.Result validation = new SchemaValidator().validate(schema);
             List<String> issues = config.validate ? validation.issues() : List.of();
+            List<String> warnings = config.validate ? validation.warnings() : List.of();
 
-            String output = validation.schema().write(AurkituVersion.schemaHeader(), config.generateVersion, issues);
+            String output = validation.schema().write(AurkituVersion.schemaHeader(), config.generateVersion, issues, warnings);
             if (config.cacheEnabled && unchanged(outFile, output)) {
                 // Keeps the file's timestamp, so downstream steps (e.g. flatc code generation) can skip work.
                 log.info("Schema {} is unchanged; not rewritten", outFile.getAbsolutePath());
@@ -119,6 +135,7 @@ public class SchemaGenerator {
             }
 
             if (config.validate) {
+                warnings.forEach(warning -> log.warn("Warning: {}", warning));
                 if (issues.isEmpty()) {
                     log.info("Basic validation complete. No issues found.");
                 } else {
