@@ -473,7 +473,7 @@ With `validate` on (the default), problems are listed as comments at the end of 
 - Field ids on only some fields of a table, repeated ids, gaps, or a union field without the id before its own free (all ids are then left out).
 - Attributes on the wrong kind of field: `required` on scalars, enums or struct fields; `deprecated` on struct fields; `key` on anything but a string, scalar, enum or struct (or, in a struct, a fixed-length array), on a deprecated field, or a second `key`; `hash` with an unknown algorithm or not on an integer (or vector of integers) of its width; `nested_flatbuffer` and `flexbuffer` not on `[ubyte]`, or `nested_flatbuffer` naming a table that is not declared. The attribute is left out.
 - Defaults that `flatc` rejects: on strings, vectors, tables or struct fields, together with `required`, or not fitting the type (`300` on a `ubyte`, `abc` on an `int`). The default is left out. `= null` is valid on scalars and enums.
-- `fixedLength` outside a struct (written as a vector), two fields written with the same name (`fooBar` and `foo_bar`), and a field clashing with a union's hidden `<name>_type` field.
+- `fixedLength` outside a struct (written as a vector), two fields written with the same name (`fooBar` and `foo_bar` with `snakeCaseFields`), and a field clashing with a union's hidden `<name>_type` field. The later field is left out.
 - Enum problems: no values, duplicate or out-of-range values, more than one `@FlatBufferEnumTypeField`, a value field that cannot be read, table enum fields whose default is not an enum value, and `bit_flags` on a signed type or with a bit position that does not fit.
 - Union members that are enums or unions, named `NONE` or twice, or (without `includes`) not declared; vectors of unions (C++ only).
 - `original_order` on a struct, `force_align` on a table or not a power of two, and custom attribute names that are invalid or built in.
@@ -610,8 +610,9 @@ Publishing a GitHub release runs `.github/workflows/publish.yml`, which builds t
   - A map of maps (`Map<String, Map<String, V>>`) produced a table that referred to itself. The inner map now gets its own table, `MapValueSet_<Owner>_<field>_value`.
   - A `namespace` statement is written only where the namespace changes. Previously the default was restored after every type in another namespace.
   - A non-scalar struct field was left in unless `failOnValidationIssues` was set. It is now always left out.
+  - Two fields written with the same name, or a field named like a union's hidden `_type` field, were reported but both written, which `flatc` rejects. The later one is now left out.
   - An optional enum field (`= null`) was reported as an invalid default.
-- **Tests**: every generator option on and off in all 2048 combinations; validation compared with `flatc` for every field type and attribute pair; an opt-in `pitest` profile for mutation testing.
+- **Tests**: every generator option (including `schemaNamespace`) on and off in all 4096 combinations, on models that probe how the options affect one another; validation compared with `flatc` for every field type and attribute pair; an opt-in `pitest` profile for mutation testing.
 - **Coveralls** receives both modules' coverage.
 
 Output changes to expect when upgrading from 1.0.1:

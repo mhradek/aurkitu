@@ -247,9 +247,18 @@ class CompositeValidatorTest {
                 field("shape", new Reference(name("Shape"))),
                 field("shape_type", StringType.INSTANCE)));
         assertEquals(List.of(
-                "Fields Root.fooBar and Root.foo_bar are both written as foo_bar",
-                "Field Root.shape_type clashes with the hidden shape_type field flatc adds for union field shape"),
+                "Fields Root.fooBar and Root.foo_bar are both written as foo_bar; foo_bar left out",
+                "Field Root.shape_type clashes with the hidden shape_type field flatc adds for union field shape; left out"),
                 result.issues());
+        assertEquals(List.of("fooBar", "shape"), result.schema().declarations().stream()
+                .filter(d -> d.name().equals(name("Root"))).flatMap(d -> ((CompositeDeclaration) d).fields().stream())
+                .map(Field::javaName).toList());
+
+        // The clash is found whichever field comes first.
+        var typeFirst = validate(SHAPE, root(field("shape_type", StringType.INSTANCE), field("shape", new Reference(name("Shape")))));
+        assertEquals(List.of(
+                "Field Root.shape_type clashes with the hidden shape_type field flatc adds for union field shape; left out"),
+                typeFirst.issues());
     }
 
     @Test

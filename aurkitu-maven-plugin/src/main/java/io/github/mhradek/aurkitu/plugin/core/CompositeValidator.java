@@ -87,11 +87,11 @@ final class CompositeValidator {
                 valid.add(checked);
             }
         }
-        checkNames(owner, valid);
+        List<Field> unique = uniqueNames(owner, valid);
         if (!struct) {
-            warnAboutInheritedFields((TableDeclaration) composite, valid);
+            warnAboutInheritedFields((TableDeclaration) composite, unique);
         }
-        return composite.withFields(valid).withAttributes(typeAttributes(composite, struct));
+        return composite.withFields(unique).withAttributes(typeAttributes(composite, struct));
     }
 
     /** The field with its problems reported and corrected, or null if it must be left out. */
@@ -390,22 +390,31 @@ final class CompositeValidator {
         return false;
     }
 
-    /** Field names must be unique, including the hidden {@code <name>_type} field of each union field. */
-    private void checkNames(String owner, List<Field> fields) {
+    /**
+     * Field names must be unique, including the hidden {@code <name>_type} field of each union field. A field
+     * written with a name already taken is reported and left out (flatc rejects the schema otherwise).
+     */
+    private List<Field> uniqueNames(String owner, List<Field> fields) {
         Map<String, String> byName = new HashMap<>();
         for (Field field : fields) {
-            String previous = byName.putIfAbsent(field.name(), field.javaName());
-            if (previous != null) {
-                issues.add("Fields " + owner + "." + previous + " and " + owner + "." + field.javaName()
-                        + " are both written as " + field.name());
+            if (isUnion(field.type())) {
+                byName.putIfAbsent(field.name() + "_type", field.javaName() + " (its hidden type field)");
             }
         }
+        List<Field> unique = new ArrayList<>();
         for (Field field : fields) {
-            if (isUnion(field.type()) && byName.containsKey(field.name() + "_type")) {
-                issues.add("Field " + owner + "." + byName.get(field.name() + "_type") + " clashes with the hidden "
-                        + field.name() + "_type field flatc adds for union field " + field.javaName());
+            String previous = byName.putIfAbsent(field.name(), field.javaName());
+            if (previous == null) {
+                unique.add(field);
+            } else if (previous.endsWith(" (its hidden type field)")) {
+                issues.add("Field " + owner + "." + field.javaName() + " clashes with the hidden " + field.name()
+                        + " field flatc adds for union field " + previous.substring(0, previous.indexOf(' ')) + "; left out");
+            } else {
+                issues.add("Fields " + owner + "." + previous + " and " + owner + "." + field.javaName()
+                        + " are both written as " + field.name() + "; " + field.javaName() + " left out");
             }
         }
+        return unique;
     }
 
     /**

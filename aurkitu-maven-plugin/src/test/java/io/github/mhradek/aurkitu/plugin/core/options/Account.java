@@ -25,6 +25,13 @@ public class Account extends AccountBase {
     private Point home;
     static int instanceCount;                    // ignoreStaticMembers
     private Optional<String> nickname;           // always unsupported: validate reports it
+    private Ghost ghost;                         // undeclared: left out unless includes may declare it
+    private String nickName;                     // snakeCaseFields: clashes with nick_name
+    @SuppressWarnings("PMD.FieldNamingConventions") // on purpose, to clash with nickName in snake_case
+    private String nick_name;
+    @FlatBufferFieldOptions(fieldType = FieldType.STRING)
+    private Date updatedAt;                      // fieldType wins over mapCommonTypes
+    private Audit audit;                         // schemaNamespace x a type with its own namespace
 
     public long getUserId() {
         return userId;
@@ -56,5 +63,26 @@ public class Account extends AccountBase {
 
     public Optional<String> getNickname() {
         return nickname;
+    }
+
+    public Ghost getGhost() {
+        return ghost;
+    }
+
+    public String getNickName() {
+        return nickName;
+    }
+
+    @SuppressWarnings("PMD.MethodNamingConventions")
+    public String getNick_name() {
+        return nick_name;
+    }
+
+    public Date getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public Audit getAudit() {
+        return audit;
     }
 }

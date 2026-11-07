@@ -133,10 +133,10 @@ class FlatcAgreementTest {
                 + String.join("\n", problems));
     }
 
-    /** Every field type in a table and in a struct, with no attribute, each attribute, and each pair. */
+    /** Every field type in a table and in a struct, with no attribute, each attribute, and each pair; then multi-field cases. */
     static List<Case> cases() {
         List<Option> options = options();
-        List<Case> cases = new ArrayList<>();
+        List<Case> cases = new ArrayList<>(multiFieldCases());
         for (Map.Entry<String, SchemaType> type : new java.util.TreeMap<>(TYPES).entrySet()) {
             for (boolean inStruct : new boolean[]{false, true}) {
                 cases.add(make(type.getKey(), type.getValue(), inStruct, List.of()));
@@ -149,6 +149,38 @@ class FlatcAgreementTest {
             }
         }
         return cases;
+    }
+
+    /** Rules that involve more than one field: names, keys and ids. */
+    private static List<Case> multiFieldCases() {
+        SchemaType union = TYPES.get("union");
+        Field a = Field.of("a", INT);
+        return List.of(
+                table("same name twice", a, new Field("b", "a", INT, "", "", List.of())),
+                table("field named like a union's hidden _type field", new Field("s", "s", union, "", "", List.of()),
+                        Field.of("s_type", INT)),
+                table("hidden _type field name first", Field.of("s_type", INT), new Field("s", "s", union, "", "", List.of())),
+                table("two keys", a.withAttributes(List.of(new FieldAttribute.Key())),
+                        Field.of("b", INT).withAttributes(List.of(new FieldAttribute.Key()))),
+                table("ids 0 and 1", a.withAttributes(List.of(new FieldAttribute.Id(0))),
+                        Field.of("b", INT).withAttributes(List.of(new FieldAttribute.Id(1)))),
+                table("ids 1 and 0 (any order)", a.withAttributes(List.of(new FieldAttribute.Id(1))),
+                        Field.of("b", INT).withAttributes(List.of(new FieldAttribute.Id(0)))),
+                table("ids 0 and 0", a.withAttributes(List.of(new FieldAttribute.Id(0))),
+                        Field.of("b", INT).withAttributes(List.of(new FieldAttribute.Id(0)))),
+                table("ids 0 and 2 (gap)", a.withAttributes(List.of(new FieldAttribute.Id(0))),
+                        Field.of("b", INT).withAttributes(List.of(new FieldAttribute.Id(2)))),
+                table("id on one field of two", a.withAttributes(List.of(new FieldAttribute.Id(0))), Field.of("b", INT)),
+                table("union id 2 after id 0", a.withAttributes(List.of(new FieldAttribute.Id(0))),
+                        new Field("s", "s", union, "", "", List.of(new FieldAttribute.Id(2)))),
+                table("union id 1 after id 0 (overlap)", a.withAttributes(List.of(new FieldAttribute.Id(0))),
+                        new Field("s", "s", union, "", "", List.of(new FieldAttribute.Id(1)))));
+    }
+
+    private static Case table(String label, Field... fields) {
+        List<Declaration> declarations = new ArrayList<>(baseDeclarations());
+        declarations.add(new TableDeclaration(ROOT, "Root", "", List.of(fields), true));
+        return new Case("table with " + label, new Schema("app", List.of(), null, null, declarations));
     }
 
     private static List<Option> options() {
@@ -188,12 +220,7 @@ class FlatcAgreementTest {
         for (Option option : applied) {
             field = option.apply().apply(field);
         }
-        List<Declaration> declarations = new ArrayList<>(List.of(
-                new EnumDeclaration(name("Color"), "Color", "", ScalarKind.BYTE,
-                        List.of(new EnumDeclaration.Value("RED", null), new EnumDeclaration.Value("GREEN", null)), null),
-                new StructDeclaration(name("Vec"), "Vec", "", List.of(Field.of("x", new Scalar(ScalarKind.FLOAT))), false),
-                new TableDeclaration(name("Other"), "Other", "", List.of(Field.of("v", INT)), false),
-                UnionDeclaration.of(name("Shape"), "Shape", "", List.of("Other"))));
+        List<Declaration> declarations = new ArrayList<>(baseDeclarations());
         if (inStruct) {
             declarations.add(new StructDeclaration(STRUCT, "S", "", List.of(field), false));
             declarations.add(new TableDeclaration(ROOT, "Root", "", List.of(Field.of("s", new Reference(STRUCT))), true));
@@ -203,6 +230,15 @@ class FlatcAgreementTest {
         String label = typeLabel + " in " + (inStruct ? "struct" : "table") + " with "
                 + (applied.isEmpty() ? "nothing" : String.join(" + ", applied.stream().map(Option::label).toList()));
         return new Case(label, new Schema("app", List.of(), null, null, declarations));
+    }
+
+    private static List<Declaration> baseDeclarations() {
+        return List.of(
+                new EnumDeclaration(name("Color"), "Color", "", ScalarKind.BYTE,
+                        List.of(new EnumDeclaration.Value("RED", null), new EnumDeclaration.Value("GREEN", null)), null),
+                new StructDeclaration(name("Vec"), "Vec", "", List.of(Field.of("x", new Scalar(ScalarKind.FLOAT))), false),
+                new TableDeclaration(name("Other"), "Other", "", List.of(Field.of("v", INT)), false),
+                UnionDeclaration.of(name("Shape"), "Shape", "", List.of("Other")));
     }
 
     /** Compiles the schema with flatc for Java and C++; the error output if it is rejected. */
@@ -225,13 +261,14 @@ class FlatcAgreementTest {
     void casesCoverEveryTypeAttributeAndPair() {
         // 10 types x 2 places x (1 + 11 + 55)
         List<Case> cases = cases();
-        assertEquals(10 * 2 * (1 + 11 + 55), cases.size());
+        assertEquals(11 + 10 * 2 * (1 + 11 + 55), cases.size());
         assertEquals(cases.size(), cases.stream().map(Case::label).distinct().count());
         for (Case c : cases) {
             SchemaValidator.Result result = assertDoesNotThrow(() -> new SchemaValidator().validate(c.schema()), c.label());
             assertDoesNotThrow(() -> result.schema().write("// test", false, result.issues()), c.label());
         }
-        // The baseline (no attributes) is valid wherever the type is allowed.
-        assertEquals(List.of(), new SchemaValidator().validate(cases.get(0).schema()).issues(), cases.get(0).label());
+        // A baseline (no attributes) is valid wherever the type is allowed.
+        Case baseline = cases.stream().filter(c -> c.label().equals("bool in table with nothing")).findFirst().orElseThrow();
+        assertEquals(List.of(), new SchemaValidator().validate(baseline.schema()).issues(), baseline.label());
     }
 }
