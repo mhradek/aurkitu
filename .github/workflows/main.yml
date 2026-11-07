@@ -62,10 +62,11 @@ jobs:
         uses: coverallsapp/github-action@v2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          file: aurkitu-maven-plugin/target/site/jacoco/jacoco.xml
+          # Both modules, as for Codecov and Codacy.
+          files: >-
+            aurkitu-annotations/target/site/jacoco/jacoco.xml
+            aurkitu-maven-plugin/target/site/jacoco/jacoco.xml
           format: jacoco
-          # Optional: also send the annotations report if desired
-          # parallel: true
 
       - name: Upload coverage to Codacy
         continue-on-error: true
