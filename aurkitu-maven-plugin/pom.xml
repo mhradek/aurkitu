@@ -165,6 +165,8 @@
                             </targetClasses>
                             <excludedTestClasses>
                                 <param>*FlatcValidationTest</param>
+                                <!-- 2048 generations per mutant; the other tests cover the same code -->
+                                <param>*OptionMatrixTest</param>
                             </excludedTestClasses>
                             <outputFormats>
                                 <param>HTML</param>

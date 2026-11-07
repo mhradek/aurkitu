@@ -9,6 +9,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.lang.reflect.Field;
 import java.nio.file.Files;
@@ -105,6 +107,46 @@ class AurkituMojoExecutionTest {
         Files.delete(schema);
         mojo("   ").execute(); // a blank path would fail too
         assertTrue(Files.exists(schema));
+    }
+
+    /**
+     * validate x failOnValidationIssues x cacheEnabled x flatcPath (unset, blank, set), on models with issues:
+     * the build fails exactly when validate and failOnValidationIssues are both on (before flatc), and flatc
+     * runs exactly when validate is on, a path is set and the build has not failed; cached or not.
+     */
+    @ParameterizedTest
+    @CsvSource({
+            "false,false,false,none", "false,false,false,blank", "false,false,false,script",
+            "false,false,true,none", "false,false,true,blank", "false,false,true,script",
+            "false,true,false,none", "false,true,false,blank", "false,true,false,script",
+            "false,true,true,none", "false,true,true,blank", "false,true,true,script",
+            "true,false,false,none", "true,false,false,blank", "true,false,false,script",
+            "true,false,true,none", "true,false,true,blank", "true,false,true,script",
+            "true,true,false,none", "true,true,false,blank", "true,true,false,script",
+            "true,true,true,none", "true,true,true,blank", "true,true,true,script"})
+    @DisabledOnOs(OS.WINDOWS)
+    void validationFailureAndFlatcInteract(boolean validate, boolean failOnIssues, boolean cache, String flatc) throws Exception {
+        Path ran = tempDir.resolve("flatc-ran");
+        String path = switch (flatc) {
+            case "none" -> null;
+            case "blank" -> " ";
+            default -> script("flatc-record", "touch '" + ran + "'\nexit 0\n").toString();
+        };
+        for (int run = 1; run <= 2; run++) { // the second run finds an unchanged schema
+            Files.deleteIfExists(ran);
+            AurkituMojo mojo = mojo(path);
+            set(mojo, "validate", validate);
+            set(mojo, "failOnValidationIssues", failOnIssues);
+            set(mojo, "cacheEnabled", cache);
+            String label = "validate=" + validate + " failOn=" + failOnIssues + " cache=" + cache + " flatc=" + flatc + " run=" + run;
+            if (validate && failOnIssues) {
+                assertThrows(MojoFailureException.class, mojo::execute, label);
+            } else {
+                mojo.execute();
+            }
+            assertTrue(Files.exists(tempDir.resolve("out/models.fbs")), label);
+            assertEquals(validate && !failOnIssues && "script".equals(flatc), Files.exists(ran), label);
+        }
     }
 
     @Test
