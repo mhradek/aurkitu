@@ -48,9 +48,6 @@
  *   <li>{@link io.github.mhradek.aurkitu.annotations.FlatBufferRpcService}: an {@code rpc_service}.</li>
  * </ul>
  *
- * <p>Annotated classes and enums must be {@code public}: the plugin does not see others. Fields can
- * have any visibility.</p>
- *
  * <p>Java types map to schema types as follows: primitives and their wrappers to the scalar of the same
  * name; {@code String} to {@code string}; {@code byte[]} to {@code [ubyte]}; other arrays and collections
  * to vectors; {@code Map<String, V>} to a vector of a generated key/value table; and annotated classes

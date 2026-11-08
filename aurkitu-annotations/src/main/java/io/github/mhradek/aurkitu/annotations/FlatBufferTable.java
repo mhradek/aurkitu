@@ -3,7 +3,7 @@ package io.github.mhradek.aurkitu.annotations;
 import java.lang.annotation.*;
 
 /**
- * Declares a public class as a FlatBuffers {@code table} (the default) or {@code struct}. Its fields,
+ * Declares a class as a FlatBuffers {@code table} (the default) or {@code struct}. Its fields,
  * including inherited ones, become the schema's fields; mark one {@link FlatBufferIgnore} to leave it
  * out, and use {@link FlatBufferFieldOptions} to change how it is written.
  *
