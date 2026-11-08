@@ -1,6 +1,3 @@
-/**
- *
- */
 package io.github.mhradek.aurkitu.annotations;
 
 import java.lang.annotation.Documented;

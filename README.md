@@ -1,4 +1,4 @@
-# Aurkitu 1.1.0
+# Aurkitu 1.1.1
 
 [![Latest release](https://img.shields.io/github/release/mhradek/aurkitu.svg)](https://github.com/mhradek/aurkitu/releases/latest)
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.mhradek/aurkitu-maven-plugin.svg?label=plugin)](https://central.sonatype.com/artifact/io.github.mhradek/aurkitu-maven-plugin)
@@ -26,6 +26,8 @@ The 1.0 line:
 
 It generates schemas for tables, structs, enums, unions, maps, inheritance and field options, validates them, and can optionally check them with `flatc`.
 
+> **Upgrading from 1.1.0?** Non-public classes are now scanned; see [What's new in 1.1.1](#whats-new-in-111).
+>
 > **Upgrading from 1.0.1?** See [What's new in 1.1.0](#whats-new-in-110) for the output changes to expect.
 >
 > **Upgrading from 1.0.0?** 1.0.0 scanned the plugin's own classpath instead of your project's, so it generated an empty schema in real builds. See [What's new in 1.0.1](#whats-new-in-101).
@@ -42,7 +44,7 @@ It generates schemas for tables, structs, enums, unions, maps, inheritance and f
 <dependency>
     <groupId>io.github.mhradek</groupId>
     <artifactId>aurkitu-annotations</artifactId>
-    <version>1.1.0</version>
+    <version>1.1.1</version>
 </dependency>
 ```
 
@@ -52,7 +54,7 @@ It generates schemas for tables, structs, enums, unions, maps, inheritance and f
 <plugin>
     <groupId>io.github.mhradek</groupId>
     <artifactId>aurkitu-maven-plugin</artifactId>
-    <version>1.1.0</version>
+    <version>1.1.1</version>
     <configuration>
         <schemaName>user</schemaName>
         <schemaNamespace>com.example.flatbuffers</schemaNamespace>
@@ -84,6 +86,8 @@ public class User {
     private String name;
 }
 ```
+
+Classes, enums and fields can have any visibility (`public`, package-private, `protected` or `private`): the annotation is what puts a type in the schema, and a model used only inside your code can stay package-private.
 
 Run `mvn process-classes` (or any later phase, such as `mvn package`) to generate `target/aurkitu/schemas/user.fbs`.
 
@@ -401,7 +405,7 @@ table Knight {
 root_type Knight;
 ```
 
-Types are declared by their simple name (`Knight.Weapon` becomes `Weapon`). Mark a nested type `@FlatBufferIgnore` to leave it out; types nested more than one level deep are not declared automatically.
+Types are declared by their simple name (`Knight.Weapon` becomes `Weapon`). This includes `private` nested classes, so mark a nested helper class that is not part of the schema `@FlatBufferIgnore` to leave it out; types nested more than one level deep are not declared automatically.
 
 ### Ignoring fields
 
@@ -624,12 +628,16 @@ Codacy's quality-grade badge comes from its static analysis and is independent o
 | Java 17, 21 and 25 | CI | The build and every test run on each, so newer JDKs keep working |
 | [CodeQL](https://codeql.github.com/) | CI and weekly | GitHub's security and quality analysis; findings appear under Security → Code scanning |
 | [OpenSSF Scorecard](https://scorecard.dev/) | weekly and on push | Scores the repository's security practices (the Scorecard badge) |
-| Dependabot | weekly | Opens grouped PRs for Maven and GitHub Actions updates |
+| Dependabot | weekly | Opens grouped PRs for Maven and GitHub Actions updates. ClassGraph major versions are skipped (6.0 removed APIs the plugin uses) |
+| Pinned actions | every workflow | Each GitHub Action is pinned to a commit (`@<sha> # vX.Y.Z`), so a moved tag cannot change a build; Dependabot updates the pins |
+| Least-privilege tokens | every workflow | The `GITHUB_TOKEN` is read-only unless a job needs more (code scanning uploads, attaching release assets) |
 | Codacy, Codecov, Coveralls | CI | Static analysis and coverage reports (see [Coverage](#coverage)) |
 
 ### Publishing
 
 Publishing a GitHub release runs `.github/workflows/publish.yml`, which builds the release tag and deploys both artifacts and the parent POM to Maven Central (signed, with sources and Javadoc). It needs the `MAVEN_USERNAME`, `MAVEN_PASSWORD`, `GPG_PRIVATE_KEY` and `GPG_PASSPHRASE` secrets. The workflow can also be run manually on a tag. If the version is already on Maven Central, the run does nothing, so publishing the release page after a manual run is safe. Publish the release page only after a manual run has finished, so the two runs do not both upload.
+
+When a release is published, `.github/workflows/release-assets.yml` waits for it on Maven Central and attaches the jars, POMs and their `.asc` signatures to the GitHub release. It can also be run manually with a tag, e.g. to add them to an older release.
 
 After a release, move the POMs to the next `-SNAPSHOT` version and set `japicmp.baseline` to the version just released. The build enforces this: with the project version equal to the baseline, japicmp would compare the annotations with themselves.
 
@@ -640,6 +648,19 @@ After a release, move the POMs to the next `-SNAPSHOT` version and set `japicmp.
 - **`snakeCaseAcronyms`** (opt-in): acronym-aware snake_case, so `userID` becomes `user_id` and `XMLParser` becomes `xml_parser` (in field names and `MapValueSet_*` table names). Off by default, because it renames fields.
 - **`typedMapKeys`** (opt-in): map keys keep their Java type (`Map<Integer, V>` → `key:int`) and are marked `(key)` for lookups. Off by default, because it changes existing map tables.
 - **Tests**: the option matrix covers both new options (14 options, 16384 combinations, run in parallel).
+
+## What's new in 1.1.1
+
+A fix release. Aurkitu scanned only `public` classes, so a schema could lose parts without any report:
+
+- the fields of a package-private superclass were left out;
+- a `private` nested class was written as an empty table;
+- a package-private `@FlatBufferTable` or `@FlatBufferEnum` was not declared, and fields using it were reported and left out.
+
+Classes are now scanned whatever their visibility. Output changes to expect when upgrading from 1.1.0, only for models that use non-public classes:
+
+- The missing fields, tables and enums are written. Fields inherited from a package-private superclass come after the table's own fields; if data written with 1.1.0 already exists, give the fields `fieldId`s first (see [Schema evolution](#schema-evolution)).
+- A `private` nested class that 1.1.0 wrote as an empty table now has its fields. If it is a helper that is not part of the schema, mark it `@FlatBufferIgnore`.
 
 ## What's new in 1.1.0
 
@@ -727,7 +748,7 @@ Output changes to expect when upgrading from 1.0.0: explicit enum values are wri
 
 ### Steps
 
-1. Update the dependency and plugin coordinates to `io.github.mhradek` and version `1.1.0`.
+1. Update the dependency and plugin coordinates to `io.github.mhradek` and version `1.1.1`.
 2. Change imports from `com.michaelhradek.aurkitu.*` to `io.github.mhradek.aurkitu.*`.
 3. Rename plugin parameters as above.
 4. Set `<snakeCaseFields>false</snakeCaseFields>` if clients depend on camelCase field names.
@@ -744,6 +765,10 @@ Output changes to expect when upgrading from 1.0.0: explicit enum values are wri
 | Low | Multiple schema files (one per namespace) | One file per execution |
 | Low | Acronym-aware snake_case and typed map keys on by default | Opt-in since 1.2.0; candidates for the default in 2.0 |
 | Low | Remove deprecated `@FlatBufferOptions` | Planned for 2.0 |
+
+## Security
+
+See [SECURITY.md](SECURITY.md) for supported versions and how to report a vulnerability privately.
 
 ## License
 

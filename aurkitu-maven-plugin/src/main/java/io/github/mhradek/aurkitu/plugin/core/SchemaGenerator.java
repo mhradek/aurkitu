@@ -150,6 +150,9 @@ public class SchemaGenerator {
                 .enableFieldInfo()
                 .enableMethodInfo()
                 .ignoreFieldVisibility()
+                // The annotation is what puts a type in the schema, whatever its visibility. Scanning only
+                // public classes also lost the fields of package-private superclasses and private nested types.
+                .ignoreClassVisibility()
                 .acceptPackages(config.specifiedPackages != null && !config.specifiedPackages.isEmpty()
                         ? config.specifiedPackages.toArray(new String[0])
                         : new String[]{"*"})

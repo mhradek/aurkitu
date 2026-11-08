@@ -1,0 +1,65 @@
+# Attaches each release's artifacts and their signatures (the .asc files published to Maven Central) to the
+# GitHub release, so users (and OpenSSF Scorecard) can verify the release from GitHub too.
+name: Release assets
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to attach artifacts to (e.g. 1.1.0); it must already be on Maven Central
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  attach:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      # The artifacts come from Maven Central, so they are exactly what users download, already signed.
+      # A release published right after the deploy can take a while to appear there: wait up to an hour.
+      - name: Wait for the release on Maven Central
+        run: |
+          set -euo pipefail
+          url="https://repo1.maven.org/maven2/io/github/mhradek/aurkitu-maven-plugin/${TAG}/aurkitu-maven-plugin-${TAG}.pom"
+          for i in $(seq 1 60); do
+            if curl -sfI "$url" > /dev/null; then echo "${TAG} is on Maven Central"; exit 0; fi
+            echo "Waiting for ${TAG} on Maven Central (${i}/60)"; sleep 60
+          done
+          echo "::error::${TAG} did not appear on Maven Central within an hour"; exit 1
+
+      - name: Download artifacts and signatures
+        run: |
+          set -euo pipefail
+          mkdir assets && cd assets
+          base="https://repo1.maven.org/maven2/io/github/mhradek"
+          files=(
+            "aurkitu-parent/${TAG}/aurkitu-parent-${TAG}.pom"
+            "aurkitu-annotations/${TAG}/aurkitu-annotations-${TAG}.pom"
+            "aurkitu-annotations/${TAG}/aurkitu-annotations-${TAG}.jar"
+            "aurkitu-annotations/${TAG}/aurkitu-annotations-${TAG}-sources.jar"
+            "aurkitu-annotations/${TAG}/aurkitu-annotations-${TAG}-javadoc.jar"
+            "aurkitu-maven-plugin/${TAG}/aurkitu-maven-plugin-${TAG}.pom"
+            "aurkitu-maven-plugin/${TAG}/aurkitu-maven-plugin-${TAG}.jar"
+            "aurkitu-maven-plugin/${TAG}/aurkitu-maven-plugin-${TAG}-sources.jar"
+            "aurkitu-maven-plugin/${TAG}/aurkitu-maven-plugin-${TAG}-javadoc.jar"
+          )
+          for f in "${files[@]}"; do
+            for suffix in "" ".asc"; do
+              # Central rate-limits bursts (HTTP 429); curl honours its Retry-After and backs off.
+              curl -sSf --retry 10 --retry-all-errors --retry-max-time 600 -O "${base}/${f}${suffix}"
+              sleep 1
+            done
+          done
+          ls -l
+
+      - name: Attach to the GitHub release
+        run: gh release upload "$TAG" assets/* --clobber --repo "$GITHUB_REPOSITORY"
