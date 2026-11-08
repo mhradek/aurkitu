@@ -21,6 +21,9 @@ public class Lookup {
     private Map<Object, Integer> byObject;
     private Map<Code, Integer> byCode;
     private Map<String, Code> codeByName;
+    @SuppressWarnings("rawtypes")
+    private Map raw;
+    private Map<?, Integer> byWildcard;
 
     public Map<Long, Integer> getByLong() {
         return byLong;
@@ -68,5 +71,14 @@ public class Lookup {
 
     public Map<String, Code> getCodeByName() {
         return codeByName;
+    }
+
+    @SuppressWarnings("rawtypes")
+    public Map getRaw() {
+        return raw;
+    }
+
+    public Map<?, Integer> getByWildcard() {
+        return byWildcard;
     }
 }

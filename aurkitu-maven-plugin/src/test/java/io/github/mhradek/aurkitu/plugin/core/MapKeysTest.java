@@ -98,6 +98,8 @@ class MapKeysTest {
                 // - Unsupported field type: Lookup.byMap
                 // - Unsupported field type: Lookup.byBytes
                 // - Unsupported field type: Lookup.byObject
+                // - Unsupported field type: Lookup.raw
+                // - Unsupported field type: Lookup.byWildcard
                 // - key on MapValueSet_Lookup_by_item.key skipped: a key must be a string, scalar, enum or struct
                 """, generate(true));
     }
@@ -106,10 +108,11 @@ class MapKeysTest {
     void untypedKeysAreAlwaysStringsAsBefore() throws Exception {
         String schema = generate(false);
         assertFalse(schema.contains("(key)"), schema);
-        assertFalse(schema.contains("Validation issues"), schema);
+        // Only a raw Map, which has no key or value type, is unsupported.
+        assertTrue(schema.endsWith("// Validation issues:\n// - Unsupported field type: Lookup.raw\n"), schema);
         // A map value (or key) whose enum has no 0 value gets the lowest value, so flatc accepts the table.
         assertTrue(schema.contains("table MapValueSet_Lookup_code_by_name {\n  key:string;\n  value:Code = LOW;\n}"), schema);
-        for (String field : List.of("long", "flag", "uuid", "color", "pos", "item", "list", "map", "bytes", "object", "code")) {
+        for (String field : List.of("long", "flag", "uuid", "color", "pos", "item", "list", "map", "bytes", "object", "code", "wildcard")) {
             assertTrue(schema.contains("table MapValueSet_Lookup_by_" + field + " {\n  key:string;\n"), field + ":\n" + schema);
         }
     }

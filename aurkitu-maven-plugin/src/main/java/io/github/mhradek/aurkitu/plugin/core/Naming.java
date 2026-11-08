@@ -58,10 +58,6 @@ final class Naming {
     }
 
     /** Schema name of a field: '$' (not valid in schema identifiers) becomes '_', then optional snake_case. */
-    static String fieldName(String javaName, boolean snakeCase) {
-        return fieldName(javaName, snakeCase, false);
-    }
-
     static String fieldName(String javaName, boolean snakeCase, boolean acronyms) {
         String name = javaName.replace('$', '_');
         return snakeCase ? toSnakeCase(name, acronyms) : name;
