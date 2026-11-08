@@ -1,30 +1,50 @@
 package io.github.mhradek.aurkitu.annotations.types;
 
 /**
- * These are the possible field types when defining a TypeDeclaration. FieldType.IDENT means that the field is a class which
- * ins't one of the other supported field types. IDENT is short for `Identifier`. ARRAY is similar to IDENT however, an array
- * may also be composed or have a type of an IDENT. For example, String[] or List&lt;String&gt;. MAP is a special type which
- * allows the use translates a Java Map to a List[GeneratedObject] and back.
+ * The schema type of a field, set with {@code FlatBufferFieldOptions.fieldType}. Each scalar constant is
+ * written as the FlatBuffers type of the same name; Java has no unsigned types, so the unsigned ones are
+ * how a Java {@code int} becomes a {@code uint}, for example.
  *
- * See https://google.github.io/flatbuffers/md__schemas.html
+ * <p>{@code IDENT}, {@code ARRAY} and {@code MAP} keep the type inferred from the Java field: a reference to
+ * another table, struct, enum or union; a vector for arrays and collections; a generated
+ * {@code MapValueSet_*} table of {@code key}/{@code value} entries for maps.</p>
  *
- * 8 bit: byte ubyte bool
- * 16 bit: short ushort
- * 32 bit: int uint float
- * 64 bit: long ulong double
- *
- * Built-in non-scalar types:
- *    * Vector of any other type (denoted with [type]). Nesting vectors is not supported, instead you can wrap the inner vector in a table.
- *    * string, which may only hold UTF-8 or 7-bit ASCII. For other text encodings or general binary data use vectors ([byte] or [ubyte]) instead.
- *    * References to other tables or structs, enums or unions (see below).
- *
+ * @see <a href="https://flatbuffers.dev/schema/">FlatBuffers schema types</a>
  * @author m.hradek
  */
 public enum FieldType {
-    BOOL(boolean.class), BYTE(byte.class), UBYTE(byte.class), SHORT(short.class), USHORT(
-            short.class), INT(int.class), UINT(int.class), FLOAT(float.class), LONG(long.class), ULONG(
-            long.class), DOUBLE(double.class), STRING(String.class), IDENT(null), ARRAY(null), MAP(null);
+    /** {@code bool}: 8-bit true/false. */
+    BOOL(boolean.class),
+    /** {@code byte}: 8-bit signed. */
+    BYTE(byte.class),
+    /** {@code ubyte}: 8-bit unsigned. */
+    UBYTE(byte.class),
+    /** {@code short}: 16-bit signed. */
+    SHORT(short.class),
+    /** {@code ushort}: 16-bit unsigned. */
+    USHORT(short.class),
+    /** {@code int}: 32-bit signed. */
+    INT(int.class),
+    /** {@code uint}: 32-bit unsigned. */
+    UINT(int.class),
+    /** {@code float}: 32-bit floating point. */
+    FLOAT(float.class),
+    /** {@code long}: 64-bit signed. */
+    LONG(long.class),
+    /** {@code ulong}: 64-bit unsigned. */
+    ULONG(long.class),
+    /** {@code double}: 64-bit floating point. */
+    DOUBLE(double.class),
+    /** {@code string}: UTF-8 text. Also makes a type with no schema equivalent (e.g. {@code Instant}) a string. */
+    STRING(String.class),
+    /** Keep the inferred type: a reference to a declared table, struct, enum or union. */
+    IDENT(null),
+    /** Keep the inferred type: a vector ({@code [type]}) for an array or collection. */
+    ARRAY(null),
+    /** Keep the inferred type: a vector of a generated key/value table for a {@code Map}. */
+    MAP(null);
 
+    /** The Java type that holds this type's values; null for {@code IDENT}, {@code ARRAY} and {@code MAP}. */
     public Class<?> targetClass;
 
     FieldType(Class<?> targetClass) {
