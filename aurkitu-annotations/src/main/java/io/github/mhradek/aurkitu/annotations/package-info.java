@@ -48,6 +48,8 @@
  *   <li>{@link io.github.mhradek.aurkitu.annotations.FlatBufferRpcService}: an {@code rpc_service}.</li>
  * </ul>
  *
+ * <p>Classes, enums and fields can have any visibility; the annotation is what puts a type in the schema.</p>
+ *
  * <p>Java types map to schema types as follows: primitives and their wrappers to the scalar of the same
  * name; {@code String} to {@code string}; {@code byte[]} to {@code [ubyte]}; other arrays and collections
  * to vectors; {@code Map<String, V>} to a vector of a generated key/value table; and annotated classes
