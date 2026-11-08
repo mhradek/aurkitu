@@ -85,6 +85,8 @@ public class User {
 }
 ```
 
+Annotated classes and enums must be `public`; others are not scanned. Fields can have any visibility.
+
 Run `mvn process-classes` (or any later phase, such as `mvn package`) to generate `target/aurkitu/schemas/user.fbs`.
 
 ---
