@@ -12,9 +12,9 @@ import java.lang.annotation.*;
  * class Monster { long id; String name; }   // table Monster { id:long; name:string; }  root_type Monster;
  * }</pre>
  *
- * <p>The type is named by its simple Java name ({@code Outer.Inner} becomes {@code Inner}). Classes and
- * enums nested directly in an annotated class are written too, in its namespace, without their own
- * annotation; mark one {@link FlatBufferIgnore} to leave it out.</p>
+ * <p>The type is named by its simple Java name ({@code Outer.Inner} becomes {@code Inner}). Classes
+ * and enums nested directly in an annotated class, including {@code private} ones, are written too, in
+ * its namespace, without their own annotation; mark one {@link FlatBufferIgnore} to leave it out.</p>
  *
  * @author m.hradek
  */
