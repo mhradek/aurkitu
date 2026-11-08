@@ -1,4 +1,4 @@
-# Aurkitu 1.1.0
+# Aurkitu 1.1.1
 
 [![Latest release](https://img.shields.io/github/release/mhradek/aurkitu.svg)](https://github.com/mhradek/aurkitu/releases/latest)
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.mhradek/aurkitu-maven-plugin.svg?label=plugin)](https://central.sonatype.com/artifact/io.github.mhradek/aurkitu-maven-plugin)
@@ -26,6 +26,8 @@ The 1.0 line:
 
 It generates schemas for tables, structs, enums, unions, maps, inheritance and field options, validates them, and can optionally check them with `flatc`.
 
+> **Upgrading from 1.1.0?** Non-public classes are now scanned; see [What's new in 1.1.1](#whats-new-in-111).
+>
 > **Upgrading from 1.0.1?** See [What's new in 1.1.0](#whats-new-in-110) for the output changes to expect.
 >
 > **Upgrading from 1.0.0?** 1.0.0 scanned the plugin's own classpath instead of your project's, so it generated an empty schema in real builds. See [What's new in 1.0.1](#whats-new-in-101).
@@ -42,7 +44,7 @@ It generates schemas for tables, structs, enums, unions, maps, inheritance and f
 <dependency>
     <groupId>io.github.mhradek</groupId>
     <artifactId>aurkitu-annotations</artifactId>
-    <version>1.1.0</version>
+    <version>1.1.1</version>
 </dependency>
 ```
 
@@ -52,7 +54,7 @@ It generates schemas for tables, structs, enums, unions, maps, inheritance and f
 <plugin>
     <groupId>io.github.mhradek</groupId>
     <artifactId>aurkitu-maven-plugin</artifactId>
-    <version>1.1.0</version>
+    <version>1.1.1</version>
     <configuration>
         <schemaName>user</schemaName>
         <schemaNamespace>com.example.flatbuffers</schemaNamespace>
@@ -84,6 +86,8 @@ public class User {
     private String name;
 }
 ```
+
+Classes, enums and fields can have any visibility (`public`, package-private, `protected` or `private`): the annotation is what puts a type in the schema, and a model used only inside your code can stay package-private.
 
 Run `mvn process-classes` (or any later phase, such as `mvn package`) to generate `target/aurkitu/schemas/user.fbs`.
 
@@ -399,7 +403,7 @@ table Knight {
 root_type Knight;
 ```
 
-Types are declared by their simple name (`Knight.Weapon` becomes `Weapon`). Mark a nested type `@FlatBufferIgnore` to leave it out; types nested more than one level deep are not declared automatically.
+Types are declared by their simple name (`Knight.Weapon` becomes `Weapon`). This includes `private` nested classes, so mark a nested helper class that is not part of the schema `@FlatBufferIgnore` to leave it out; types nested more than one level deep are not declared automatically.
 
 ### Ignoring fields
 
@@ -622,6 +626,19 @@ After a release, move the POMs to the next `-SNAPSHOT` version and set `japicmp.
 
 ---
 
+## What's new in 1.1.1
+
+A fix release. Aurkitu scanned only `public` classes, so a schema could lose parts without any report:
+
+- the fields of a package-private superclass were left out;
+- a `private` nested class was written as an empty table;
+- a package-private `@FlatBufferTable` or `@FlatBufferEnum` was not declared, and fields using it were reported and left out.
+
+Classes are now scanned whatever their visibility. Output changes to expect when upgrading from 1.1.0, only for models that use non-public classes:
+
+- The missing fields, tables and enums are written. Fields inherited from a package-private superclass come after the table's own fields; if data written with 1.1.0 already exists, give the fields `fieldId`s first (see [Schema evolution](#schema-evolution)).
+- A `private` nested class that 1.1.0 wrote as an empty table now has its fields. If it is a helper that is not part of the schema, mark it `@FlatBufferIgnore`.
+
 ## What's new in 1.1.0
 
 - **Validation** of the FlatBuffers schema rules Aurkitu used to write without checking: `required`, defaults, struct-only and vector-only attributes, field ids, `key`, `hash`, `nested_flatbuffer`, duplicate field names, union `_type` clashes, empty structs and more (see [Validation](#validation)). Invalid parts are reported and left out, so the written schema compiles; the one exception is a table enum field whose enum has no `0` value and that needs a `defaultValue`, which is reported for you to fix. The rules are tested against `flatc` itself.
@@ -708,7 +725,7 @@ Output changes to expect when upgrading from 1.0.0: explicit enum values are wri
 
 ### Steps
 
-1. Update the dependency and plugin coordinates to `io.github.mhradek` and version `1.1.0`.
+1. Update the dependency and plugin coordinates to `io.github.mhradek` and version `1.1.1`.
 2. Change imports from `com.michaelhradek.aurkitu.*` to `io.github.mhradek.aurkitu.*`.
 3. Rename plugin parameters as above.
 4. Set `<snakeCaseFields>false</snakeCaseFields>` if clients depend on camelCase field names.
