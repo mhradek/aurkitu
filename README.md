@@ -607,12 +607,16 @@ Codacy's quality-grade badge comes from its static analysis and is independent o
 | Java 17, 21 and 25 | CI | The build and every test run on each, so newer JDKs keep working |
 | [CodeQL](https://codeql.github.com/) | CI and weekly | GitHub's security and quality analysis; findings appear under Security → Code scanning |
 | [OpenSSF Scorecard](https://scorecard.dev/) | weekly and on push | Scores the repository's security practices (the Scorecard badge) |
-| Dependabot | weekly | Opens grouped PRs for Maven and GitHub Actions updates |
+| Dependabot | weekly | Opens grouped PRs for Maven and GitHub Actions updates. ClassGraph major versions are skipped (6.0 removed APIs the plugin uses) |
+| Pinned actions | every workflow | Each GitHub Action is pinned to a commit (`@<sha> # vX.Y.Z`), so a moved tag cannot change a build; Dependabot updates the pins |
+| Least-privilege tokens | every workflow | The `GITHUB_TOKEN` is read-only unless a job needs more (code scanning uploads, attaching release assets) |
 | Codacy, Codecov, Coveralls | CI | Static analysis and coverage reports (see [Coverage](#coverage)) |
 
 ### Publishing
 
 Publishing a GitHub release runs `.github/workflows/publish.yml`, which builds the release tag and deploys both artifacts and the parent POM to Maven Central (signed, with sources and Javadoc). It needs the `MAVEN_USERNAME`, `MAVEN_PASSWORD`, `GPG_PRIVATE_KEY` and `GPG_PASSPHRASE` secrets. The workflow can also be run manually on a tag. If the version is already on Maven Central, the run does nothing, so publishing the release page after a manual run is safe. Publish the release page only after a manual run has finished, so the two runs do not both upload.
+
+When a release is published, `.github/workflows/release-assets.yml` waits for it on Maven Central and attaches the jars, POMs and their `.asc` signatures to the GitHub release. It can also be run manually with a tag, e.g. to add them to an older release.
 
 After a release, move the POMs to the next `-SNAPSHOT` version and set `japicmp.baseline` to the version just released. The build enforces this: with the project version equal to the baseline, japicmp would compare the annotations with themselves.
 
@@ -722,6 +726,10 @@ Output changes to expect when upgrading from 1.0.0: explicit enum values are wri
 | Low | Acronym-aware snake_case (`userID` → `user_id`) | Changes field names, so opt-in |
 | Low | Typed map keys and a `(key)` attribute on `MapValueSet_*` keys | Keys are written as `string` |
 | Low | Remove deprecated `@FlatBufferOptions` | Planned for 2.0 |
+
+## Security
+
+See [SECURITY.md](SECURITY.md) for supported versions and how to report a vulnerability privately.
 
 ## License
 
