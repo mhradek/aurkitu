@@ -1,6 +1,7 @@
 package io.github.mhradek.aurkitu.plugin;
 
 import io.github.mhradek.aurkitu.plugin.core.AurkituVersion;
+import io.github.mhradek.aurkitu.plugin.core.Flatc;
 import io.github.mhradek.aurkitu.plugin.core.SchemaGenerationException;
 import io.github.mhradek.aurkitu.plugin.core.SchemaGenerator;
 import lombok.extern.slf4j.Slf4j;
@@ -15,13 +16,7 @@ import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Comparator;
 import java.util.List;
-import java.util.stream.Stream;
 
 /**
  * {@code aurkitu:build-schema}: writes a FlatBuffers schema ({@code <schemaName>.fbs}) from the annotated
@@ -170,7 +165,7 @@ public class AurkituMojo extends AbstractMojo {
         }
 
         SchemaGenerator.Config config = new SchemaGenerator.Config(
-                project, specifiedPackages, validate, ignoreStaticMembers, fileIdentifier, includes, mapCommonTypes, cacheEnabled, snakeCaseFields, generateVersion, failOnValidationIssues, fileExtension,
+                specifiedPackages, validate, ignoreStaticMembers, fileIdentifier, includes, mapCommonTypes, cacheEnabled, snakeCaseFields, generateVersion, failOnValidationIssues, fileExtension,
                 resolveClasspath(), optionalScalars)
                 .withSnakeCaseAcronyms(snakeCaseAcronyms)
                 .withTypedMapKeys(typedMapKeys);
@@ -206,55 +201,12 @@ public class AurkituMojo extends AbstractMojo {
         }
     }
 
-    /**
-     * Validates the schema by compiling it to a binary schema ({@code flatc --binary --schema}),
-     * which parses and checks it fully without targeting a language. Output is discarded.
-     */
+    /** Checks the schema with flatc ({@link Flatc#validate}); a rejection or failure to run it fails the build. */
     private void runFlatcValidation(File schemaFile) throws MojoExecutionException {
-        Path scratch = null;
         try {
-            scratch = Files.createTempDirectory("aurkitu-flatc");
-            ProcessBuilder pb = new ProcessBuilder(flatcPath, "--binary", "--schema",
-                    "-o", scratch.toString(), schemaFile.getAbsolutePath());
-            pb.directory(schemaFile.getParentFile());
-            pb.redirectErrorStream(true);
-            Process process = pb.start();
-            // Drain output before waiting so a full pipe cannot block flatc.
-            String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-            int exit = process.waitFor();
-            if (exit != 0) {
-                throw new MojoExecutionException("flatc validation failed for " + schemaFile.getName() + ":\n" + output);
-            }
-            log.info("flatc validation succeeded for {}", schemaFile.getName());
-        } catch (IOException e) {
-            throw new MojoExecutionException("Failed to run flatc", e);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new MojoExecutionException("Interrupted while running flatc", e);
-        } finally {
-            deleteQuietly(scratch);
-        }
-    }
-
-    /** Deletes {@code dir} and its contents, best effort: a leftover temp file is harmless. */
-    static void deleteQuietly(Path dir) {
-        if (dir == null) {
-            return;
-        }
-        // Deepest first, so each directory is empty when it is deleted.
-        try (Stream<Path> paths = Files.walk(dir)) {
-            paths.sorted(Comparator.reverseOrder()).forEach(AurkituMojo::deleteOrLog);
-        } catch (IOException e) {
-            log.debug("Could not clean up {}", dir, e);
-        }
-    }
-
-    /** Deletes one file or empty directory; logs instead of failing when it cannot. */
-    static void deleteOrLog(Path path) {
-        try {
-            Files.delete(path);
-        } catch (IOException e) {
-            log.debug("Could not delete {}", path, e);
+            Flatc.validate(flatcPath, schemaFile);
+        } catch (SchemaGenerationException e) {
+            throw new MojoExecutionException(e.getMessage(), e);
         }
     }
 }

@@ -54,12 +54,23 @@ jobs:
             "aurkitu-annotations/${TAG}/aurkitu-annotations-${TAG}.jar"
             "aurkitu-annotations/${TAG}/aurkitu-annotations-${TAG}-sources.jar"
             "aurkitu-annotations/${TAG}/aurkitu-annotations-${TAG}-javadoc.jar"
+            "?aurkitu-core/${TAG}/aurkitu-core-${TAG}.pom"
+            "?aurkitu-core/${TAG}/aurkitu-core-${TAG}.jar"
+            "?aurkitu-core/${TAG}/aurkitu-core-${TAG}-sources.jar"
+            "?aurkitu-core/${TAG}/aurkitu-core-${TAG}-javadoc.jar"
             "aurkitu-maven-plugin/${TAG}/aurkitu-maven-plugin-${TAG}.pom"
             "aurkitu-maven-plugin/${TAG}/aurkitu-maven-plugin-${TAG}.jar"
             "aurkitu-maven-plugin/${TAG}/aurkitu-maven-plugin-${TAG}-sources.jar"
             "aurkitu-maven-plugin/${TAG}/aurkitu-maven-plugin-${TAG}-javadoc.jar"
           )
           for f in "${files[@]}"; do
+            # "?": only in some releases (aurkitu-core is new after 1.2.0); skipped when the release has no such file.
+            if [[ "$f" == "?"* ]]; then
+              f="${f#?}"
+              if ! curl -sfI --retry 5 --retry-all-errors "${base}/${f}" > /dev/null; then
+                echo "Not in ${TAG}: ${f}"; continue
+              fi
+            fi
             for suffix in "" ".asc"; do
               # Central rate-limits bursts (HTTP 429); curl honours its Retry-After and backs off.
               curl -sSf --retry 10 --retry-all-errors --retry-max-time 600 -O "${base}/${f}${suffix}"
@@ -90,6 +101,9 @@ jobs:
               -Dspotbugs.skip -Djapicmp.skip)
           cp source/pom.xml "source/aurkitu-parent-${TAG}.pom"
           cp source/aurkitu-annotations/pom.xml "source/aurkitu-annotations/target/aurkitu-annotations-${TAG}.pom"
+          if [ -f source/aurkitu-core/pom.xml ]; then
+            cp source/aurkitu-core/pom.xml "source/aurkitu-core/target/aurkitu-core-${TAG}.pom"
+          fi
           cp source/aurkitu-maven-plugin/pom.xml "source/aurkitu-maven-plugin/target/aurkitu-maven-plugin-${TAG}.pom"
           matched=()
           for published in assets/*; do

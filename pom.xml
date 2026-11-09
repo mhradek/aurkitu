@@ -83,6 +83,7 @@
 
     <modules>
         <module>aurkitu-annotations</module>
+        <module>aurkitu-core</module>
         <module>aurkitu-maven-plugin</module>
     </modules>
 

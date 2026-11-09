@@ -25,6 +25,17 @@ point `FLATC_PATH` at a `flatc` binary (the version CI uses is `FLATC_VERSION` i
 FLATC_PATH=/path/to/flatc mvn clean verify
 ```
 
+If you change the core (`aurkitu-core`) or the Gradle plugin, also build the Gradle plugin, which uses the
+core you just installed:
+
+```bash
+mvn -B install -DskipTests -Dinvoker.skip
+```
+
+```bash
+cd aurkitu-gradle-plugin && gradle build
+```
+
 The README's "Building Aurkitu" section describes each check.
 
 ## Making a change
@@ -35,7 +46,9 @@ The README's "Building Aurkitu" section describes each check.
   `src/it/*/expected` in the same commit and say why in the pull request.
 - **Validation matches `flatc`.** A new rule reports exactly what `flatc` rejects; `FlatcAgreementTest` checks
   this when `flatc` is available.
-- **New generator options** go into `OptionMatrixTest`, which checks every combination of options.
+- **New generator options** go into `OptionMatrixTest`, which checks every combination of options, and into
+  both plugins: a `@Parameter` in `AurkituMojo` and a property of the Gradle extension and task, with the same
+  name and default.
 - **The annotations are a public API.** japicmp fails the build on incompatible changes; a new annotation
   element needs a default and a minor version.
 - **SpotBugs findings** are fixed, not excluded. If one is a false positive, add it to `spotbugs-exclude.xml`

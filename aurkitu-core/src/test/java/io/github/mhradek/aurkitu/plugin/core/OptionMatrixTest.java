@@ -65,7 +65,7 @@ class OptionMatrixTest {
         }
 
         SchemaGenerator.Config config() {
-            return new SchemaGenerator.Config(null, List.of(PACKAGE), validate, ignoreStatic,
+            return new SchemaGenerator.Config(List.of(PACKAGE), validate, ignoreStatic,
                     fileIdentifier ? "OPTS" : null, includes ? List.of("base.fbs") : List.of(), mapCommonTypes, cache,
                     snakeCase, version, failOnIssues, fileExtension ? "dat" : null,
                     // Scanning only the test classes keeps the generations fast; the output is the same.

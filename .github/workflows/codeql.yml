@@ -34,8 +34,15 @@ jobs:
           build-mode: manual
           queries: security-and-quality
 
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        with:
+          gradle-version: '8.14.3'
+
+      # Installs the Maven modules, so the Gradle plugin (its own build) can compile against aurkitu-core.
       - name: Build
-        run: mvn -B -DskipTests -Dinvoker.skip -Djacoco.skip -Djapicmp.skip package
+        run: |
+          mvn -B -DskipTests -Dinvoker.skip -Djacoco.skip -Djapicmp.skip -Dspotbugs.skip install
+          gradle -p aurkitu-gradle-plugin --no-build-cache --rerun-tasks compileJava
 
       - name: Analyze
         uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3

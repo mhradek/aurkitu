@@ -27,8 +27,7 @@ class SchemaGeneratorFixesTest {
 
     @BeforeEach
     void generate() throws Exception {
-        SchemaGenerator.Config config = new SchemaGenerator.Config(
-                null, List.of(PKG), true, true, "FIX1", List.of("other.fbs"),
+        SchemaGenerator.Config config = new SchemaGenerator.Config(List.of(PKG), true, true, "FIX1", List.of("other.fbs"),
                 true, false, true, false, false, null);
         new SchemaGenerator(config).generate("fixes", "fix.ns", tempDir.toFile());
         schema = Files.readString(tempDir.resolve("fixes.fbs"));
@@ -190,8 +189,7 @@ class SchemaGeneratorFixesTest {
     void boxedScalarsAreOptionalOnlyWhenEnabled() throws Exception {
         assertTrue(schema.contains("table Optionals {\n  maybe:int;\n  flag:bool;"), "off by default:\n" + schema);
 
-        SchemaGenerator.Config config = new SchemaGenerator.Config(
-                null, List.of(PKG), true, true, null, List.of(), true, false, true, false, false, null, null, true);
+        SchemaGenerator.Config config = new SchemaGenerator.Config(List.of(PKG), true, true, null, List.of(), true, false, true, false, false, null, null, true);
         Path dir = Files.createDirectories(tempDir.resolve("optional"));
         new SchemaGenerator(config).generate("optional", "fix.ns", dir.toFile());
         String content = Files.readString(dir.resolve("optional.fbs"));
@@ -209,8 +207,7 @@ class SchemaGeneratorFixesTest {
 
     @Test
     void stringIsMappedEvenWithoutCommonTypes() throws Exception {
-        SchemaGenerator.Config config = new SchemaGenerator.Config(
-                null, List.of(PKG), true, true, null, List.of(),
+        SchemaGenerator.Config config = new SchemaGenerator.Config(List.of(PKG), true, true, null, List.of(),
                 false, false, true, false, false, null);
         Path dir = Files.createDirectories(tempDir.resolve("no-common"));
         new SchemaGenerator(config).generate("nocommon", "fix.ns", dir.toFile());
@@ -222,8 +219,7 @@ class SchemaGeneratorFixesTest {
 
     @Test
     void invalidFileIdentifierIsReported() throws Exception {
-        SchemaGenerator.Config config = new SchemaGenerator.Config(
-                null, List.of(PKG), true, true, "TOOLONG", List.of(),
+        SchemaGenerator.Config config = new SchemaGenerator.Config(List.of(PKG), true, true, "TOOLONG", List.of(),
                 true, false, true, false, false, null);
         Path dir = Files.createDirectories(tempDir.resolve("bad-id"));
         new SchemaGenerator(config).generate("badid", "fix.ns", dir.toFile());

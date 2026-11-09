@@ -16,6 +16,18 @@ updates:
         patterns: [ "*" ]
         update-types: [ minor, patch ]
 
+  # The Gradle plugin's own build (its plugins and test dependencies). aurkitu-core follows the reactor version.
+  - package-ecosystem: gradle
+    directory: /aurkitu-gradle-plugin
+    schedule:
+      interval: weekly
+    ignore:
+      - dependency-name: io.github.mhradek:*
+    groups:
+      gradle:
+        patterns: [ "*" ]
+        update-types: [ minor, patch ]
+
   - package-ecosystem: github-actions
     directory: /
     schedule:

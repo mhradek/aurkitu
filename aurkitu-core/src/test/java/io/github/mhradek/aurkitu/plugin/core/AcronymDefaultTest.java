@@ -22,14 +22,14 @@ class AcronymDefaultTest {
 
     @Test
     void acronymsStayOneWordByDefault() throws Exception {
-        SchemaGenerator.Config config = new SchemaGenerator.Config(null, List.of(PACKAGE), true);
+        SchemaGenerator.Config config = new SchemaGenerator.Config(List.of(PACKAGE), true);
         assertTrue(config.snakeCaseAcronyms);
         assertEquals(schema("user_id", "profile_url"), generate(config));
     }
 
     @Test
     void turnedOffEveryCapitalStartsAWordAsIn11() throws Exception {
-        SchemaGenerator.Config config = new SchemaGenerator.Config(null, List.of(PACKAGE), true).withSnakeCaseAcronyms(false);
+        SchemaGenerator.Config config = new SchemaGenerator.Config(List.of(PACKAGE), true).withSnakeCaseAcronyms(false);
         assertEquals(schema("user_i_d", "profile_u_r_l"), generate(config));
     }
 
