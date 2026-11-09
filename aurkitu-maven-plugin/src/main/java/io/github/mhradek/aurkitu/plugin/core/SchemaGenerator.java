@@ -42,7 +42,10 @@ public class SchemaGenerator {
         public final List<String> classpathElements;
         /** Write boxed Java scalars (Integer, Boolean, ...) in tables as optional scalars ({@code = null}). */
         public final boolean optionalScalars;
-        /** With {@link #snakeCaseFields}, keep a run of capitals as one word: {@code userID} becomes {@code user_id}. */
+        /**
+         * With {@link #snakeCaseFields}, keep a run of capitals as one word: {@code userID} becomes {@code user_id}.
+         * On by default since 1.2.0; off gives the 1.0/1.1 names ({@code user_i_d}).
+         */
         public final boolean snakeCaseAcronyms;
         /** Write map keys with their own type, marked {@code (key)}, instead of always {@code string}. */
         public final boolean typedMapKeys;
@@ -88,7 +91,7 @@ public class SchemaGenerator {
             this.fileExtension = fileExtension;
             this.classpathElements = classpathElements;
             this.optionalScalars = optionalScalars;
-            this.snakeCaseAcronyms = false;
+            this.snakeCaseAcronyms = true;
             this.typedMapKeys = false;
         }
 

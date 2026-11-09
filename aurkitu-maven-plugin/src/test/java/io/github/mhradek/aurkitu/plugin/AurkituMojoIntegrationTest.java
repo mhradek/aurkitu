@@ -177,7 +177,7 @@ class AurkituMojoIntegrationTest {
                 "<outputDirectory implementation=\"java.io.File\" default-value=\"${project.build.directory}/aurkitu/schemas\">${aurkitu.outputDir}</outputDirectory>",
                 "<schemaNamespace implementation=\"java.lang.String\" default-value=\"generated.flatbuffers\">${aurkitu.schemaNamespace}</schemaNamespace>",
                 "<snakeCaseFields implementation=\"boolean\" default-value=\"true\">${aurkitu.snakeCaseFields}</snakeCaseFields>",
-                "<snakeCaseAcronyms implementation=\"boolean\" default-value=\"false\">${aurkitu.snakeCaseAcronyms}</snakeCaseAcronyms>",
+                "<snakeCaseAcronyms implementation=\"boolean\" default-value=\"true\">${aurkitu.snakeCaseAcronyms}</snakeCaseAcronyms>",
                 "<typedMapKeys implementation=\"boolean\" default-value=\"false\">${aurkitu.typedMapKeys}</typedMapKeys>",
                 "<validate implementation=\"boolean\" default-value=\"true\">${aurkitu.validate}</validate>")) {
             assertTrue(xml.contains(line), line);

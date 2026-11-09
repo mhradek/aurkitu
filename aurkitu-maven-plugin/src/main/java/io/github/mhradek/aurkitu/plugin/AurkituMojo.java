@@ -114,11 +114,11 @@ public class AurkituMojo extends AbstractMojo {
     /**
      * With snakeCaseFields, keep a run of capitals as one word: {@code userID} becomes {@code user_id} and
      * {@code XMLParser} becomes {@code xml_parser}, instead of {@code user_i_d} and {@code x_m_l_parser}.
-     * Off by default, because it renames existing fields.
+     * On by default; set it to false to keep the names 1.0 and 1.1 wrote.
      *
      * @since 1.2.0
      */
-    @Parameter(property = "aurkitu.snakeCaseAcronyms", defaultValue = "false")
+    @Parameter(property = "aurkitu.snakeCaseAcronyms", defaultValue = "true")
     private boolean snakeCaseAcronyms;
 
     /**
