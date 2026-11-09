@@ -4,7 +4,7 @@ Notable changes per release. The README's "What's new" sections give the details
 changes to expect when upgrading. Versions follow [Semantic Versioning](https://semver.org); tags have no
 `v` prefix.
 
-## Unreleased
+## [1.2.0] - 2026-11-09
 
 ### Changed
 
@@ -16,7 +16,6 @@ changes to expect when upgrading. Versions follow [Semantic Versioning](https://
 
 - `typedMapKeys` (opt-in): map keys keep their Java type (`Map<Integer, V>` gives `key:int`) and are marked
   `(key)`.
-
 - Build: SpotBugs with FindSecBugs fails the build on new findings; reproducible builds; SLSA provenance for
   release artifacts that the release workflow rebuilds byte for byte; a weekly mutation-testing run.
 - Repository: `CHANGELOG.md`, `CONTRIBUTING.md`, issue and pull request templates.
@@ -63,6 +62,7 @@ changes to expect when upgrading. Versions follow [Semantic Versioning](https://
 - First release under `io.github.mhradek`, migrated from `com.michaelhradek` 0.0.x: Java 17, ClassGraph
   scanning, snake_case field names, validation and an optional `flatc` check.
 
+[1.2.0]: https://github.com/mhradek/aurkitu/releases/tag/1.2.0
 [1.1.1]: https://github.com/mhradek/aurkitu/releases/tag/1.1.1
 [1.1.0]: https://github.com/mhradek/aurkitu/releases/tag/1.1.0
 [1.0.1]: https://github.com/mhradek/aurkitu/releases/tag/1.0.1
