@@ -1,6 +1,7 @@
 // The Gradle plugin is its own Gradle build, next to the Maven reactor. It uses aurkitu-core of the same version:
 // build the reactor first (mvn install) so the core is in the local Maven repository.
 import javax.xml.parsers.DocumentBuilderFactory
+import org.gradle.plugin.compatibility.compatibility
 
 plugins {
     `java-gradle-plugin`
@@ -53,6 +54,12 @@ gradlePlugin {
             displayName = "Aurkitu"
             description = "Generates FlatBuffers schemas (.fbs) from annotated Java models."
             tags = listOf("flatbuffers", "schema", "fbs", "codegen", "serialization")
+            // Shown on the portal. AurkituPluginFunctionalTest.worksWithTheConfigurationCache checks it.
+            compatibility {
+                features {
+                    configurationCache = true
+                }
+            }
         }
     }
 }

@@ -4,6 +4,15 @@ Notable changes per release. The README's "What's new" sections give the details
 changes to expect when upgrading. Versions follow [Semantic Versioning](https://semver.org); tags have no
 `v` prefix.
 
+## [Unreleased]
+
+### Changed
+
+- Gradle plugin: declares configuration-cache support on the Gradle Plugin Portal.
+- Build: the Gradle plugin is built and published with Gradle 9.9; it is still tested with 8.14 and 9.9.
+- Release: the Gradle plugin is built and tested before anything is deployed to Maven Central, and is published
+  in its own job. Missing Gradle Plugin Portal keys fail the release instead of skipping the Gradle plugin.
+
 ## [1.3.0] - 2026-11-09
 
 ### Added
@@ -76,6 +85,7 @@ changes to expect when upgrading. Versions follow [Semantic Versioning](https://
 - First release under `io.github.mhradek`, migrated from `com.michaelhradek` 0.0.x: Java 17, ClassGraph
   scanning, snake_case field names, validation and an optional `flatc` check.
 
+[Unreleased]: https://github.com/mhradek/aurkitu/compare/1.3.0...HEAD
 [1.3.0]: https://github.com/mhradek/aurkitu/releases/tag/1.3.0
 [1.2.0]: https://github.com/mhradek/aurkitu/releases/tag/1.2.0
 [1.1.1]: https://github.com/mhradek/aurkitu/releases/tag/1.1.1

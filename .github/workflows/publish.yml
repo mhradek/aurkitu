@@ -14,8 +14,14 @@ env:
   FLATC_VERSION: 25.12.19
 
 jobs:
-  publish:
+  # Maven Central: the annotations, aurkitu-core, the Maven plugin and the parent POM. Before deploying, it also
+  # builds and tests the Gradle plugin, so a broken Gradle plugin stops the release before anything is public
+  # (a deploy to Central cannot be undone).
+  maven:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.central.outputs.version }}
+      just-published: ${{ steps.central.outputs.published != 'true' }}
     env:
       MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
       MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
@@ -37,6 +43,7 @@ jobs:
         id: central
         run: |
           VERSION=$(mvn -B -q help:evaluate -Dexpression=project.version -DforceStdout)
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           URL="https://repo1.maven.org/maven2/io/github/mhradek/aurkitu-maven-plugin/${VERSION}/aurkitu-maven-plugin-${VERSION}.pom"
           if curl -sfI "$URL" > /dev/null; then
             echo "::notice::${VERSION} is already on Maven Central; nothing to publish."
@@ -86,16 +93,27 @@ jobs:
           echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
           gpg-connect-agent reloadagent /bye || true
           echo "KEY_ID=${KEY_ID}" >> "$GITHUB_ENV"
-      # Also for the Gradle plugin's tests, so not skipped with the Maven steps.
       - name: Download flatc
+        if: steps.central.outputs.published != 'true'
         run: |
           curl -sL -o flatc.zip https://github.com/google/flatbuffers/releases/download/v${FLATC_VERSION}/Linux.flatc.binary.g++-13.zip
           unzip -o flatc.zip -d /tmp/flatc-bin
           chmod +x /tmp/flatc-bin/flatc
           /tmp/flatc-bin/flatc --version
+      # install, not just verify: the Gradle plugin builds against aurkitu-core from the local Maven repository.
       - name: Build
         if: steps.central.outputs.published != 'true'
-        run: mvn -B clean verify
+        run: mvn -B clean install
+        env:
+          FLATC_PATH: /tmp/flatc-bin/flatc
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        if: steps.central.outputs.published != 'true'
+        with:
+          gradle-version: '9.9.0'
+      - name: Build and test the Gradle plugin
+        if: steps.central.outputs.published != 'true'
+        working-directory: aurkitu-gradle-plugin
+        run: gradle build
         env:
           FLATC_PATH: /tmp/flatc-bin/flatc
       - name: Publish to Maven Central
@@ -110,36 +128,59 @@ jobs:
             -Dgpg.passphrase="${MAVEN_GPG_PASSPHRASE}" \
             -Dgpg.keyname="${KEY_ID}"
 
-      # The Gradle plugin goes to the Gradle Plugin Portal, with the same version. It needs aurkitu-core of that
-      # version on Maven Central (just published above, or already there), and the portal's API key as the
-      # GRADLE_PUBLISH_KEY and GRADLE_PUBLISH_SECRET secrets: without them this is skipped with a warning.
+  # The Gradle Plugin Portal, with the same version, after the Maven deploy: the plugin needs aurkitu-core of that
+  # version on Maven Central. Re-running this job (or the workflow) is safe: a version already on the portal is
+  # skipped. It fails, rather than skipping, when the portal's keys are missing or aurkitu-core is not on Central.
+  gradle:
+    needs: maven
+    runs-on: ubuntu-latest
+    steps:
       - name: Check whether the Gradle plugin can and should be published
         id: portal
         env:
-          JUST_PUBLISHED: ${{ steps.central.outputs.published != 'true' }}
+          VERSION: ${{ needs.maven.outputs.version }}
+          JUST_PUBLISHED: ${{ needs.maven.outputs.just-published }}
           HAS_KEY: ${{ secrets.GRADLE_PUBLISH_KEY != '' && secrets.GRADLE_PUBLISH_SECRET != '' }}
         run: |
-          VERSION=$(mvn -B -q help:evaluate -Dexpression=project.version -DforceStdout)
           CORE="https://repo1.maven.org/maven2/io/github/mhradek/aurkitu-core/${VERSION}/aurkitu-core-${VERSION}.pom"
           MARKER="https://plugins.gradle.org/m2/io/github/mhradek/aurkitu/io.github.mhradek.aurkitu.gradle.plugin/${VERSION}/io.github.mhradek.aurkitu.gradle.plugin-${VERSION}.pom"
-          publish=true
-          if [ "$HAS_KEY" != "true" ]; then
-            echo "::warning::GRADLE_PUBLISH_KEY / GRADLE_PUBLISH_SECRET are not set; the Gradle plugin is not published."
-            publish=false
           # -L: for anything it does not host, the portal redirects (303) to Maven Central, which then gives
           # the real answer. Without following it, the redirect itself would count as "already published".
-          elif curl -sfIL "$MARKER" > /dev/null; then
-            echo "::notice::The Gradle plugin ${VERSION} is already on the Gradle Plugin Portal."
-            publish=false
-          elif [ "$JUST_PUBLISHED" != "true" ] && ! curl -sfIL "$CORE" > /dev/null; then
-            echo "::warning::aurkitu-core ${VERSION} is not on Maven Central; the Gradle plugin would not resolve."
-            publish=false
+          if curl -sfIL "$MARKER" > /dev/null; then
+            echo "::notice::The Gradle plugin ${VERSION} is already on the Gradle Plugin Portal; nothing to publish."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
-          echo "publish=${publish}" >> "$GITHUB_OUTPUT"
+          if [ "$HAS_KEY" != "true" ]; then
+            echo "::error::The GRADLE_PUBLISH_KEY and GRADLE_PUBLISH_SECRET repository secrets are not set, so the Gradle plugin ${VERSION} cannot be published. Add them (Settings > Secrets and variables > Actions > Repository secrets) and re-run this job."
+            exit 1
+          fi
+          # Just deployed: Central can take a while to serve it, but it is on its way.
+          if [ "$JUST_PUBLISHED" != "true" ] && ! curl -sfIL "$CORE" > /dev/null; then
+            echo "::error::aurkitu-core ${VERSION} is not on Maven Central, so the Gradle plugin would not resolve. Publish the Maven artifacts first."
+            exit 1
+          fi
+          echo "publish=true" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.portal.outputs.publish == 'true'
+      - name: Set up JDK 17
+        if: steps.portal.outputs.publish == 'true'
+        uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
       - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         if: steps.portal.outputs.publish == 'true'
         with:
-          gradle-version: '8.14.3'
+          gradle-version: '9.9.0'
+      - name: Download flatc
+        if: steps.portal.outputs.publish == 'true'
+        run: |
+          curl -sL -o flatc.zip https://github.com/google/flatbuffers/releases/download/v${FLATC_VERSION}/Linux.flatc.binary.g++-13.zip
+          unzip -o flatc.zip -d /tmp/flatc-bin
+          chmod +x /tmp/flatc-bin/flatc
+      # Tested again here: a re-run of this job alone, or of a version already on Central, skips the Maven job's tests.
       - name: Publish the Gradle plugin
         if: steps.portal.outputs.publish == 'true'
         env:
@@ -147,7 +188,7 @@ jobs:
           GRADLE_PUBLISH_SECRET: ${{ secrets.GRADLE_PUBLISH_SECRET }}
           FLATC_PATH: /tmp/flatc-bin/flatc
         run: |
-          # aurkitu-core of this version in the local Maven repository (a deploy above already installed it).
+          # aurkitu-core of this version in the local Maven repository, which the Gradle plugin builds against.
           mvn -B -q install -DskipTests -Dinvoker.skip -Djacoco.skip -Dspotbugs.skip -Djapicmp.skip
           cd aurkitu-gradle-plugin
           gradle build publishPlugins
