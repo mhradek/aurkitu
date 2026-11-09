@@ -21,7 +21,7 @@ class ClassVisibilityTest {
 
     @Test
     void nonPublicTypesSuperclassesAndNestedTypesAreWritten() throws Exception {
-        new SchemaGenerator(null, List.of("io.github.mhradek.aurkitu.plugin.core.visibility"), true)
+        new SchemaGenerator(List.of("io.github.mhradek.aurkitu.plugin.core.visibility"), true)
                 .generate("vis", "app", tempDir.toFile());
         String schema = Files.readString(tempDir.resolve("vis.fbs"));
         assertEquals(AurkituVersion.schemaHeader() + "\n" + """

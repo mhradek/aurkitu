@@ -4,6 +4,20 @@ Notable changes per release. The README's "What's new" sections give the details
 changes to expect when upgrading. Versions follow [Semantic Versioning](https://semver.org); tags have no
 `v` prefix.
 
+## [Unreleased]
+
+### Added
+
+- Gradle plugin `io.github.mhradek.aurkitu`, published to the Gradle Plugin Portal: the `generateFlatBuffersSchema`
+  task, with the same options and output as the Maven plugin. Cacheable, and works with the configuration cache.
+- `aurkitu-core`: the schema generator as its own artifact, with no dependency on Maven, shared by both plugins.
+- README: using the generated schema from other languages (C#, Swift, TypeScript, Go, Rust, ...) with `flatc`.
+
+### Changed
+
+- The Maven plugin's generator classes moved to `aurkitu-core` (same packages); the plugin depends on it. Its
+  output and parameters are unchanged. `SchemaGenerator.Config` no longer takes a `MavenProject`.
+
 ## [1.2.0] - 2026-11-09
 
 ### Changed
@@ -62,6 +76,7 @@ changes to expect when upgrading. Versions follow [Semantic Versioning](https://
 - First release under `io.github.mhradek`, migrated from `com.michaelhradek` 0.0.x: Java 17, ClassGraph
   scanning, snake_case field names, validation and an optional `flatc` check.
 
+[Unreleased]: https://github.com/mhradek/aurkitu/compare/1.2.0...HEAD
 [1.2.0]: https://github.com/mhradek/aurkitu/releases/tag/1.2.0
 [1.1.1]: https://github.com/mhradek/aurkitu/releases/tag/1.1.1
 [1.1.0]: https://github.com/mhradek/aurkitu/releases/tag/1.1.0

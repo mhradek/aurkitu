@@ -42,7 +42,7 @@ class AnnotationDefaultsTest {
 
     private String generate(String pkg) throws Exception {
         Path dir = Files.createDirectories(tempDir.resolve(pkg));
-        new SchemaGenerator(null, List.of("io.github.mhradek.aurkitu.plugin.core.defaults." + pkg), true)
+        new SchemaGenerator(List.of("io.github.mhradek.aurkitu.plugin.core.defaults." + pkg), true)
                 .generate("defaults", "d", dir.toFile());
         return Files.readString(dir.resolve("defaults.fbs"));
     }

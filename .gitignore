@@ -8,3 +8,7 @@ target/
 *.iws
 .DS_Store
 .vscode/
+
+# Gradle (the Gradle plugin build)
+.gradle/
+aurkitu-gradle-plugin/build/

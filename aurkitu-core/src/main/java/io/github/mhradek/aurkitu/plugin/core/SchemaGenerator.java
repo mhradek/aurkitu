@@ -4,7 +4,6 @@ import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ScanResult;
 import io.github.mhradek.aurkitu.plugin.core.model.Schema;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.maven.project.MavenProject;
 
 import java.io.File;
 import java.io.IOException;
@@ -22,7 +21,6 @@ public class SchemaGenerator {
     private final Config config;
 
     public static class Config {
-        public final MavenProject project;
         public final List<String> specifiedPackages;
         public final boolean validate;
         public final boolean ignoreStaticMembers;
@@ -51,33 +49,32 @@ public class SchemaGenerator {
         public final boolean typedMapKeys;
 
         @SuppressWarnings("PMD.ExcessiveParameterList")
-        public Config(MavenProject project, List<String> specifiedPackages, boolean validate,
+        public Config(List<String> specifiedPackages, boolean validate,
                       boolean ignoreStaticMembers, String fileIdentifier, List<String> includes,
                       boolean mapCommonTypes, boolean cacheEnabled, boolean snakeCaseFields,
                       boolean generateVersion, boolean failOnValidationIssues, String fileExtension) {
-            this(project, specifiedPackages, validate, ignoreStaticMembers, fileIdentifier, includes,
+            this(specifiedPackages, validate, ignoreStaticMembers, fileIdentifier, includes,
                     mapCommonTypes, cacheEnabled, snakeCaseFields, generateVersion, failOnValidationIssues,
                     fileExtension, null);
         }
 
         @SuppressWarnings("PMD.ExcessiveParameterList")
-        public Config(MavenProject project, List<String> specifiedPackages, boolean validate,
+        public Config(List<String> specifiedPackages, boolean validate,
                       boolean ignoreStaticMembers, String fileIdentifier, List<String> includes,
                       boolean mapCommonTypes, boolean cacheEnabled, boolean snakeCaseFields,
                       boolean generateVersion, boolean failOnValidationIssues, String fileExtension,
                       List<String> classpathElements) {
-            this(project, specifiedPackages, validate, ignoreStaticMembers, fileIdentifier, includes,
+            this(specifiedPackages, validate, ignoreStaticMembers, fileIdentifier, includes,
                     mapCommonTypes, cacheEnabled, snakeCaseFields, generateVersion, failOnValidationIssues,
                     fileExtension, classpathElements, false);
         }
 
         @SuppressWarnings("PMD.ExcessiveParameterList")
-        public Config(MavenProject project, List<String> specifiedPackages, boolean validate,
+        public Config(List<String> specifiedPackages, boolean validate,
                       boolean ignoreStaticMembers, String fileIdentifier, List<String> includes,
                       boolean mapCommonTypes, boolean cacheEnabled, boolean snakeCaseFields,
                       boolean generateVersion, boolean failOnValidationIssues, String fileExtension,
                       List<String> classpathElements, boolean optionalScalars) {
-            this.project = project;
             this.specifiedPackages = specifiedPackages;
             this.validate = validate;
             this.ignoreStaticMembers = ignoreStaticMembers;
@@ -96,7 +93,6 @@ public class SchemaGenerator {
         }
 
         private Config(Config base, boolean snakeCaseAcronyms, boolean typedMapKeys) {
-            this.project = base.project;
             this.specifiedPackages = base.specifiedPackages;
             this.validate = base.validate;
             this.ignoreStaticMembers = base.ignoreStaticMembers;
@@ -125,8 +121,8 @@ public class SchemaGenerator {
         }
 
         // Convenience constructor for tests
-        public Config(MavenProject project, List<String> specifiedPackages, boolean validate) {
-            this(project, specifiedPackages, validate, true, null, List.of(), true, false, true, false, false, null);
+        public Config(List<String> specifiedPackages, boolean validate) {
+            this(specifiedPackages, validate, true, null, List.of(), true, false, true, false, false, null);
         }
     }
 
@@ -135,8 +131,8 @@ public class SchemaGenerator {
     }
 
     // Backward-compatible constructor
-    public SchemaGenerator(MavenProject project, List<String> specifiedPackages, boolean validate) {
-        this(new Config(project, specifiedPackages, validate));
+    public SchemaGenerator(List<String> specifiedPackages, boolean validate) {
+        this(new Config(specifiedPackages, validate));
     }
 
     public void generate(String schemaName, String namespace, File outputDir) {

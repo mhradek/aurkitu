@@ -13,17 +13,13 @@
     <packaging>maven-plugin</packaging>
 
     <name>Aurkitu Maven Plugin</name>
-    <description>Maven plugin that generates FlatBuffer schemas from annotated Java models using ClassGraph.</description>
+    <description>Maven plugin that generates FlatBuffer schemas from annotated Java models.</description>
 
     <dependencies>
         <dependency>
             <groupId>io.github.mhradek</groupId>
-            <artifactId>aurkitu-annotations</artifactId>
+            <artifactId>aurkitu-core</artifactId>
             <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.github.classgraph</groupId>
-            <artifactId>classgraph</artifactId>
         </dependency>
         <dependency>
             <groupId>org.apache.maven.plugin-tools</groupId>
@@ -58,6 +54,14 @@
         </dependency>
 
         <!-- Test -->
+        <!-- The core's test models, which the Mojo tests generate schemas from. -->
+        <dependency>
+            <groupId>io.github.mhradek</groupId>
+            <artifactId>aurkitu-core</artifactId>
+            <version>${project.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
@@ -66,16 +70,6 @@
     </dependencies>
 
     <build>
-        <resources>
-            <resource>
-                <directory>src/main/resources</directory>
-            </resource>
-            <!-- Only these resources are filtered (e.g. ${project.version}). -->
-            <resource>
-                <directory>src/main/resources-filtered</directory>
-                <filtering>true</filtering>
-            </resource>
-        </resources>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -139,45 +133,7 @@
                     </execution>
                 </executions>
             </plugin>
-    </plugins>
+        </plugins>
     </build>
 
-    <profiles>
-        <!-- Mutation testing, opt-in: mvn -Ppitest test-compile org.pitest:pitest-maven:mutationCoverage -->
-        <profile>
-            <id>pitest</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.pitest</groupId>
-                        <artifactId>pitest-maven</artifactId>
-                        <version>1.30.2</version>
-                        <dependencies>
-                            <dependency>
-                                <groupId>org.pitest</groupId>
-                                <artifactId>pitest-junit5-plugin</artifactId>
-                                <version>1.2.3</version>
-                            </dependency>
-                        </dependencies>
-                        <configuration>
-                            <targetClasses>
-                                <param>io.github.mhradek.aurkitu.plugin.*</param>
-                            </targetClasses>
-                            <excludedTestClasses>
-                                <param>*FlatcValidationTest</param>
-                                <!-- 2048 generations per mutant; the other tests cover the same code -->
-                                <param>*OptionMatrixTest</param>
-                            </excludedTestClasses>
-                            <outputFormats>
-                                <param>HTML</param>
-                                <param>XML</param>
-                            </outputFormats>
-                            <timestampedReports>false</timestampedReports>
-                            <threads>4</threads>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
 </project>

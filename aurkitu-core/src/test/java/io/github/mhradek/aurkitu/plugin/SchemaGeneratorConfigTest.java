@@ -15,18 +15,16 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Integration-style tests that exercise SchemaGenerator.Config the same way
- * AurkituMojo does, covering the main configuration combinations.
+ * the Maven and Gradle plugins do, covering the main configuration combinations.
  */
-class AurkituMojoConfigTest {
+class SchemaGeneratorConfigTest {
 
     @TempDir
     Path tempDir;
 
     @Test
     void configProducesSchemaFileWithIdentifierAndVersion() throws Exception {
-        SchemaGenerator.Config config = new SchemaGenerator.Config(
-                null,
-                List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
+        SchemaGenerator.Config config = new SchemaGenerator.Config(List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
                 true,
                 true,
                 "AB12",
@@ -52,9 +50,7 @@ class AurkituMojoConfigTest {
 
     @Test
     void snakeCaseCanBeDisabled() throws Exception {
-        SchemaGenerator.Config config = new SchemaGenerator.Config(
-                null,
-                List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
+        SchemaGenerator.Config config = new SchemaGenerator.Config(List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
                 true,
                 true,
                 null,
@@ -78,9 +74,7 @@ class AurkituMojoConfigTest {
 
     @Test
     void includesAreEmitted() throws Exception {
-        SchemaGenerator.Config config = new SchemaGenerator.Config(
-                null,
-                List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
+        SchemaGenerator.Config config = new SchemaGenerator.Config(List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
                 false,
                 true,
                 null,
@@ -101,9 +95,7 @@ class AurkituMojoConfigTest {
 
     @Test
     void failOnValidationIssuesThrowsWhenProblemsExist() {
-        SchemaGenerator.Config config = new SchemaGenerator.Config(
-                null,
-                List.of("java.lang"), // no annotated types
+        SchemaGenerator.Config config = new SchemaGenerator.Config(List.of("java.lang"), // no annotated types
                 true,
                 true,
                 null,
@@ -159,11 +151,19 @@ class AurkituMojoConfigTest {
     }
 
     private static SchemaGenerator.Config cachingConfig(boolean failOnValidationIssues) {
-        return new SchemaGenerator.Config(
-                null,
-                List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
+        return new SchemaGenerator.Config(List.of("io.github.mhradek.aurkitu.plugin.core.testmodels"),
                 true, true, null, List.of(), true,
                 true, // cacheEnabled
                 true, false, failOnValidationIssues, null);
+    }
+
+    @Test
+    void unsetIncludesAreEmpty() {
+        // A build plugin passes null for an unset list parameter.
+        SchemaGenerator.Config config = new SchemaGenerator.Config(List.of(), true, true, null, null,
+                true, false, true, false, false, null);
+        assertEquals(List.of(), config.includes);
+        assertEquals(List.of("common.fbs"), new SchemaGenerator.Config(List.of(), true, true, null,
+                List.of("common.fbs"), true, false, true, false, false, null).includes);
     }
 }

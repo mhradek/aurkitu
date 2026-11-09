@@ -21,7 +21,7 @@ class NamespaceTest {
 
     @Test
     void typesAreScopedToTheirNamespacesAndReferencesQualifiedAcrossThem() throws Exception {
-        new SchemaGenerator(null, List.of("io.github.mhradek.aurkitu.plugin.core.namespaces"), true)
+        new SchemaGenerator(List.of("io.github.mhradek.aurkitu.plugin.core.namespaces"), true)
                 .generate("ns", "app", tempDir.toFile());
         String schema = Files.readString(tempDir.resolve("ns.fbs"));
         assertEquals(AurkituVersion.schemaHeader() + "\n" + """

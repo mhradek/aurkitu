@@ -1,5 +1,5 @@
-# Weekly mutation testing (pitest): changes the plugin's code in small ways and checks that a test fails
-# each time. A surviving mutant is code the tests run but do not check. Fails below the threshold.
+# Weekly mutation testing (pitest): changes the generator's code (aurkitu-core) in small ways and checks that a
+# test fails each time. A surviving mutant is code the tests run but do not check. Fails below the threshold.
 name: Mutation testing
 
 on:
@@ -38,7 +38,7 @@ jobs:
         run: mvn -B -q install -pl aurkitu-annotations -am -DskipTests -Dspotbugs.skip -Djapicmp.skip -Djacoco.skip
 
       - name: Run pitest
-        run: mvn -B -pl aurkitu-maven-plugin -Ppitest test-compile org.pitest:pitest-maven:mutationCoverage -DmutationThreshold=90
+        run: mvn -B -pl aurkitu-core -Ppitest test-compile org.pitest:pitest-maven:mutationCoverage -DmutationThreshold=90
         env:
           FLATC_PATH: /tmp/flatc-bin/flatc
 
@@ -47,5 +47,5 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: pitest-report
-          path: aurkitu-maven-plugin/target/pit-reports
+          path: aurkitu-core/target/pit-reports
           retention-days: 30

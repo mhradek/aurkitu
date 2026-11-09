@@ -16,9 +16,15 @@
         <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
     </Match>
 
-    <!-- flatcPath, schemaName and outputDirectory are plugin parameters set in the project's POM. -->
+    <!--
+      flatcPath, schemaName and outputDirectory are plugin parameters set in the project's build file
+      (Maven POM or Gradle build script).
+    -->
     <Match>
-        <Class name="io.github.mhradek.aurkitu.plugin.AurkituMojo"/>
+        <Or>
+            <Class name="io.github.mhradek.aurkitu.plugin.AurkituMojo"/>
+            <Class name="io.github.mhradek.aurkitu.plugin.core.Flatc"/>
+        </Or>
         <Bug pattern="COMMAND_INJECTION,PATH_TRAVERSAL_IN,CRLF_INJECTION_LOGS"/>
     </Match>
     <Match>

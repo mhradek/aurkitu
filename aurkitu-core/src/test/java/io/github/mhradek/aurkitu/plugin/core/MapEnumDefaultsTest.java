@@ -21,7 +21,7 @@ class MapEnumDefaultsTest {
 
     @Test
     void mapEnumValuesWithoutZeroDefaultToTheirLowestValue() throws Exception {
-        new SchemaGenerator(null, List.of("io.github.mhradek.aurkitu.plugin.core.mapenums"), true)
+        new SchemaGenerator(List.of("io.github.mhradek.aurkitu.plugin.core.mapenums"), true)
                 .generate("enums", "app", tempDir.toFile());
         assertEquals(AurkituVersion.schemaHeader() + "\n" + """
                 namespace app;

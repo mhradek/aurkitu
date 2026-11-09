@@ -118,7 +118,7 @@ class MapKeysTest {
     }
 
     private String generate(boolean typed) throws Exception {
-        SchemaGenerator.Config config = new SchemaGenerator.Config(null, List.of(PACKAGE), true).withTypedMapKeys(typed);
+        SchemaGenerator.Config config = new SchemaGenerator.Config(List.of(PACKAGE), true).withTypedMapKeys(typed);
         new SchemaGenerator(config).generate("keys", "app", tempDir.toFile());
         return Files.readString(tempDir.resolve("keys.fbs"));
     }

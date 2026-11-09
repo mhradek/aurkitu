@@ -24,14 +24,14 @@ class SchemaGeneratorTest {
 
     @Test
     void generatesHeaderAndNamespaceWhenNothingIsAnnotated() throws Exception {
-        String content = generate(new SchemaGenerator(null, List.of("java.lang"), true), "test");
+        String content = generate(new SchemaGenerator(List.of("java.lang"), true), "test");
         assertEquals(AurkituVersion.schemaHeader() + "\nnamespace test.test;\n\n\n"
                 + "// Validation issues:\n// - No root type defined\n", content);
     }
 
     @Test
     void anEmptyPackageListScansTheWholeClasspath() throws Exception {
-        String content = generate(new SchemaGenerator(null, List.of(), true), "all");
+        String content = generate(new SchemaGenerator(List.of(), true), "all");
         assertTrue(content.contains("table SampleRootTable {"), content); // testmodels
         assertTrue(content.contains("table WarnChild {"), content);       // warnings
         assertTrue(content.contains("enum BadEnum : byte {"), content);   // fixes
@@ -172,7 +172,7 @@ class SchemaGeneratorTest {
 
     @Test
     void reportsNonScalarStructFieldAndWritesPerTypeNamespaces() throws Exception {
-        SchemaGenerator generator = new SchemaGenerator(null, List.of("io.github.mhradek.aurkitu.plugin.core.validation"), true);
+        SchemaGenerator generator = new SchemaGenerator(List.of("io.github.mhradek.aurkitu.plugin.core.validation"), true);
         String content = generate(generator, "struct");
         assertEquals(AurkituVersion.schemaHeader() + "\n" + """
                 namespace test.struct;
@@ -198,7 +198,7 @@ class SchemaGeneratorTest {
 
     @Test
     void emitsFieldAttributesAndFixedArray() throws Exception {
-        SchemaGenerator generator = new SchemaGenerator(null, List.of("io.github.mhradek.aurkitu.plugin.core.attrs"), true);
+        SchemaGenerator generator = new SchemaGenerator(List.of("io.github.mhradek.aurkitu.plugin.core.attrs"), true);
         String content = generate(generator, "attrs");
         assertEquals("""
                 table SampleWithAttributes {
@@ -222,7 +222,7 @@ class SchemaGeneratorTest {
 
     @Test
     void emitsFileIdentifierIncludesAndExtensionInOrder() throws Exception {
-        SchemaGenerator.Config config = new SchemaGenerator.Config(null, List.of(MODELS), true, true, "AB12",
+        SchemaGenerator.Config config = new SchemaGenerator.Config(List.of(MODELS), true, true, "AB12",
                 List.of("common.fbs", "types.fbs"), true, false, true, false, false, "bin");
         String content = generate(new SchemaGenerator(config), "config");
         assertTrue(content.startsWith(AurkituVersion.schemaHeader() + "\ninclude \"common.fbs\";\ninclude \"types.fbs\";\n\n"
@@ -249,8 +249,7 @@ class SchemaGeneratorTest {
 
     @Test
     void warningsAloneDoNotFailTheBuild() throws Exception {
-        SchemaGenerator.Config config = new SchemaGenerator.Config(null,
-                List.of("io.github.mhradek.aurkitu.plugin.core.warnings"), true, true, null, List.of(),
+        SchemaGenerator.Config config = new SchemaGenerator.Config(List.of("io.github.mhradek.aurkitu.plugin.core.warnings"), true, true, null, List.of(),
                 true, false, true, false, true, null);
         String content = generate(new SchemaGenerator(config), "warn");
         assertFalse(content.contains("// Validation issues:"), content);
@@ -261,7 +260,7 @@ class SchemaGeneratorTest {
 
     @Test
     void validationOffWritesNoCommentsAndNeverFails() throws Exception {
-        SchemaGenerator.Config config = new SchemaGenerator.Config(null, List.of(MODELS), false, true, null, List.of(),
+        SchemaGenerator.Config config = new SchemaGenerator.Config(List.of(MODELS), false, true, null, List.of(),
                 true, false, true, false, true, null);
         String content = generate(new SchemaGenerator(config), "novalidate");
         assertTrue(content.endsWith("root_type SampleRootTable;\n"), content);
@@ -293,7 +292,7 @@ class SchemaGeneratorTest {
     void staticMembersAreIgnoredUnlessConfigured() throws Exception {
         assertFalse(generate(defaults(), "static").contains("instances"));
 
-        SchemaGenerator.Config keep = new SchemaGenerator.Config(null, List.of(MODELS), true, false, null, List.of(),
+        SchemaGenerator.Config keep = new SchemaGenerator.Config(List.of(MODELS), true, false, null, List.of(),
                 true, false, true, false, false, null);
         assertTrue(generate(new SchemaGenerator(keep), "nostatic").contains("  bytes:[ubyte];\n  instances:int;\n}"));
     }
@@ -308,12 +307,12 @@ class SchemaGeneratorTest {
     }
 
     private SchemaGenerator defaults() {
-        return new SchemaGenerator(null, List.of(MODELS), true);
+        return new SchemaGenerator(List.of(MODELS), true);
     }
 
     private static SchemaGenerator config(boolean mapCommonTypes, boolean ignoreStatic, boolean snakeCase,
                                           boolean version, boolean failOnIssues, String extension) {
-        return new SchemaGenerator(new SchemaGenerator.Config(null, List.of(MODELS), true, ignoreStatic, null, List.of(),
+        return new SchemaGenerator(new SchemaGenerator.Config(List.of(MODELS), true, ignoreStatic, null, List.of(),
                 mapCommonTypes, false, snakeCase, version, failOnIssues, extension));
     }
 

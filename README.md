@@ -25,7 +25,7 @@ The 1.0 line:
 - Is tested end to end against real consumer builds, and the generated schemas are compiled with `flatc` 25.x in CI
 - **Coordinates**: `io.github.mhradek` (migrated from `com.michaelhradek`)
 
-It generates schemas for tables, structs, enums, unions, maps, inheritance and field options, validates them, and can optionally check them with `flatc`.
+It generates schemas for tables, structs, enums, unions, maps, inheritance and field options, validates them, and can optionally check them with `flatc`. It runs as a **Maven plugin** or a **Gradle plugin**, and the schema it writes can be compiled by `flatc` for [any FlatBuffers language](#using-the-schema-from-other-languages) (C#, C++, Go, Rust, Swift, TypeScript, Python, Kotlin, Dart, ...), so clients in other languages share your Java models.
 
 > **Upgrading from 1.1.x?** Field names with consecutive capitals change (`userID` is now `user_id`); see [What's new in 1.2.0](#whats-new-in-120).
 >
@@ -78,6 +78,40 @@ It generates schemas for tables, structs, enums, unions, maps, inheritance and f
 
 The `build-schema` goal runs in the `process-classes` phase by default, after your classes are compiled.
 
+### Gradle plugin
+
+> New after 1.2.0: the Gradle plugin is first published with the next release, on the [Gradle Plugin Portal](https://plugins.gradle.org/plugin/io.github.mhradek.aurkitu). Tested with Gradle 8.14 and 9.9.
+
+```kotlin
+// build.gradle.kts
+plugins {
+    java
+    id("io.github.mhradek.aurkitu") version "1.3.0"
+}
+
+dependencies {
+    implementation("io.github.mhradek:aurkitu-annotations:1.3.0")
+}
+
+aurkitu {
+    schemaName = "user"
+    schemaNamespace = "com.example.flatbuffers"
+    // Optional but recommended: limits scanning to your model packages
+    specifiedPackages = listOf("com.example.models")
+}
+```
+
+The plugin adds the `generateFlatBuffersSchema` task, which `assemble` (and so `build`) runs. It scans the `main` classes and their compile classpath, so annotated classes in dependencies and in other projects of the build are found, as with Maven. Kotlin JVM projects work the same way. The schema is written to `build/aurkitu/schemas/<schemaName>.fbs`.
+
+Every [configuration option](#configuration-options) has the same name and default in the `aurkitu { }` block, except that `outputDirectory` defaults to `build/aurkitu/schemas` and `schemaName` is optional, defaulting to the project's name. The task is cacheable and works with the configuration cache: it runs again only when the classes or the options change.
+
+To feed the schema to another task, such as one running `flatc`, use the task's output:
+
+```kotlin
+val schema = tasks.named<io.github.mhradek.aurkitu.gradle.GenerateFlatBuffersSchema>("generateFlatBuffersSchema")
+    .flatMap { it.outputDirectory }
+```
+
 ### Annotate models
 
 ```java
@@ -92,7 +126,7 @@ public class User {
 
 Classes, enums and fields can have any visibility (`public`, package-private, `protected` or `private`): the annotation is what puts a type in the schema, and a model used only inside your code can stay package-private.
 
-Run `mvn process-classes` (or any later phase, such as `mvn package`) to generate `target/aurkitu/schemas/user.fbs`.
+Run `mvn process-classes` (or any later phase, such as `mvn package`) to generate `target/aurkitu/schemas/user.fbs`. With Gradle, run `gradle generateFlatBuffersSchema` (or `gradle build`) to generate `build/aurkitu/schemas/user.fbs`.
 
 ---
 
@@ -546,6 +580,34 @@ flatc --java --gen-mutable -o target/aurkitu/output/java target/aurkitu/schemas/
 flatc --cpp -o target/aurkitu/output/cpp target/aurkitu/schemas/*.fbs
 ```
 
+### Using the schema from other languages
+
+The schema is plain FlatBuffers IDL, so `flatc` generates code from it for every language FlatBuffers supports. Your Java models stay the single source of truth, and a C# game client, a Swift or Kotlin app, a TypeScript web client or a Go or Rust service reads and writes the same buffers:
+
+| Language | `flatc` option | Notes |
+|----------|----------------|-------|
+| C# (.NET, Unity) | `--csharp` | Add `--gen-object-api` for plain classes to build buffers from |
+| C++ | `--cpp` | `--gen-object-api` for the object API; `--grpc` for RPC services |
+| Go | `--go` | `--go-namespace` sets the package |
+| Rust | `--rust` | |
+| Swift | `--swift` | |
+| Kotlin | `--kotlin` | Or `--java`, which Kotlin uses too |
+| TypeScript / JavaScript | `--ts` | |
+| Python | `--python` | |
+| Dart | `--dart` | |
+
+For example, from the schema a Maven build wrote:
+
+```bash
+flatc --csharp --gen-object-api -o client/Generated target/aurkitu/schemas/user.fbs
+flatc --swift -o ios/Generated target/aurkitu/schemas/user.fbs
+flatc --ts -o web/src/generated target/aurkitu/schemas/user.fbs
+```
+
+Field names are written in snake_case (`snakeCaseFields`), the FlatBuffers style; `flatc` turns them into each language's own convention (`UserId` in C#, `userId` in Swift and TypeScript). The binary format is the same whichever language reads it, and `file_identifier` (`fileIdentifier`) lets a reader check a buffer is of the expected type.
+
+To keep clients in step, publish the `.fbs` with your service (for example as a build artifact or in a shared repository) and run `flatc` in each client's build. `generateVersion` adds a hash that changes when the schema does, so a client can tell it has an older copy. The [Schema evolution](#schema-evolution) rules say which model changes old clients can still read.
+
 ### Checking schemas with flatc
 
 Set `flatcPath` and the plugin runs `flatc --binary --schema` on the generated schema, failing the build if `flatc` rejects it:
@@ -594,6 +656,27 @@ Requires JDK 17+.
 mvn clean verify
 ```
 
+The modules:
+
+| Module | What it is |
+|--------|------------|
+| `aurkitu-annotations` | The annotations users put on their models |
+| `aurkitu-core` | The schema generator: scans the classes, builds the schema model, validates and writes it, and runs `flatc`. No dependency on Maven or Gradle |
+| `aurkitu-maven-plugin` | The `build-schema` goal, a thin wrapper around the core |
+| `aurkitu-gradle-plugin` | The Gradle plugin, also a thin wrapper around the core. A separate Gradle build (see below) |
+
+The Gradle plugin is built with Gradle (8.14 or later), against `aurkitu-core` of the same version from the local Maven repository, so install the Maven modules first:
+
+```bash
+mvn -B install -DskipTests -Dinvoker.skip
+```
+
+```bash
+cd aurkitu-gradle-plugin && gradle build
+```
+
+Its version is read from the parent POM. `gradle build` runs functional tests ([TestKit](https://docs.gradle.org/current/userguide/test_kit.html)): real Gradle builds that apply the plugin, including the Maven end-to-end projects `kitchen-sink`, `dependency-models` and `fail-on-validation`, whose schemas must match the Maven plugin's byte for byte. CI runs them with Gradle 8.14 and 9.9.
+
 `verify` runs the unit tests, then the end-to-end tests in `aurkitu-maven-plugin/src/it`. Each directory there is a real consumer project, built with [maven-invoker-plugin](https://maven.apache.org/plugins/maven-invoker-plugin/) against the freshly built plugin:
 
 | Project | Covers |
@@ -629,7 +712,7 @@ Codacy's quality-grade badge comes from its static analysis and is independent o
 | Maven Enforcer | every build | Requires Java 17+ and Maven 3.6.3+, a pinned version for every plugin (so a build cannot change or downgrade silently), and convergent dependency versions |
 | API compatibility ([japicmp](https://siom79.github.io/japicmp/)) | every build of `aurkitu-annotations` | Compares the annotations with the last release (`japicmp.baseline`). A binary or source incompatible change fails the build, and so does a change that needs a newer version number than the project has (semantic versioning: a new annotation option needs a minor version) |
 | [SpotBugs](https://spotbugs.github.io/) with [FindSecBugs](https://find-sec-bugs.github.io/) | every build (`verify`) | Bug patterns PMD does not cover, and security rules. A finding fails the build; the few excluded on purpose are listed, with reasons, in `spotbugs-exclude.xml` |
-| Mutation testing ([pitest](https://pitest.org/)) | weekly (`.github/workflows/mutation.yml`), or `mvn -Ppitest -pl aurkitu-maven-plugin test-compile org.pitest:pitest-maven:mutationCoverage` | Changes the plugin's code in small ways and checks a test fails each time. The run fails below 90% of mutants killed; the report is attached to the run |
+| Mutation testing ([pitest](https://pitest.org/)) | weekly (`.github/workflows/mutation.yml`), or `mvn -Ppitest -pl aurkitu-core test-compile org.pitest:pitest-maven:mutationCoverage` | Changes the generator's code in small ways and checks a test fails each time. The run fails below 90% of mutants killed; the report is attached to the run |
 | Reproducible builds | every build | `project.build.outputTimestamp` fixes the timestamps in the jars, so building the same commit twice gives byte-identical artifacts |
 | Java 17, 21 and 25 | CI | The build and every test run on each, so newer JDKs keep working |
 | [CodeQL](https://codeql.github.com/) | CI and weekly | GitHub's security and quality analysis; findings appear under Security → Code scanning |
@@ -641,7 +724,7 @@ Codacy's quality-grade badge comes from its static analysis and is independent o
 
 ### Publishing
 
-Publishing a GitHub release runs `.github/workflows/publish.yml`, which builds the release tag and deploys both artifacts and the parent POM to Maven Central (signed, with sources and Javadoc). It needs the `MAVEN_USERNAME`, `MAVEN_PASSWORD`, `GPG_PRIVATE_KEY` and `GPG_PASSPHRASE` secrets. The workflow can also be run manually on a tag. If the version is already on Maven Central, the run does nothing, so publishing the release page after a manual run is safe. Publish the release page only after a manual run has finished, so the two runs do not both upload.
+Publishing a GitHub release runs `.github/workflows/publish.yml`, which builds the release tag and deploys the annotations, the core, the Maven plugin and the parent POM to Maven Central (signed, with sources and Javadoc). It then publishes the Gradle plugin to the [Gradle Plugin Portal](https://plugins.gradle.org/), with the same version, when the `GRADLE_PUBLISH_KEY` and `GRADLE_PUBLISH_SECRET` secrets hold an API key of the portal account that owns `io.github.mhradek` (without them it is skipped with a warning). It needs the `MAVEN_USERNAME`, `MAVEN_PASSWORD`, `GPG_PRIVATE_KEY` and `GPG_PASSPHRASE` secrets. The workflow can also be run manually on a tag. If the version is already on Maven Central, the run does nothing, so publishing the release page after a manual run is safe. Publish the release page only after a manual run has finished, so the two runs do not both upload.
 
 When a release is published, `.github/workflows/release-assets.yml` waits for it on Maven Central and attaches the jars, POMs and their `.asc` signatures to the GitHub release. It then rebuilds the tag and compares the result with Maven Central byte for byte. For the files that match, it attaches [SLSA](https://slsa.dev/) build provenance, `aurkitu-<version>.intoto.jsonl`, which you can check with [slsa-verifier](https://github.com/slsa-framework/slsa-verifier):
 
@@ -787,6 +870,7 @@ Output changes to expect when upgrading from 1.0.0: explicit enum values are wri
 | Low | Multiple schema files (one per namespace) | One file per execution |
 | Low | Typed map keys on by default | Opt-in since 1.2.0; a candidate for the default in 2.0 |
 | Low | Remove deprecated `@FlatBufferOptions` | Planned for 2.0 |
+| Low | Models in other languages (C#, TypeScript, Go, ...) | Clients in any language already use the generated schema through `flatc`; a port for models written in another language is considered on request |
 | Low | Make `FieldType.targetClass` and `EnumType.targetClass` final | Public and assignable since 0.0.x, so a breaking change; planned for 2.0 |
 
 ## Security

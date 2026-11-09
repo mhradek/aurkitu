@@ -49,7 +49,7 @@ class FlatcValidationTest {
             assertNotEquals("true", System.getenv("CI"), "flatc must be available on CI");
             Assumptions.abort("flatc not found");
         }
-        new SchemaGenerator(null, List.of("io.github.mhradek.aurkitu.plugin.core." + pkg), true)
+        new SchemaGenerator(List.of("io.github.mhradek.aurkitu.plugin.core." + pkg), true)
                 .generate(pkg, "test." + pkg, tempDir.toFile());
         Path schema = tempDir.resolve(pkg + ".fbs");
 
