@@ -666,7 +666,7 @@ The modules:
 | `aurkitu-maven-plugin` | The `build-schema` goal, a thin wrapper around the core |
 | `aurkitu-gradle-plugin` | The Gradle plugin, also a thin wrapper around the core. A separate Gradle build (see below) |
 
-The Gradle plugin is built with Gradle (8.14 or later), against `aurkitu-core` of the same version from the local Maven repository, so install the Maven modules first:
+The Gradle plugin is built with Gradle (8.14 or later; CI and releases use 9.9), against `aurkitu-core` of the same version from the local Maven repository, so install the Maven modules first:
 
 ```bash
 mvn -B install -DskipTests -Dinvoker.skip
@@ -725,7 +725,7 @@ Codacy's quality-grade badge comes from its static analysis and is independent o
 
 ### Publishing
 
-Publishing a GitHub release runs `.github/workflows/publish.yml`, which builds the release tag and deploys the annotations, the core, the Maven plugin and the parent POM to Maven Central (signed, with sources and Javadoc). It then publishes the Gradle plugin to the [Gradle Plugin Portal](https://plugins.gradle.org/), with the same version, when the `GRADLE_PUBLISH_KEY` and `GRADLE_PUBLISH_SECRET` secrets hold an API key of the portal account that owns `io.github.mhradek` (without them it is skipped with a warning). It needs the `MAVEN_USERNAME`, `MAVEN_PASSWORD`, `GPG_PRIVATE_KEY` and `GPG_PASSPHRASE` secrets. The workflow can also be run manually on a tag. If the version is already on Maven Central, the run does nothing, so publishing the release page after a manual run is safe. Publish the release page only after a manual run has finished, so the two runs do not both upload.
+Publishing a GitHub release runs `.github/workflows/publish.yml`, which builds the release tag and deploys the annotations, the core, the Maven plugin and the parent POM to Maven Central (signed, with sources and Javadoc). Before deploying, it also builds and tests the Gradle plugin, so a broken Gradle plugin stops the release before anything reaches Maven Central. A second job then publishes the Gradle plugin to the [Gradle Plugin Portal](https://plugins.gradle.org/), with the same version, using the `GRADLE_PUBLISH_KEY` and `GRADLE_PUBLISH_SECRET` repository secrets (an API key of the portal account that owns `io.github.mhradek`). Without them, or without `aurkitu-core` of that version on Maven Central, that job fails. A version already on the portal is skipped, so re-running either job is safe. It needs the `MAVEN_USERNAME`, `MAVEN_PASSWORD`, `GPG_PRIVATE_KEY` and `GPG_PASSPHRASE` secrets. The workflow can also be run manually on a tag. If the version is already on Maven Central, the run does nothing, so publishing the release page after a manual run is safe. Publish the release page only after a manual run has finished, so the two runs do not both upload.
 
 When a release is published, `.github/workflows/release-assets.yml` waits for it on Maven Central and attaches the jars, POMs and their `.asc` signatures to the GitHub release. It then rebuilds the tag and compares the result with Maven Central byte for byte. For the files that match, it attaches [SLSA](https://slsa.dev/) build provenance, `aurkitu-<version>.intoto.jsonl`, which you can check with [slsa-verifier](https://github.com/slsa-framework/slsa-verifier):
 
