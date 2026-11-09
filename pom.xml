@@ -51,7 +51,7 @@
         <enforcer.version>3.7.0</enforcer.version>
         <japicmp.version>0.27.0</japicmp.version>
         <!-- Released version the annotations' API is compared with (japicmp). Raise it after each release. -->
-        <japicmp.baseline>1.1.0</japicmp.baseline>
+        <japicmp.baseline>1.1.1</japicmp.baseline>
         <!-- Minimum coverage for every class (unit tests). The build fails below it. -->
         <jacoco.line.coverage.minimum>0.80</jacoco.line.coverage.minimum>
         <jacoco.branch.coverage.minimum>0.80</jacoco.branch.coverage.minimum>
