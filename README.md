@@ -6,7 +6,7 @@
 [![Build Status](https://github.com/mhradek/aurkitu/actions/workflows/main.yml/badge.svg)](https://github.com/mhradek/aurkitu/actions)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/42b23d745afc4ef1b1102807752e8a38)](https://app.codacy.com/gh/mhradek/aurkitu/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 [![codecov](https://codecov.io/gh/mhradek/aurkitu/branch/master/graph/badge.svg)](https://codecov.io/gh/mhradek/aurkitu)
-[![Coverage Status](https://coveralls.io/repos/github/mhradek/aurkitu/badge.svg?branch=master)](https://coveralls.io/github/mhradek/aurkitu?branch=master)
+[![Coverage Status](https://coveralls.io/repos/github/mhradek/aurkitu/badge.svg?branch=master&v=2)](https://coveralls.io/github/mhradek/aurkitu?branch=master)
 [![CodeQL](https://github.com/mhradek/aurkitu/actions/workflows/codeql.yml/badge.svg)](https://github.com/mhradek/aurkitu/actions/workflows/codeql.yml)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/mhradek/aurkitu/badge)](https://scorecard.dev/viewer/?uri=github.com/mhradek/aurkitu)
 [![javadoc](https://img.shields.io/maven-central/v/io.github.mhradek/aurkitu-annotations.svg?label=javadoc)](https://javadoc.io/doc/io.github.mhradek/aurkitu-annotations)
