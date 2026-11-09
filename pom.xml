@@ -35,6 +35,12 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!--
+          Reproducible builds: entry timestamps in the jars. Builds of the same commit then give byte-identical
+          jars, which the release-assets workflow checks against Maven Central before writing provenance.
+          Set it to the release date when preparing a release.
+        -->
+        <project.build.outputTimestamp>2026-11-09T00:00:00Z</project.build.outputTimestamp>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <java.version>17</java.version>
@@ -50,6 +56,8 @@
         <invoker.plugin.version>3.10.1</invoker.plugin.version>
         <enforcer.version>3.7.0</enforcer.version>
         <japicmp.version>0.27.0</japicmp.version>
+        <spotbugs.plugin.version>4.10.5.0</spotbugs.plugin.version>
+        <findsecbugs.version>1.14.0</findsecbugs.version>
         <!-- Released version the annotations' API is compared with (japicmp). Raise it after each release. -->
         <japicmp.baseline>1.1.0</japicmp.baseline>
         <!-- Minimum coverage for every class (unit tests). The build fails below it. -->
@@ -185,6 +193,31 @@
                                 </requireProperty>
                             </rules>
                         </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Bug patterns PMD (Codacy) does not cover, plus FindSecBugs' security rules. Fails the build. -->
+            <plugin>
+                <groupId>com.github.spotbugs</groupId>
+                <artifactId>spotbugs-maven-plugin</artifactId>
+                <version>${spotbugs.plugin.version}</version>
+                <configuration>
+                    <effort>Max</effort>
+                    <threshold>Medium</threshold>
+                    <excludeFilterFile>${maven.multiModuleProjectDirectory}/spotbugs-exclude.xml</excludeFilterFile>
+                    <plugins>
+                        <plugin>
+                            <groupId>com.h3xstream.findsecbugs</groupId>
+                            <artifactId>findsecbugs-plugin</artifactId>
+                            <version>${findsecbugs.version}</version>
+                        </plugin>
+                    </plugins>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>spotbugs</id>
+                        <phase>verify</phase>
+                        <goals><goal>check</goal></goals>
                     </execution>
                 </executions>
             </plugin>

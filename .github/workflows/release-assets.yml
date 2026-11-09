@@ -1,5 +1,10 @@
 # Attaches each release's artifacts and their signatures (the .asc files published to Maven Central) to the
 # GitHub release, so users (and OpenSSF Scorecard) can verify the release from GitHub too.
+#
+# It also rebuilds the release tag here and compares the result with Maven Central, byte for byte (the build
+# is reproducible). For the files that match, it attaches SLSA build provenance (<tag>.intoto.jsonl): a signed
+# statement that this repository's workflow, at this tag, builds exactly those files. Releases built before
+# reproducible builds (1.1.1 and earlier) do not match, so they get no provenance.
 name: Release assets
 
 on:
@@ -20,6 +25,8 @@ jobs:
     timeout-minutes: 90
     permissions:
       contents: write
+    outputs:
+      subjects: ${{ steps.reproduce.outputs.subjects }}
     env:
       TAG: ${{ github.event.release.tag_name || inputs.tag }}
       GH_TOKEN: ${{ github.token }}
@@ -63,3 +70,57 @@ jobs:
 
       - name: Attach to the GitHub release
         run: gh release upload "$TAG" assets/* --clobber --repo "$GITHUB_REPOSITORY"
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.TAG }}
+          path: source
+          persist-credentials: false
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # Same artifacts as the publish workflow (release profile, without signing); tests ran when it was built.
+      - name: Rebuild the tag and compare with Maven Central
+        id: reproduce
+        run: |
+          set -euo pipefail
+          (cd source && mvn -B -q package -P release -Dgpg.skip -DskipTests -Dinvoker.skip -Djacoco.skip \
+              -Dspotbugs.skip -Djapicmp.skip)
+          cp source/pom.xml "source/aurkitu-parent-${TAG}.pom"
+          cp source/aurkitu-annotations/pom.xml "source/aurkitu-annotations/target/aurkitu-annotations-${TAG}.pom"
+          cp source/aurkitu-maven-plugin/pom.xml "source/aurkitu-maven-plugin/target/aurkitu-maven-plugin-${TAG}.pom"
+          matched=()
+          for published in assets/*; do
+            name=$(basename "$published")
+            case "$name" in *.asc) continue ;; esac
+            built=$(find source -name "$name" -not -path '*/src/*' | head -1)
+            if [ -n "$built" ] && cmp -s "$built" "$published"; then
+              echo "reproduced: $name"; matched+=("$name")
+            else
+              echo "::warning::$name: the rebuild does not match Maven Central; no provenance for it"
+            fi
+          done
+          if [ ${#matched[@]} -eq 0 ]; then
+            echo "Nothing reproduced (a release from before reproducible builds); no provenance."
+            echo "subjects=" >> "$GITHUB_OUTPUT"
+          else
+            echo "subjects=$(cd assets && sha256sum "${matched[@]}" | base64 -w0)" >> "$GITHUB_OUTPUT"
+          fi
+
+  # SLSA level 3 provenance for the reproduced files, attached to the release. The generator must be
+  # referenced by tag (it verifies its own identity), which Scorecard accepts as pinned.
+  provenance:
+    needs: attach
+    if: needs.attach.outputs.subjects != ''
+    permissions:
+      actions: read
+      id-token: write
+      contents: write
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.1.0
+    with:
+      base64-subjects: ${{ needs.attach.outputs.subjects }}
+      upload-assets: true
+      upload-tag-name: ${{ github.event.release.tag_name || inputs.tag }}
+      provenance-name: aurkitu-${{ github.event.release.tag_name || inputs.tag }}.intoto.jsonl

@@ -1,0 +1,43 @@
+name: Bug report
+description: The plugin wrote a wrong schema, failed, or did something unexpected.
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Aurkitu version
+      placeholder: "1.1.1"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Java and Maven versions
+      placeholder: "Java 21, Maven 3.9.9"
+  - type: textarea
+    id: model
+    attributes:
+      label: Annotated classes
+      description: The smallest classes that show the problem.
+      render: java
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: Plugin configuration
+      description: The `<plugin>` section of your POM.
+      render: xml
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened
+      description: The schema written, or the error and log output.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true

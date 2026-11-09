@@ -214,14 +214,25 @@ public class AurkituMojo extends AbstractMojo {
         }
     }
 
-    private static void deleteQuietly(Path dir) {
+    /** Deletes {@code dir} and its contents, best effort: a leftover temp file is harmless. */
+    static void deleteQuietly(Path dir) {
         if (dir == null) {
             return;
         }
+        // Deepest first, so each directory is empty when it is deleted.
         try (Stream<Path> paths = Files.walk(dir)) {
-            paths.sorted(Comparator.reverseOrder()).forEach(p -> p.toFile().delete());
-        } catch (IOException ignored) {
-            // best effort
+            paths.sorted(Comparator.reverseOrder()).forEach(AurkituMojo::deleteOrLog);
+        } catch (IOException e) {
+            log.debug("Could not clean up {}", dir, e);
+        }
+    }
+
+    /** Deletes one file or empty directory; logs instead of failing when it cannot. */
+    static void deleteOrLog(Path path) {
+        try {
+            Files.delete(path);
+        } catch (IOException e) {
+            log.debug("Could not delete {}", path, e);
         }
     }
 }
