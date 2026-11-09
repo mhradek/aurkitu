@@ -218,10 +218,12 @@ public class AurkituMojo extends AbstractMojo {
         if (dir == null) {
             return;
         }
+        // Deepest first, so each directory is empty when it is deleted. Best effort: a leftover temp file is harmless.
         try (Stream<Path> paths = Files.walk(dir)) {
-            paths.sorted(Comparator.reverseOrder()).forEach(p -> p.toFile().delete());
-        } catch (IOException ignored) {
-            // best effort
+            paths.sorted(Comparator.reverseOrder()).map(Path::toFile).filter(f -> !f.delete())
+                    .forEach(f -> log.debug("Could not delete {}", f));
+        } catch (IOException e) {
+            log.debug("Could not clean up {}", dir, e);
         }
     }
 }

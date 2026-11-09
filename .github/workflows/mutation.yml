@@ -1,0 +1,51 @@
+# Weekly mutation testing (pitest): changes the plugin's code in small ways and checks that a test fails
+# each time. A surviving mutant is code the tests run but do not check. Fails below the threshold.
+name: Mutation testing
+
+on:
+  schedule:
+    - cron: '17 3 * * 1'
+  workflow_dispatch:
+
+env:
+  FLATC_VERSION: 25.12.19
+
+permissions:
+  contents: read
+
+jobs:
+  pitest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Download flatc
+        run: |
+          curl -sL -o flatc.zip https://github.com/google/flatbuffers/releases/download/v${FLATC_VERSION}/Linux.flatc.binary.g++-13.zip
+          unzip -o flatc.zip -d /tmp/flatc-bin
+          chmod +x /tmp/flatc-bin/flatc
+          echo "/tmp/flatc-bin" >> $GITHUB_PATH
+
+      - name: Install the annotations
+        run: mvn -B -q install -pl aurkitu-annotations -am -DskipTests -Dspotbugs.skip -Djapicmp.skip -Djacoco.skip
+
+      - name: Run pitest
+        run: mvn -B -pl aurkitu-maven-plugin -Ppitest test-compile org.pitest:pitest-maven:mutationCoverage -DmutationThreshold=90
+        env:
+          FLATC_PATH: /tmp/flatc-bin/flatc
+
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: pitest-report
+          path: aurkitu-maven-plugin/target/pit-reports
+          retention-days: 30

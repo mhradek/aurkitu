@@ -608,6 +608,9 @@ Codacy's quality-grade badge comes from its static analysis and is independent o
 |-------|-------|--------------|
 | Maven Enforcer | every build | Requires Java 17+ and Maven 3.6.3+, a pinned version for every plugin (so a build cannot change or downgrade silently), and convergent dependency versions |
 | API compatibility ([japicmp](https://siom79.github.io/japicmp/)) | every build of `aurkitu-annotations` | Compares the annotations with the last release (`japicmp.baseline`). A binary or source incompatible change fails the build, and so does a change that needs a newer version number than the project has (semantic versioning: a new annotation option needs a minor version) |
+| [SpotBugs](https://spotbugs.github.io/) with [FindSecBugs](https://find-sec-bugs.github.io/) | every build (`verify`) | Bug patterns PMD does not cover, and security rules. A finding fails the build; the few excluded on purpose are listed, with reasons, in `spotbugs-exclude.xml` |
+| Mutation testing ([pitest](https://pitest.org/)) | weekly (`.github/workflows/mutation.yml`), or `mvn -Ppitest -pl aurkitu-maven-plugin test-compile org.pitest:pitest-maven:mutationCoverage` | Changes the plugin's code in small ways and checks a test fails each time. The run fails below 90% of mutants killed; the report is attached to the run |
+| Reproducible builds | every build | `project.build.outputTimestamp` fixes the timestamps in the jars, so building the same commit twice gives byte-identical artifacts |
 | Java 17, 21 and 25 | CI | The build and every test run on each, so newer JDKs keep working |
 | [CodeQL](https://codeql.github.com/) | CI and weekly | GitHub's security and quality analysis; findings appear under Security → Code scanning |
 | [OpenSSF Scorecard](https://scorecard.dev/) | weekly and on push | Scores the repository's security practices (the Scorecard badge) |
@@ -620,7 +623,17 @@ Codacy's quality-grade badge comes from its static analysis and is independent o
 
 Publishing a GitHub release runs `.github/workflows/publish.yml`, which builds the release tag and deploys both artifacts and the parent POM to Maven Central (signed, with sources and Javadoc). It needs the `MAVEN_USERNAME`, `MAVEN_PASSWORD`, `GPG_PRIVATE_KEY` and `GPG_PASSPHRASE` secrets. The workflow can also be run manually on a tag. If the version is already on Maven Central, the run does nothing, so publishing the release page after a manual run is safe. Publish the release page only after a manual run has finished, so the two runs do not both upload.
 
-When a release is published, `.github/workflows/release-assets.yml` waits for it on Maven Central and attaches the jars, POMs and their `.asc` signatures to the GitHub release. It can also be run manually with a tag, e.g. to add them to an older release.
+When a release is published, `.github/workflows/release-assets.yml` waits for it on Maven Central and attaches the jars, POMs and their `.asc` signatures to the GitHub release. It then rebuilds the tag and compares the result with Maven Central byte for byte. For the files that match, it attaches [SLSA](https://slsa.dev/) build provenance, `aurkitu-<version>.intoto.jsonl`, which you can check with [slsa-verifier](https://github.com/slsa-framework/slsa-verifier):
+
+```bash
+slsa-verifier verify-artifact aurkitu-maven-plugin-<version>.jar \
+  --provenance-path aurkitu-<version>.intoto.jsonl \
+  --source-uri github.com/mhradek/aurkitu --source-tag <version>
+```
+
+Releases up to 1.1.1 were built before reproducible builds, so they get no provenance. The workflow can also be run manually with a tag, e.g. to add assets to an older release.
+
+Before tagging a release, set `project.build.outputTimestamp` in the parent POM to the release date (any fixed value works; the date documents when it was cut).
 
 After a release, move the POMs to the next `-SNAPSHOT` version and set `japicmp.baseline` to the version just released. The build enforces this: with the project version equal to the baseline, japicmp would compare the annotations with themselves.
 
@@ -737,12 +750,13 @@ Output changes to expect when upgrading from 1.0.0: explicit enum values are wri
 
 | Priority | Item | Status |
 |----------|------|--------|
-| Medium | Published Javadoc site | Javadoc jars are on Maven Central |
+| Medium | Published Javadoc site | Done: [javadoc.io](https://javadoc.io/doc/io.github.mhradek/aurkitu-annotations) serves the Javadoc jars from Maven Central |
 | Low | Schema include resolution | Includes are written, not read |
 | Low | Multiple schema files (one per namespace) | One file per execution |
 | Low | Acronym-aware snake_case (`userID` → `user_id`) | Changes field names, so opt-in |
 | Low | Typed map keys and a `(key)` attribute on `MapValueSet_*` keys | Keys are written as `string` |
 | Low | Remove deprecated `@FlatBufferOptions` | Planned for 2.0 |
+| Low | Make `FieldType.targetClass` and `EnumType.targetClass` final | Public and assignable since 0.0.x, so a breaking change; planned for 2.0 |
 
 ## Security
 

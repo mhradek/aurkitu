@@ -1,0 +1,52 @@
+# Changelog
+
+Notable changes per release. The README's "What's new" sections give the details, including the output
+changes to expect when upgrading. Versions follow [Semantic Versioning](https://semver.org); tags have no
+`v` prefix.
+
+## Unreleased
+
+- Build: SpotBugs with FindSecBugs fails the build on new findings; reproducible builds; SLSA provenance for
+  release artifacts that the release workflow rebuilds byte for byte; a weekly mutation-testing run.
+- Repository: `CHANGELOG.md`, `CONTRIBUTING.md`, issue and pull request templates.
+
+## [1.1.1] - 2026-11-09
+
+### Fixed
+- Classes of any visibility are scanned. Before, only `public` classes were: fields of a package-private
+  superclass were lost, a `private` nested class was written as an empty table, and package-private annotated
+  types were not declared.
+
+### Added
+- Javadoc for every annotation element, the type enums and every plugin parameter.
+
+## [1.1.0] - 2026-11-07
+
+### Added
+- Validation of the FlatBuffers schema rules, matched against `flatc`: invalid parts are reported and left out,
+  so the written schema compiles. Warnings for risky but valid schemas.
+- `///` documentation comments, optional scalars, `bit_flags` enums, union aliases, RPC services, custom
+  attributes, `original_order` and struct `force_align`.
+
+### Fixed
+- Maps of maps, repeated `namespace` lines, duplicate field names, enum defaults and optional enum fields.
+
+## [1.0.1] - 2026-11-07
+
+### Fixed
+- 1.0.0 scanned the plugin's own classpath and generated empty schemas in real builds.
+- Enum underlying types and explicit values, `byte[]` as `[ubyte]`, collection and map detection, nested type
+  names, namespace leaks, declaration order, `cacheEnabled` and `flatcPath`.
+
+### Deprecated
+- `@FlatBufferOptions`, which never had an effect.
+
+## [1.0.0] - 2026-11-03
+
+- First release under `io.github.mhradek`, migrated from `com.michaelhradek` 0.0.x: Java 17, ClassGraph
+  scanning, snake_case field names, validation and an optional `flatc` check.
+
+[1.1.1]: https://github.com/mhradek/aurkitu/releases/tag/1.1.1
+[1.1.0]: https://github.com/mhradek/aurkitu/releases/tag/1.1.0
+[1.0.1]: https://github.com/mhradek/aurkitu/releases/tag/1.0.1
+[1.0.0]: https://github.com/mhradek/aurkitu/releases/tag/1.0.0
