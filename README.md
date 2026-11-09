@@ -9,7 +9,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/mhradek/aurkitu/badge.svg?branch=master)](https://coveralls.io/github/mhradek/aurkitu?branch=master)
 [![CodeQL](https://github.com/mhradek/aurkitu/actions/workflows/codeql.yml/badge.svg)](https://github.com/mhradek/aurkitu/actions/workflows/codeql.yml)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/mhradek/aurkitu/badge)](https://scorecard.dev/viewer/?uri=github.com/mhradek/aurkitu)
-[![javadoc](https://javadoc.io/badge2/io.github.mhradek/aurkitu-annotations/javadoc.svg)](https://javadoc.io/doc/io.github.mhradek/aurkitu-annotations)
+[![javadoc](https://img.shields.io/maven-central/v/io.github.mhradek/aurkitu-annotations.svg?label=javadoc)](https://javadoc.io/doc/io.github.mhradek/aurkitu-annotations)
 [![Java](https://img.shields.io/badge/Java-17%20%7C%2021%20%7C%2025-blue.svg)](https://openjdk.org/projects/jdk/17/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub stars](https://img.shields.io/github/stars/mhradek/aurkitu.svg)](https://github.com/mhradek/aurkitu/stargazers)
