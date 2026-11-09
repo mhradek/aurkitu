@@ -1,4 +1,4 @@
-# Aurkitu 1.1.1
+# Aurkitu 1.2.0
 
 [![Latest release](https://img.shields.io/github/release/mhradek/aurkitu.svg)](https://github.com/mhradek/aurkitu/releases/latest)
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.mhradek/aurkitu-maven-plugin.svg?label=plugin)](https://central.sonatype.com/artifact/io.github.mhradek/aurkitu-maven-plugin)
@@ -27,6 +27,8 @@ The 1.0 line:
 
 It generates schemas for tables, structs, enums, unions, maps, inheritance and field options, validates them, and can optionally check them with `flatc`.
 
+> **Upgrading from 1.1.x?** Field names with consecutive capitals change (`userID` is now `user_id`); see [What's new in 1.2.0](#whats-new-in-120).
+>
 > **Upgrading from 1.1.0?** Non-public classes are now scanned; see [What's new in 1.1.1](#whats-new-in-111).
 >
 > **Upgrading from 1.0.1?** See [What's new in 1.1.0](#whats-new-in-110) for the output changes to expect.
@@ -45,7 +47,7 @@ It generates schemas for tables, structs, enums, unions, maps, inheritance and f
 <dependency>
     <groupId>io.github.mhradek</groupId>
     <artifactId>aurkitu-annotations</artifactId>
-    <version>1.1.1</version>
+    <version>1.2.0</version>
 </dependency>
 ```
 
@@ -55,7 +57,7 @@ It generates schemas for tables, structs, enums, unions, maps, inheritance and f
 <plugin>
     <groupId>io.github.mhradek</groupId>
     <artifactId>aurkitu-maven-plugin</artifactId>
-    <version>1.1.1</version>
+    <version>1.2.0</version>
     <configuration>
         <schemaName>user</schemaName>
         <schemaNamespace>com.example.flatbuffers</schemaNamespace>
@@ -657,11 +659,12 @@ After a release, move the POMs to the next `-SNAPSHOT` version and set `japicmp.
 
 ---
 
-## What's new in 1.2.0 (unreleased)
+## What's new in 1.2.0
 
 - **`snakeCaseAcronyms`** (on by default): acronym-aware snake_case, so `userID` becomes `user_id` and `XMLParser` becomes `xml_parser` (in field names and `MapValueSet_*` table names).
 - **`typedMapKeys`** (opt-in): map keys keep their Java type (`Map<Integer, V>` → `key:int`) and are marked `(key)` for lookups. Off by default, because it changes existing map tables.
 - **Tests**: the option matrix covers both new options (14 options, 16384 combinations, run in parallel).
+- **Build**: reproducible builds, and [SLSA](https://slsa.dev/) provenance on the GitHub release for the artifacts the release workflow rebuilds byte for byte (see [Publishing](#publishing)); SpotBugs with FindSecBugs; weekly mutation testing.
 
 Output changes to expect when upgrading from 1.1:
 
@@ -767,7 +770,7 @@ Output changes to expect when upgrading from 1.0.0: explicit enum values are wri
 
 ### Steps
 
-1. Update the dependency and plugin coordinates to `io.github.mhradek` and version `1.1.1`.
+1. Update the dependency and plugin coordinates to `io.github.mhradek` and version `1.2.0`.
 2. Change imports from `com.michaelhradek.aurkitu.*` to `io.github.mhradek.aurkitu.*`.
 3. Rename plugin parameters as above.
 4. Set `<snakeCaseFields>false</snakeCaseFields>` if clients depend on camelCase field names.
