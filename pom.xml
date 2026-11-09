@@ -4,7 +4,7 @@
 
     <groupId>io.github.mhradek</groupId>
     <artifactId>aurkitu-parent</artifactId>
-    <version>1.1.1</version>
+    <version>1.2.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Aurkitu Parent</name>
@@ -59,7 +59,7 @@
         <spotbugs.plugin.version>4.10.5.0</spotbugs.plugin.version>
         <findsecbugs.version>1.14.0</findsecbugs.version>
         <!-- Released version the annotations' API is compared with (japicmp). Raise it after each release. -->
-        <japicmp.baseline>1.1.0</japicmp.baseline>
+        <japicmp.baseline>1.1.1</japicmp.baseline>
         <!-- Minimum coverage for every class (unit tests). The build fails below it. -->
         <jacoco.line.coverage.minimum>0.80</jacoco.line.coverage.minimum>
         <jacoco.branch.coverage.minimum>0.80</jacoco.branch.coverage.minimum>

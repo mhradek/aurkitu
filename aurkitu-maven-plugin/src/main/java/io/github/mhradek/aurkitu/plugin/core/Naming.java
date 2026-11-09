@@ -11,12 +11,21 @@ final class Naming {
     private Naming() {}
 
     static String toSnakeCase(String name) {
+        return toSnakeCase(name, false);
+    }
+
+    /**
+     * camelCase to snake_case. Without {@code acronyms}, every capital starts a word ({@code userID} becomes
+     * {@code user_i_d}, as in 1.0); with it, a run of capitals is one word ({@code userID} becomes {@code user_id},
+     * {@code XMLParser} becomes {@code xml_parser}).
+     */
+    static String toSnakeCase(String name, boolean acronyms) {
         if (name == null || name.isEmpty()) return name;
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < name.length(); i++) {
             char c = name.charAt(i);
             if (Character.isUpperCase(c)) {
-                if (i > 0 && sb.charAt(sb.length() - 1) != '_') {
+                if (i > 0 && sb.charAt(sb.length() - 1) != '_' && startsWord(name, i, acronyms)) {
                     sb.append('_');
                 }
                 sb.append(Character.toLowerCase(c));
@@ -27,6 +36,21 @@ final class Naming {
         return sb.toString();
     }
 
+    /** Whether the capital at {@code i} starts a new word. */
+    private static boolean startsWord(String name, int i, boolean acronyms) {
+        if (!acronyms || !Character.isUpperCase(name.charAt(i - 1))) {
+            return true;
+        }
+        // Inside a run of capitals, only the last one starts a word, when a lowercase letter follows (XMLParser),
+        // unless that is a plural s ending the acronym (userIDs, URLsByHost).
+        if (i + 1 >= name.length() || !Character.isLowerCase(name.charAt(i + 1))) {
+            return false;
+        }
+        boolean pluralS = name.charAt(i + 1) == 's'
+                && (i + 2 == name.length() || !Character.isLowerCase(name.charAt(i + 2)));
+        return !pluralS;
+    }
+
     /** Schema name of a type: the simple Java name, without any outer class. */
     static String typeName(String className) {
         String simple = className.substring(className.lastIndexOf('.') + 1);
@@ -34,9 +58,9 @@ final class Naming {
     }
 
     /** Schema name of a field: '$' (not valid in schema identifiers) becomes '_', then optional snake_case. */
-    static String fieldName(String javaName, boolean snakeCase) {
+    static String fieldName(String javaName, boolean snakeCase, boolean acronyms) {
         String name = javaName.replace('$', '_');
-        return snakeCase ? toSnakeCase(name) : name;
+        return snakeCase ? toSnakeCase(name, acronyms) : name;
     }
 
     /** Extract the constant name from a ClassGraph enum value ("...Type.STRUCT" -> "STRUCT"). */

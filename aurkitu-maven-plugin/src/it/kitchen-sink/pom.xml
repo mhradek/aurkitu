@@ -57,6 +57,8 @@
                     </includes>
                     <failOnValidationIssues>true</failOnValidationIssues>
                     <optionalScalars>true</optionalScalars>
+                    <snakeCaseAcronyms>true</snakeCaseAcronyms>
+                    <typedMapKeys>true</typedMapKeys>
                 </configuration>
                 <executions>
                     <execution>

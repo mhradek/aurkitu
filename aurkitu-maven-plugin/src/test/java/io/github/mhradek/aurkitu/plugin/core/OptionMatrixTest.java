@@ -22,7 +22,7 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Every generator option, on and off, in every combination (2^12 = 4096), against the {@code options}
+ * Every generator option, on and off, in every combination (2^14 = 16384), against the {@code options}
  * models. For each combination the exact expected schema is built from the options alone ({@link #expected}),
  * so an option that changes the output of another fails here. Also checked per combination: failing on
  * validation issues, the cache keeping an unchanged file, and the version hash depending only on the schema.
@@ -44,13 +44,15 @@ class OptionMatrixTest {
 
     record Options(boolean validate, boolean ignoreStatic, boolean mapCommonTypes, boolean cache, boolean snakeCase,
                    boolean version, boolean failOnIssues, boolean optionalScalars,
-                   boolean fileIdentifier, boolean includes, boolean fileExtension, boolean auditNamespace) {
+                   boolean fileIdentifier, boolean includes, boolean fileExtension, boolean auditNamespace,
+                   boolean snakeCaseAcronyms, boolean typedMapKeys) {
 
-        static final int COUNT = 12;
+        static final int COUNT = 14;
 
         static Options of(int bits) {
             return new Options(bit(bits, 0), bit(bits, 1), bit(bits, 2), bit(bits, 3), bit(bits, 4), bit(bits, 5),
-                    bit(bits, 6), bit(bits, 7), bit(bits, 8), bit(bits, 9), bit(bits, 10), bit(bits, 11));
+                    bit(bits, 6), bit(bits, 7), bit(bits, 8), bit(bits, 9), bit(bits, 10), bit(bits, 11),
+                    bit(bits, 12), bit(bits, 13));
         }
 
         /** schemaNamespace: "opts", or "audit", the namespace Audit declares for itself. */
@@ -67,14 +69,22 @@ class OptionMatrixTest {
                     fileIdentifier ? "OPTS" : null, includes ? List.of("base.fbs") : List.of(), mapCommonTypes, cache,
                     snakeCase, version, failOnIssues, fileExtension ? "dat" : null,
                     // Scanning only the test classes keeps the generations fast; the output is the same.
-                    List.of(TEST_CLASSES), optionalScalars);
+                    List.of(TEST_CLASSES), optionalScalars)
+                    .withSnakeCaseAcronyms(snakeCaseAcronyms)
+                    .withTypedMapKeys(typedMapKeys);
+        }
+
+        /** A Date map key needs mapCommonTypes once keys are typed. */
+        boolean dateKeyUnsupported() {
+            return typedMapKeys && !mapCommonTypes;
         }
 
         int issueCount() {
             return (mapCommonTypes ? 0 : 1) + 1 // createdAt, nickname
                     + (includes ? 0 : 1)        // ghost: undeclared, unless an include may declare it
                     + (snakeCase ? 1 : 0)       // nickName and nick_name clash
-                    + (ignoreStatic ? 0 : 1);   // Ledger's static field has no id
+                    + (ignoreStatic ? 0 : 1)    // Ledger's static field has no id
+                    + (dateKeyUnsupported() ? 1 : 0);
         }
 
         boolean fails() {
@@ -153,7 +163,10 @@ class OptionMatrixTest {
                 out.append("// - Field Account.ghost references ").append(o.namespace()).append(".Ghost, which is not declared")
                         .append(" in this schema; annotate it, or include the schema that declares it\n");
             }
-            if (o.snakeCase()) {
+            if (o.dateKeyUnsupported()) {
+                out.append("// - Unsupported field type: Account.loginsByDay\n");
+            }
+            if (o.snakeCase()) { // name clashes are checked after a table's fields
                 out.append("// - Fields Account.nickName and Account.nick_name are both written as nick_name; nick_name left out\n");
             }
             if (!o.ignoreStatic()) {
@@ -197,6 +210,9 @@ class OptionMatrixTest {
                 + when(!o.snakeCase(), "  nick_name:string;\n") // only distinct from nickName without snake_case
                 + field(o, "updated_at", "updatedAt", "string") // fieldType = STRING, even without mapCommonTypes
                 + "  audit:" + (o.auditNamespace() ? "Audit" : "audit.Audit") + ";\n"
+                + field(o, o.snakeCaseAcronyms() ? "account_url" : "account_u_r_l", "accountURL", "string")
+                + "  " + namesField(o) + ":[MapValueSet_Account_" + namesField(o) + "];\n"
+                + when(!o.dateKeyUnsupported(), field(o, "logins_by_day", "loginsByDay", "[" + loginsTable(o) + "]"))
                 + field(o, "tenant_id", "tenantId", "long")
                 + "}\n\n";
     }
@@ -211,7 +227,19 @@ class OptionMatrixTest {
     }
 
     private static String mapTables(Options o) {
-        return "table " + scoreTable(o) + " {\n  key:string;\n  value:int;\n}\n\n";
+        String stringKey = o.typedMapKeys() ? "  key:string (key);\n" : "  key:string;\n";
+        return "table " + scoreTable(o) + " {\n" + stringKey + "  value:int;\n}\n\n"
+                + "table MapValueSet_Account_" + namesField(o) + " {\n"
+                + (o.typedMapKeys() ? "  key:int (key);\n" : "  key:string;\n") + "  value:string;\n}\n\n"
+                + when(!o.dateKeyUnsupported(), "table " + loginsTable(o) + " {\n" + stringKey + "  value:int;\n}\n\n");
+    }
+
+    private static String namesField(Options o) {
+        return name(o, o.snakeCaseAcronyms() ? "names_by_id" : "names_by_i_d", "namesByID");
+    }
+
+    private static String loginsTable(Options o) {
+        return "MapValueSet_Account_" + name(o, "logins_by_day", "loginsByDay");
     }
 
     private static String scoreTable(Options o) {
