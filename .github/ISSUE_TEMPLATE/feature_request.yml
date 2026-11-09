@@ -1,0 +1,16 @@
+name: Feature request
+description: A FlatBuffers feature, option or annotation Aurkitu does not support yet.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What do you want to write in the schema?
+      description: The schema you want, and the Java model it would come from.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: How could Aurkitu support it?
+      description: An annotation option, a plugin parameter, or something else. Optional.
