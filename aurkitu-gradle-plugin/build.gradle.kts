@@ -35,7 +35,9 @@ tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"
 }
 
-val functionalTest: SourceSet = sourceSets.create("functionalTest")
+// The functional tests' name: their source set, their test task and the repository they publish the plugin to.
+val functionalTestName = "functionalTest"
+val functionalTest: SourceSet = sourceSets.create(functionalTestName)
 
 dependencies {
     implementation("io.github.mhradek:aurkitu-core:$reactorVersion")
@@ -75,13 +77,13 @@ val functionalTestRepo = layout.buildDirectory.dir("functional-test-repo")
 publishing {
     repositories {
         maven {
-            name = "functionalTest"
+            name = functionalTestName
             url = uri(functionalTestRepo)
         }
     }
 }
 
-val functionalTestTask = tasks.register<Test>("functionalTest") {
+val functionalTestTask = tasks.register<Test>(functionalTestName) {
     description = "Runs the plugin in real builds (Gradle TestKit)."
     group = "verification"
     testClassesDirs = functionalTest.output.classesDirs
