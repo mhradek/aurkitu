@@ -6,14 +6,14 @@ body:
     id: version
     attributes:
       label: Aurkitu version
-      placeholder: "1.1.1"
+      placeholder: "1.3.0"
     validations:
       required: true
   - type: input
     id: environment
     attributes:
-      label: Java and Maven versions
-      placeholder: "Java 21, Maven 3.9.9"
+      label: Java and build tool versions
+      placeholder: "Java 21, Maven 3.9.9 (or Gradle 9.9)"
   - type: textarea
     id: model
     attributes:
@@ -26,8 +26,7 @@ body:
     id: config
     attributes:
       label: Plugin configuration
-      description: The `<plugin>` section of your POM.
-      render: xml
+      description: The `<plugin>` section of your POM, or the `plugins { }` and `aurkitu { }` blocks of your Gradle build.
   - type: textarea
     id: actual
     attributes:

@@ -18,15 +18,11 @@
 
 **Aurkitu** (Basque for “to find”) generates FlatBuffers IDL (`.fbs`) schemas from annotated Java models. This keeps your server-side models as the single source of truth — especially useful when models carry storage annotations (e.g. DynamoDB) that must remain authoritative.
 
-The 1.0 line:
-
-- Targets **Java 17**
-- Uses **ClassGraph** to scan the project's compile classpath (replaces the old custom Reflections fork and classloader logic)
-- Builds a typed schema model, validates it, and lets each element write its own schema syntax
-- Is tested end to end against real consumer builds, and the generated schemas are compiled with `flatc` 25.x in CI
-- **Coordinates**: `io.github.mhradek` (migrated from `com.michaelhradek`)
-
-It generates schemas for tables, structs, enums, unions, maps, inheritance and field options, validates them, and can optionally check them with `flatc`. It runs as a **Maven plugin** or a **Gradle plugin**, and the schema it writes can be compiled by `flatc` for [any FlatBuffers language](#using-the-schema-from-other-languages) (C#, C++, Go, Rust, Swift, TypeScript, Python, Kotlin, Dart, ...), so clients in other languages share your Java models.
+- **Maven or Gradle**: a [Maven plugin](#maven-plugin) and a [Gradle plugin](#gradle-plugin) with the same options, built on the same generator, so both write the same schema byte for byte.
+- **The FlatBuffers schema language**: tables, structs, enums (including `bit_flags`), unions, maps, inheritance, field ids and attributes, optional scalars, RPC services, namespaces, includes and documentation comments.
+- **Schemas that compile**: [validation](#validation) of the rules `flatc` enforces, tested against `flatc` itself, with an optional check by `flatc` in the build.
+- **Your models as they are**: classes of any visibility, in your project or in a dependency, scanned from the compile classpath. Java 17 or later; Kotlin JVM classes work too.
+- **Any client language**: `flatc` turns the schema into code for [C#, Swift, TypeScript, Go, Rust and more](#using-the-schema-from-other-languages), so clients share your Java models.
 
 > **Upgrading from 1.1.x?** Field names with consecutive capitals change (`userID` is now `user_id`); see [What's new in 1.2.0](#whats-new-in-120).
 >
@@ -42,73 +38,153 @@ It generates schemas for tables, structs, enums, unions, maps, inheritance and f
 
 ## Quick start
 
-### Annotations
+1. Add the annotations and the plugin to your build.
+
+   **Maven** (`pom.xml`):
+
+   ```xml
+   <dependencies>
+       <dependency>
+           <groupId>io.github.mhradek</groupId>
+           <artifactId>aurkitu-annotations</artifactId>
+           <version>1.3.0</version>
+       </dependency>
+   </dependencies>
+
+   <build>
+       <plugins>
+           <plugin>
+               <groupId>io.github.mhradek</groupId>
+               <artifactId>aurkitu-maven-plugin</artifactId>
+               <version>1.3.0</version>
+               <configuration>
+                   <schemaName>user</schemaName>
+                   <schemaNamespace>com.example.flatbuffers</schemaNamespace>
+                   <!-- Optional but recommended: limits scanning to your model packages -->
+                   <specifiedPackages>
+                       <specifiedPackage>com.example.models</specifiedPackage>
+                   </specifiedPackages>
+               </configuration>
+               <executions>
+                   <execution>
+                       <goals>
+                           <goal>build-schema</goal>
+                       </goals>
+                   </execution>
+               </executions>
+           </plugin>
+       </plugins>
+   </build>
+   ```
+
+   **Gradle** (`build.gradle.kts`):
+
+   ```kotlin
+   plugins {
+       java
+       id("io.github.mhradek.aurkitu") version "1.3.0"
+   }
+
+   dependencies {
+       implementation("io.github.mhradek:aurkitu-annotations:1.3.0")
+   }
+
+   aurkitu {
+       schemaName = "user"
+       schemaNamespace = "com.example.flatbuffers"
+       // Optional but recommended: limits scanning to your model packages
+       specifiedPackages = listOf("com.example.models")
+   }
+   ```
+
+   The Groovy DSL (`build.gradle`) is the same with `id 'io.github.mhradek.aurkitu' version '1.3.0'` and lists in square brackets: `specifiedPackages = ['com.example.models']`.
+
+2. Annotate your models:
+
+   ```java
+   import io.github.mhradek.aurkitu.annotations.FlatBufferTable;
+
+   @FlatBufferTable(rootType = true)
+   public class User {
+       private long id;
+       private String name;
+   }
+   ```
+
+   Classes, enums and fields can have any visibility (`public`, package-private, `protected` or `private`): the annotation is what puts a type in the schema, and a model used only inside your code can stay package-private.
+
+3. Build: `mvn package` writes `target/aurkitu/schemas/user.fbs`, and `gradle build` writes `build/aurkitu/schemas/user.fbs`:
+
+   ```idl
+   // Aurkitu 1.3.0 automatically generated FlatBuffer schema
+   namespace com.example.flatbuffers;
+
+   table User {
+     id:long;
+     name:string;
+   }
+
+   root_type User;
+   ```
+
+Then compile it with `flatc` for the languages you need: see [Compiling schemas with flatc](#compiling-schemas-with-flatc).
+
+---
+
+## Maven plugin
+
+The `build-schema` goal runs in the `process-classes` phase, after your classes are compiled, so `mvn compile` does not run it but `mvn process-classes`, `mvn package` and later phases do. It scans the project's compile classpath: its own classes and its compile-scope dependencies (including `provided`), so annotated models can live in a dependency jar.
+
+Options are set in `<configuration>` (see [Configuration options](#configuration-options)), or on the command line with their property, which a `<configuration>` value overrides: `mvn package -Daurkitu.validate=false`.
+
+To write several schemas from one project, add an `<execution>` per schema, each with its own `<id>` and `<configuration>`; options in the plugin's own `<configuration>` apply to all of them:
 
 ```xml
-<dependency>
-    <groupId>io.github.mhradek</groupId>
-    <artifactId>aurkitu-annotations</artifactId>
-    <version>1.3.0</version>
-</dependency>
+<configuration>
+    <schemaNamespace>com.example.flatbuffers</schemaNamespace>
+</configuration>
+<executions>
+    <execution>
+        <id>models</id>
+        <goals><goal>build-schema</goal></goals>
+        <configuration>
+            <schemaName>models</schemaName>
+            <specifiedPackages><specifiedPackage>com.example.models</specifiedPackage></specifiedPackages>
+        </configuration>
+    </execution>
+    <execution>
+        <id>events</id>
+        <goals><goal>build-schema</goal></goals>
+        <configuration>
+            <schemaName>events</schemaName>
+            <specifiedPackages><specifiedPackage>com.example.events</specifiedPackage></specifiedPackages>
+        </configuration>
+    </execution>
+</executions>
 ```
 
-### Maven plugin
+---
 
-```xml
-<plugin>
-    <groupId>io.github.mhradek</groupId>
-    <artifactId>aurkitu-maven-plugin</artifactId>
-    <version>1.3.0</version>
-    <configuration>
-        <schemaName>user</schemaName>
-        <schemaNamespace>com.example.flatbuffers</schemaNamespace>
-        <!-- Optional but recommended: limits scanning to your model packages -->
-        <specifiedPackages>
-            <specifiedPackage>com.example.models</specifiedPackage>
-        </specifiedPackages>
-    </configuration>
-    <executions>
-        <execution>
-            <goals>
-                <goal>build-schema</goal>
-            </goals>
-        </execution>
-    </executions>
-</plugin>
-```
+## Gradle plugin
 
-The `build-schema` goal runs in the `process-classes` phase by default, after your classes are compiled.
+> New in 1.3.0, on the [Gradle Plugin Portal](https://plugins.gradle.org/plugin/io.github.mhradek.aurkitu). Tested with Gradle 8.14 and 9.9, and on Java 17, 21 and 25.
 
-### Gradle plugin
+The plugin adds the `aurkitu { }` block and the `generateFlatBuffersSchema` task. With a Java or Kotlin JVM plugin applied, the task scans the `main` source set's classes and its compile classpath, so annotated classes in dependencies and in other projects of the build are found, as with Maven. Without one there is nothing to scan, and the task fails saying so.
 
-> New in 1.3.0, on the [Gradle Plugin Portal](https://plugins.gradle.org/plugin/io.github.mhradek.aurkitu). Tested with Gradle 8.14 and 9.9.
+**When it runs**: `assemble`, and so `build`, runs it; so does `gradle generateFlatBuffersSchema` on its own. The task is cacheable and works with the configuration cache: it runs again only when the scanned classes or the options change, and a clean build or another checkout can take the schema from the [build cache](https://docs.gradle.org/current/userguide/build_cache.html).
 
-```kotlin
-// build.gradle.kts
-plugins {
-    java
-    id("io.github.mhradek.aurkitu") version "1.3.0"
-}
+**Options**: the `aurkitu { }` block takes every [configuration option](#configuration-options), with the same names and defaults as the Maven plugin, except two:
 
-dependencies {
-    implementation("io.github.mhradek:aurkitu-annotations:1.3.0")
-}
+| Option | Maven | Gradle |
+|--------|-------|--------|
+| `schemaName` | Required | Optional: defaults to the project's name |
+| `outputDirectory` | `target/aurkitu/schemas` | `build/aurkitu/schemas` |
 
-aurkitu {
-    schemaName = "user"
-    schemaNamespace = "com.example.flatbuffers"
-    // Optional but recommended: limits scanning to your model packages
-    specifiedPackages = listOf("com.example.models")
-}
-```
+A test in this repository checks that the two plugins' options and defaults stay the same.
 
-The plugin adds the `generateFlatBuffersSchema` task, which `assemble` (and so `build`) runs. It scans the `main` classes and their compile classpath, so annotated classes in dependencies and in other projects of the build are found, as with Maven. Kotlin JVM projects work the same way. The schema is written to `build/aurkitu/schemas/<schemaName>.fbs`.
+**On the command line, or in `gradle.properties`**, every option can be set with a Gradle property named as the Maven plugin's property: `gradle build -Paurkitu.validate=false`, `-Paurkitu.outputDir=schemas`, or `-Paurkitu.specifiedPackages=com.a,com.b` for a list (comma-separated). As in Maven, a value set in the build script wins over the property.
 
-Every [configuration option](#configuration-options) has the same name and default in the `aurkitu { }` block, except that `outputDirectory` defaults to `build/aurkitu/schemas` and `schemaName` is optional, defaulting to the project's name. The task is cacheable and works with the configuration cache: it runs again only when the classes or the options change.
-
-Every option can also be set with a Gradle property of the same name as the Maven plugin's user property, on the command line or in `gradle.properties`: `gradle build -Paurkitu.validate=false`, `-Paurkitu.outputDir=schemas`, or `-Paurkitu.specifiedPackages=com.a,com.b` for a list. As in Maven, a value set in the build script wins over the property.
-
-To write several schemas from one project, register more tasks of the plugin's type. Each takes its options from `aurkitu { }` unless it sets its own, scans the same classes, writes to `build/aurkitu/<task name>` and runs with `assemble`:
+**Several schemas from one project**: register more tasks of the plugin's type. Each takes its options from `aurkitu { }` unless it sets its own, scans the same classes, writes to `build/aurkitu/<task name>` (tasks sharing an output directory cannot be cached) and runs with `assemble`:
 
 ```kotlin
 tasks.register<io.github.mhradek.aurkitu.gradle.GenerateFlatBuffersSchema>("generateEventsSchema") {
@@ -117,38 +193,39 @@ tasks.register<io.github.mhradek.aurkitu.gradle.GenerateFlatBuffersSchema>("gene
 }
 ```
 
-To feed the schema to another task, such as one running `flatc`, use the task's output:
+A task can scan other classes than `main`'s with `classpath.setFrom(...)`.
+
+**Using the schema in another task**: take it from the task's output, so Gradle runs the schema task first and reruns yours when the schema changes. For example, C# code from `flatc` (see [Compiling schemas with flatc](#compiling-schemas-with-flatc)):
 
 ```kotlin
-val schema = tasks.named<io.github.mhradek.aurkitu.gradle.GenerateFlatBuffersSchema>("generateFlatBuffersSchema")
-    .flatMap { it.outputDirectory }
-```
-
-### Annotate models
-
-```java
-import io.github.mhradek.aurkitu.annotations.FlatBufferTable;
-
-@FlatBufferTable(rootType = true)
-public class User {
-    private long id;
-    private String name;
+tasks.register<Exec>("generateCSharp") {
+    val schema = tasks.named<io.github.mhradek.aurkitu.gradle.GenerateFlatBuffersSchema>("generateFlatBuffersSchema")
+        .flatMap { it.outputDirectory.file("user.fbs") }
+    val out = layout.buildDirectory.dir("generated/csharp")
+    inputs.file(schema)
+    outputs.dir(out)
+    executable = "flatc"
+    argumentProviders.add(CommandLineArgumentProvider {
+        listOf("--csharp", "-o", out.get().asFile.path, schema.get().asFile.path)
+    })
 }
 ```
 
-Classes, enums and fields can have any visibility (`public`, package-private, `protected` or `private`): the annotation is what puts a type in the schema, and a model used only inside your code can stay package-private.
+**Kotlin models**: Kotlin classes are scanned like Java ones; a property's backing field is the schema field (`data class Order(val orderId: Long)` gives `order_id:long`). Nullability (`String?`) is not reflected in the schema.
 
-Run `mvn process-classes` (or any later phase, such as `mvn package`) to generate `target/aurkitu/schemas/user.fbs`. With Gradle, run `gradle generateFlatBuffersSchema` (or `gradle build`) to generate `build/aurkitu/schemas/user.fbs`.
+**Java versions**: the generator runs in Gradle's JVM. If your models are compiled for a newer Java than the one running Gradle (a [toolchain](https://docs.gradle.org/current/userguide/toolchains.html) newer than Gradle's JVM) and use `@FlatBufferEnumTypeField`, the build fails, because the enum values cannot be read; see [Troubleshooting](#troubleshooting).
 
 ---
 
 ## Configuration options
 
-| Parameter | Property | Default | Description |
-|-----------|----------|---------|-------------|
-| `schemaName` | `aurkitu.schemaName` | — (required) | Output file name stem (`<schemaName>.fbs`) |
+The same options in both plugins: in Maven's `<configuration>` or Gradle's `aurkitu { }` block, or on the command line with the property (`-Daurkitu.validate=false` for Maven, `-Paurkitu.validate=false` for Gradle).
+
+| Option | Property | Default | Description |
+|--------|----------|---------|-------------|
+| `schemaName` | `aurkitu.schemaName` | Maven: — (required); Gradle: the project's name | Output file name stem (`<schemaName>.fbs`) |
 | `schemaNamespace` | `aurkitu.schemaNamespace` | `generated.flatbuffers` | Default FlatBuffers namespace |
-| `outputDirectory` | `aurkitu.outputDir` | `${project.build.directory}/aurkitu/schemas` | Destination directory |
+| `outputDirectory` | `aurkitu.outputDir` | Maven: `target/aurkitu/schemas`; Gradle: `build/aurkitu/schemas` | Destination directory |
 | `specifiedPackages` | `aurkitu.specifiedPackages` | all packages | Packages to scan (and their subpackages) |
 | `validate` | `aurkitu.validate` | `true` | Report [validation](#validation) issues as comments at the end of the schema |
 | `failOnValidationIssues` | `aurkitu.failOnValidationIssues` | `false` | Fail the build when there are validation issues |
@@ -158,14 +235,14 @@ Run `mvn process-classes` (or any later phase, such as `mvn package`) to generat
 | `mapCommonTypes` | `aurkitu.mapCommonTypes` | `true` | Map `Date`, `UUID`, `URL`, `URI`, `BigDecimal`, `BigInteger` and `java.time` types (`Instant`, `LocalDate`, `LocalDateTime`, `LocalTime`, `OffsetDateTime`, `ZonedDateTime`, `Duration`) to `string`. `String` is always mapped. |
 | `fileIdentifier` | `aurkitu.fileIdentifier` | — | Emit `file_identifier "..."` (must be 4 characters) |
 | `fileExtension` | `aurkitu.fileExtension` | — | Emit `file_extension "..."` |
-| `includes` | `aurkitu.includes` | — | Schema files to `include` |
+| `includes` | `aurkitu.includes` | — | Schema files to `include` (a property takes a comma-separated list, as does `specifiedPackages`) |
 | `generateVersion` | `aurkitu.generateVersion` | `false` | Emit `// @version: <hash>`, a hash of the schema body. The header and validation comments are excluded, so it changes only when the schema does. |
 | `flatcPath` | `aurkitu.flatcPath` | — | Path to a `flatc` binary. When set (and `validate` is on), the schema is checked with `flatc --binary --schema` and the build fails if `flatc` rejects it. |
 | `cacheEnabled` | `aurkitu.cacheEnabled` | `false` | Only rewrite the schema file when its content changes, keeping its timestamp for downstream steps. The schema is still generated and validated every time. |
 | `optionalScalars` | `aurkitu.optionalScalars` | `false` | Write boxed Java scalars (`Integer`, `Boolean`, …) in tables as [optional scalars](#optional-scalars) (`= null`). Since 1.1.0. |
 | `typedMapKeys` | `aurkitu.typedMapKeys` | `false` | Write [map](#maps) keys with their own type, marked `(key)`, instead of always `string`. Off by default because it changes existing map tables. Since 1.2.0. |
 
-The plugin scans the project's compile classpath (its compiled classes plus compile-scope dependencies), so annotated models can live in the project itself or in a dependency jar.
+Both plugins scan the project's compiled classes and its compile classpath, so annotated models can live in the project itself or in a dependency.
 
 ---
 
@@ -268,7 +345,7 @@ Before 1.1.0 these were `//` comments, which `flatc` ignores.
 
 ### Optional scalars
 
-A scalar table field that is not set reads as its default (`0` unless given). FlatBuffers' optional scalars (`= null`) read as null instead, which matches a boxed Java field. With `<optionalScalars>true</optionalScalars>`, boxed scalars (`Integer`, `Boolean`, `Long`, …) in tables are written that way, unless they have a `defaultValue` or are `required`; struct fields are never optional:
+A scalar table field that is not set reads as its default (`0` unless given). FlatBuffers' optional scalars (`= null`) read as null instead, which matches a boxed Java field. With `optionalScalars` on, boxed scalars (`Integer`, `Boolean`, `Long`, …) in tables are written that way, unless they have a `defaultValue` or are `required`; struct fields are never optional:
 
 ```java
 private Integer rank;
@@ -498,7 +575,7 @@ A map key or value whose enum has no `0` value gets the enum's lowest value as i
 
 ## Sample output
 
-From an annotated `Account` table and `Status` enum, with `fileIdentifier = ACCT` and `generateVersion = true`. This is 1.1.0 output; 1.0.1 writes the comment as `// Account state`, which also changes the hash:
+From an annotated `Account` table and `Status` enum, with `fileIdentifier = ACCT` and `generateVersion = true`. Every version since 1.1.0 writes this schema for this model; only the header names the version. (1.0.1 wrote the comment as `// Account state`, which also changed the hash.)
 
 ```idl
 // Aurkitu 1.1.0 automatically generated FlatBuffer schema
@@ -576,21 +653,24 @@ FlatBuffers stores table fields by position, so a schema must change only in com
 
 - **Maps** need a small translation layer in clients (`MapValueSet_*` tables).
 - **Includes** are written but not read, so types from included schemas are not resolved or validated.
-- **One schema file** per execution; per-type namespaces are written into that file.
+- **One schema file** per Maven execution or Gradle task; per-type namespaces are written into that file. A project can have several (see [Maven plugin](#maven-plugin) and [Gradle plugin](#gradle-plugin)).
 - **Field names**: a run of capitals is one word (`userID` becomes `user_id`). With `snakeCaseAcronyms=false`, every capital starts a word (`user_i_d`), as in 1.0 and 1.1.
 - **Map keys** are written as `string` unless `typedMapKeys` is set.
-- **Scanning** without `specifiedPackages` scans the whole compile classpath, which is slower.
+- **Scanning** without `specifiedPackages` scans the whole compile classpath, which is slower, and picks up annotated classes in dependencies you may not want in the schema.
+- **Kotlin nullability** is not reflected: `String?` and `String` are both `string`.
 
 ---
 
 ## Compiling schemas with flatc
 
-Download or build `flatc` from the [FlatBuffers](https://github.com/google/flatbuffers) project (25.x recommended):
+Download or build `flatc` from the [FlatBuffers](https://github.com/google/flatbuffers) project (25.x recommended), then run it on the schema the build wrote (`target/aurkitu/schemas` with Maven, `build/aurkitu/schemas` with Gradle):
 
 ```bash
 flatc --java --gen-mutable -o target/aurkitu/output/java target/aurkitu/schemas/*.fbs
 flatc --cpp -o target/aurkitu/output/cpp target/aurkitu/schemas/*.fbs
 ```
+
+To run `flatc` as part of a Gradle build, see the `generateCSharp` example in [Gradle plugin](#gradle-plugin).
 
 ### Using the schema from other languages
 
@@ -631,7 +711,13 @@ Set `flatcPath` and the plugin runs `flatc --binary --schema` on the generated s
 </configuration>
 ```
 
-Or with the exec plugin:
+```kotlin
+aurkitu {
+    flatcPath = "/usr/local/bin/flatc"
+}
+```
+
+Or with `-Paurkitu.flatcPath=...` / `-Daurkitu.flatcPath=...`, so each machine can use its own `flatc`. With Maven, the exec plugin can also run it:
 
 ```xml
 <plugin>
@@ -657,6 +743,22 @@ Or with the exec plugin:
     </executions>
 </plugin>
 ```
+
+---
+
+## Troubleshooting
+
+**The schema is empty, or types are missing.** Check `specifiedPackages`: it lists packages to scan, including their subpackages, and a type outside them is not declared (fields that use it are then reported as referring to an undeclared type). A class needs `@FlatBufferTable` or `@FlatBufferEnum`, or must be nested directly in one that has it. With Maven, the goal must run after compilation (`process-classes` or later); with Gradle, the project needs a Java or Kotlin JVM plugin.
+
+**There are validation comments at the end of the schema.** Each says what was left out and why; see [Validation](#validation). They are also logged as warnings. To make them fail the build, set `failOnValidationIssues`.
+
+**`flatc` rejects the schema.** The usual cause is a table field whose enum has no `0` value and no `defaultValue`; Aurkitu reports it but cannot choose a default for you (see [Enums](#enums)). Set `flatcPath` to have the build catch this.
+
+**"Cannot read the @FlatBufferEnumTypeField values of ...: it is compiled for Java N, but the build runs on Java M".** The enum's values have to be read from the class, which the JVM running the build cannot load. Run the build on Java N or later (Maven: run `mvn` with that JDK; Gradle: run Gradle with it, for example with `org.gradle.java.home` in `gradle.properties`), or compile the models for Java M. Up to 1.3.0, these enums were written with implicit values (`0, 1, …`) instead, with only a validation comment.
+
+**Gradle: "nothing to scan; the task's classpath is empty".** Apply the `java` (or `java-library`, or Kotlin JVM) plugin, or give the task a `classpath`.
+
+**Field names changed after upgrading to 1.2.0.** Names with consecutive capitals (`userID`) are written `user_id`, not `user_i_d`. Set `snakeCaseAcronyms` to `false` to keep the old names; see [What's new in 1.2.0](#whats-new-in-120).
 
 ---
 
@@ -692,7 +794,9 @@ Its version is read from the parent POM. `gradle build` runs functional tests ([
 - **Every Maven end-to-end project** in `aurkitu-maven-plugin/src/it`, built with Gradle from its POM's plugin configuration: it must succeed or fail as the Maven build does, and write the same schema byte for byte. A new Maven project there is covered automatically.
 - **Option parity**: every `build-schema` parameter, read from the Maven plugin's descriptor, must be an `aurkitu { }` option with the same name and default, and the other way round.
 - **The plugin as published**: it is published to a local repository and resolved by id and version, as from the Gradle Plugin Portal, so a published POM that does not resolve fails the build.
-- Up-to-date checks, the configuration cache, `flatc`, and a build without a Java plugin. CI runs them with Gradle 8.14 and 9.9.
+- The build cache (including a copy of the project at another path), the configuration cache, up-to-date checks, Gradle-property overrides, several schema tasks in one project, a Kotlin JVM project, `flatc`, and a build without a Java plugin.
+
+It also runs unit tests ([ProjectBuilder](https://docs.gradle.org/current/javadoc/org/gradle/testfixtures/ProjectBuilder.html)) of the plugin's wiring and the task's action, with the same per-class coverage gate as the Maven modules. CI runs it with Gradle 8.14 on Java 17, and Gradle 9.9 on Java 17, 21 and 25.
 
 `verify` runs the unit tests, then the end-to-end tests in `aurkitu-maven-plugin/src/it`. Each directory there is a real consumer project, built with [maven-invoker-plugin](https://maven.apache.org/plugins/maven-invoker-plugin/) against the freshly built plugin:
 
@@ -710,7 +814,7 @@ CI (`.github/workflows/main.yml`) downloads the official `flatc` binary (version
 
 ### Coverage
 
-JaCoCo is the single source of truth. `mvn verify` fails if **any class** drops below **80% line coverage or 80% branch coverage** (`jacoco.line.coverage.minimum` and `jacoco.branch.coverage.minimum` in the parent POM). The check is per class, so a well-tested module cannot hide an untested class.
+JaCoCo is the single source of truth. `mvn verify` fails if **any class** drops below **80% line coverage or 80% branch coverage** (`jacoco.line.coverage.minimum` and `jacoco.branch.coverage.minimum` in the parent POM). The check is per class, so a well-tested module cannot hide an untested class. The Gradle plugin's build applies the same rule to its unit tests (`jacocoTestCoverageVerification`).
 
 Codecov, Coveralls and Codacy are mirrors and need these repository secrets:
 
@@ -731,10 +835,10 @@ Codacy's quality-grade badge comes from its static analysis and is independent o
 | [SpotBugs](https://spotbugs.github.io/) with [FindSecBugs](https://find-sec-bugs.github.io/) | every build (`verify`) | Bug patterns PMD does not cover, and security rules. A finding fails the build; the few excluded on purpose are listed, with reasons, in `spotbugs-exclude.xml` |
 | Mutation testing ([pitest](https://pitest.org/)) | weekly (`.github/workflows/mutation.yml`), or `mvn -Ppitest -pl aurkitu-core test-compile org.pitest:pitest-maven:mutationCoverage` | Changes the generator's code in small ways and checks a test fails each time. The run fails below 90% of mutants killed; the report is attached to the run |
 | Reproducible builds | every build | `project.build.outputTimestamp` fixes the timestamps in the jars, so building the same commit twice gives byte-identical artifacts |
-| Java 17, 21 and 25 | CI | The build and every test run on each, so newer JDKs keep working |
+| Java 17, 21 and 25 | CI | The Maven build and every test run on each, and so does the Gradle plugin on Gradle 9.9 (plus Gradle 8.14 on Java 17), so newer JDKs keep working |
 | [CodeQL](https://codeql.github.com/) | CI and weekly | GitHub's security and quality analysis; findings appear under Security → Code scanning |
 | [OpenSSF Scorecard](https://scorecard.dev/) | weekly and on push | Scores the repository's security practices (the Scorecard badge) |
-| Dependabot | weekly | Opens grouped PRs for Maven and GitHub Actions updates. ClassGraph major versions are skipped (6.0 removed APIs the plugin uses) |
+| Dependabot | weekly | Opens grouped PRs for Maven, the Gradle plugin's build and GitHub Actions. ClassGraph major versions are skipped (6.0 removed APIs the plugin uses) |
 | Pinned actions | every workflow | Each GitHub Action is pinned to a commit (`@<sha> # vX.Y.Z`), so a moved tag cannot change a build; Dependabot updates the pins |
 | Least-privilege tokens | every workflow | The `GITHUB_TOKEN` is read-only unless a job needs more (code scanning uploads, attaching release assets) |
 | Codacy, Codecov, Coveralls | CI | Static analysis and coverage reports (see [Coverage](#coverage)) |
@@ -758,6 +862,14 @@ Before tagging a release, set `project.build.outputTimestamp` in the parent POM 
 After a release, move the POMs to the next `-SNAPSHOT` version and set `japicmp.baseline` to the version just released. The build enforces this: with the project version equal to the baseline, japicmp would compare the annotations with themselves.
 
 ---
+
+## What's new since 1.3.0 (unreleased)
+
+- **Gradle: options from Gradle properties**: `-Paurkitu.validate=false` on the command line or in `gradle.properties`, named as the Maven plugin's `-D` properties. A value in the build script wins.
+- **Gradle: several schemas from one project**, by registering more `GenerateFlatBuffersSchema` tasks (see [Gradle plugin](#gradle-plugin)).
+- **Fix**: an enum with `@FlatBufferEnumTypeField` values whose class targets a newer Java than the build's JVM was written with implicit values (`0, 1, …`), noted only in a validation comment. The build now fails and says why (see [Troubleshooting](#troubleshooting)).
+
+No output changes for builds that worked before.
 
 ## What's new in 1.3.0
 
@@ -892,7 +1004,8 @@ Output changes to expect when upgrading from 1.0.0: explicit enum values are wri
 |----------|------|--------|
 | Medium | Published Javadoc site | Done: [javadoc.io](https://javadoc.io/doc/io.github.mhradek/aurkitu-annotations) serves the Javadoc jars from Maven Central |
 | Low | Schema include resolution | Includes are written, not read |
-| Low | Multiple schema files (one per namespace) | One file per execution |
+| Low | Multiple schema files (one per namespace) | One file per Maven execution or Gradle task; several executions or tasks can split a project's types by package |
+| Low | Gradle: run the generator on the project's Java toolchain | Models compiled for a newer Java than Gradle's JVM fail with an explanation if they use `@FlatBufferEnumTypeField` (see [Troubleshooting](#troubleshooting)) |
 | Low | Typed map keys on by default | Opt-in since 1.2.0; a candidate for the default in 2.0 |
 | Low | Remove deprecated `@FlatBufferOptions` | Planned for 2.0 |
 | Low | Models in other languages (C#, TypeScript, Go, ...) | Clients in any language already use the generated schema through `flatc`; a port for models written in another language is considered on request |

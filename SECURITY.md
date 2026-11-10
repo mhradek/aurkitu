@@ -2,8 +2,9 @@
 
 ## Supported versions
 
-Security fixes are made for the latest release on Maven Central (`io.github.mhradek:aurkitu-maven-plugin` and
-`aurkitu-annotations`). Older 1.x versions are not patched; upgrade to the latest release.
+Security fixes are made for the latest release: `io.github.mhradek:aurkitu-annotations`, `aurkitu-core` and
+`aurkitu-maven-plugin` on Maven Central, and the Gradle plugin `io.github.mhradek.aurkitu` on the Gradle Plugin
+Portal. Older 1.x versions are not patched; upgrade to the latest release.
 
 | Version | Supported |
 |---------|-----------|
@@ -21,7 +22,7 @@ When a fix is ready it is released, and the advisory is published with credit to
 
 ## Scope
 
-Aurkitu is a build-time Maven plugin: it reads compiled classes on the project's compile classpath and writes a
-FlatBuffers schema, and with `flatcPath` runs the `flatc` binary you configure. It does not run in production
+Aurkitu is a build-time Maven and Gradle plugin: it reads compiled classes on the project's compile classpath and
+writes a FlatBuffers schema, and with `flatcPath` runs the `flatc` binary you configure. It does not run in production
 applications. Reports about the generated schema's content, or about running untrusted models or an untrusted
 `flatc`, are welcome but are usually out of scope.
