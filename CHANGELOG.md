@@ -28,6 +28,9 @@ changes to expect when upgrading. Versions follow [Semantic Versioning](https://
   and functional tests cover the build cache (including a relocated checkout) and Kotlin JVM projects.
 - Release: the Gradle plugin is built and tested before anything is deployed to Maven Central, and is published
   in its own job. Missing Gradle Plugin Portal keys fail the release instead of skipping the Gradle plugin.
+- Documentation: Maven and Gradle sections with the same depth (when the plugin runs, command-line options,
+  several schemas per project, using the schema in other build steps), both plugins in the quick start and the
+  option table, a Troubleshooting section, and SECURITY, CONTRIBUTING and the bug report template cover Gradle.
 
 ## [1.3.0] - 2026-11-09
 
