@@ -4,6 +4,8 @@ Notable changes per release. The README's "What's new" sections give the details
 changes to expect when upgrading. Versions follow [Semantic Versioning](https://semver.org); tags have no
 `v` prefix.
 
+## [Unreleased]
+
 ## [1.4.0] - 2026-11-10
 
 ### Added
@@ -104,6 +106,7 @@ changes to expect when upgrading. Versions follow [Semantic Versioning](https://
 - First release under `io.github.mhradek`, migrated from `com.michaelhradek` 0.0.x: Java 17, ClassGraph
   scanning, snake_case field names, validation and an optional `flatc` check.
 
+[Unreleased]: https://github.com/mhradek/aurkitu/compare/1.4.0...HEAD
 [1.4.0]: https://github.com/mhradek/aurkitu/releases/tag/1.4.0
 [1.3.0]: https://github.com/mhradek/aurkitu/releases/tag/1.3.0
 [1.2.0]: https://github.com/mhradek/aurkitu/releases/tag/1.2.0
