@@ -1,4 +1,4 @@
-# Aurkitu 1.3.0
+# Aurkitu 1.4.0
 
 [![Latest release](https://img.shields.io/github/release/mhradek/aurkitu.svg)](https://github.com/mhradek/aurkitu/releases/latest)
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.mhradek/aurkitu-maven-plugin.svg?label=maven%20plugin)](https://central.sonatype.com/artifact/io.github.mhradek/aurkitu-maven-plugin)
@@ -47,7 +47,7 @@
        <dependency>
            <groupId>io.github.mhradek</groupId>
            <artifactId>aurkitu-annotations</artifactId>
-           <version>1.3.0</version>
+           <version>1.4.0</version>
        </dependency>
    </dependencies>
 
@@ -56,7 +56,7 @@
            <plugin>
                <groupId>io.github.mhradek</groupId>
                <artifactId>aurkitu-maven-plugin</artifactId>
-               <version>1.3.0</version>
+               <version>1.4.0</version>
                <configuration>
                    <schemaName>user</schemaName>
                    <schemaNamespace>com.example.flatbuffers</schemaNamespace>
@@ -82,11 +82,11 @@
    ```kotlin
    plugins {
        java
-       id("io.github.mhradek.aurkitu") version "1.3.0"
+       id("io.github.mhradek.aurkitu") version "1.4.0"
    }
 
    dependencies {
-       implementation("io.github.mhradek:aurkitu-annotations:1.3.0")
+       implementation("io.github.mhradek:aurkitu-annotations:1.4.0")
    }
 
    aurkitu {
@@ -97,7 +97,7 @@
    }
    ```
 
-   The Groovy DSL (`build.gradle`) is the same with `id 'io.github.mhradek.aurkitu' version '1.3.0'` and lists in square brackets: `specifiedPackages = ['com.example.models']`.
+   The Groovy DSL (`build.gradle`) is the same with `id 'io.github.mhradek.aurkitu' version '1.4.0'` and lists in square brackets: `specifiedPackages = ['com.example.models']`.
 
 2. Annotate your models:
 
@@ -116,7 +116,7 @@
 3. Build: `mvn package` writes `target/aurkitu/schemas/user.fbs`, and `gradle build` writes `build/aurkitu/schemas/user.fbs`:
 
    ```idl
-   // Aurkitu 1.3.0 automatically generated FlatBuffer schema
+   // Aurkitu 1.4.0 automatically generated FlatBuffer schema
    namespace com.example.flatbuffers;
 
    table User {
@@ -182,9 +182,9 @@ The plugin adds the `aurkitu { }` block and the `generateFlatBuffersSchema` task
 
 A test in this repository checks that the two plugins' options and defaults stay the same.
 
-**On the command line, or in `gradle.properties`**, every option can be set with a Gradle property named as the Maven plugin's property: `gradle build -Paurkitu.validate=false`, `-Paurkitu.outputDir=schemas`, or `-Paurkitu.specifiedPackages=com.a,com.b` for a list (comma-separated). As in Maven, a value set in the build script wins over the property.
+**On the command line, or in `gradle.properties`** (since 1.4.0), every option can be set with a Gradle property named as the Maven plugin's property: `gradle build -Paurkitu.validate=false`, `-Paurkitu.outputDir=schemas`, or `-Paurkitu.specifiedPackages=com.a,com.b` for a list (comma-separated). As in Maven, a value set in the build script wins over the property.
 
-**Several schemas from one project**: register more tasks of the plugin's type. Each takes its options from `aurkitu { }` unless it sets its own, scans the same classes, writes to `build/aurkitu/<task name>` (tasks sharing an output directory cannot be cached) and runs with `assemble`:
+**Several schemas from one project** (since 1.4.0): register more tasks of the plugin's type. Each takes its options from `aurkitu { }` unless it sets its own, scans the same classes, writes to `build/aurkitu/<task name>` (tasks sharing an output directory cannot be cached) and runs with `assemble`:
 
 ```kotlin
 tasks.register<io.github.mhradek.aurkitu.gradle.GenerateFlatBuffersSchema>("generateEventsSchema") {
@@ -863,7 +863,7 @@ After a release, move the POMs to the next `-SNAPSHOT` version and set `japicmp.
 
 ---
 
-## What's new since 1.3.0 (unreleased)
+## What's new in 1.4.0
 
 - **Gradle: options from Gradle properties**: `-Paurkitu.validate=false` on the command line or in `gradle.properties`, named as the Maven plugin's `-D` properties. A value in the build script wins.
 - **Gradle: several schemas from one project**, by registering more `GenerateFlatBuffersSchema` tasks (see [Gradle plugin](#gradle-plugin)).
@@ -990,7 +990,7 @@ Output changes to expect when upgrading from 1.0.0: explicit enum values are wri
 
 ### Steps
 
-1. Update the dependency and plugin coordinates to `io.github.mhradek` and version `1.3.0`.
+1. Update the dependency and plugin coordinates to `io.github.mhradek` and version `1.4.0`.
 2. Change imports from `com.michaelhradek.aurkitu.*` to `io.github.mhradek.aurkitu.*`.
 3. Rename plugin parameters as above.
 4. Set `<snakeCaseFields>false</snakeCaseFields>` if clients depend on camelCase field names.
