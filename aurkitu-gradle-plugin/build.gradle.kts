@@ -45,9 +45,9 @@ dependencies {
     // The unit tests use the Gradle API (ProjectBuilder) at run time. Since Gradle 9, java-gradle-plugin no longer
     // puts it on the test runtime classpath; Gradle 8 did, so the tests passed there and failed to load on 9.
     testImplementation(gradleApi())
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
+    testImplementation("org.junit.jupiter:junit-jupiter:6.1.3")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-    "functionalTestImplementation"("org.junit.jupiter:junit-jupiter:5.10.2")
+    "functionalTestImplementation"("org.junit.jupiter:junit-jupiter:6.1.3")
     "functionalTestRuntimeOnly"("org.junit.platform:junit-platform-launcher")
 }
 
