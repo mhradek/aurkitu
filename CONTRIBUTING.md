@@ -44,7 +44,8 @@ The README's "Building Aurkitu" section describes each check.
 - **Tests come with the change.** Compare whole schemas rather than substrings, so an unexpected field or
   attribute fails the test. Every class must keep 80% line and branch coverage.
 - **Output changes are deliberate.** If the generated schema changes, update the expected files in
-  `src/it/*/expected` in the same commit and say why in the pull request.
+  `src/it/*/expected` and the sample's `samples/game/expected/game.fbs` (checked by
+  `samples/verify.sh --this-checkout`) in the same commit, and say why in the pull request.
 - **Validation matches `flatc`.** A new rule reports exactly what `flatc` rejects; `FlatcAgreementTest` checks
   this when `flatc` is available.
 - **New generator options** go into `OptionMatrixTest`, which checks every combination of options, and into

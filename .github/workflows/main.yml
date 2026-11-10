@@ -138,3 +138,34 @@ jobs:
         run: gradle build
         env:
           FLATC_PATH: /tmp/flatc-bin/flatc
+
+  # The sample in samples/game, built with Maven and with Gradle against this commit: both must write
+  # samples/game/expected/game.fbs, which flatc must compile. Keeps the sample true to what Aurkitu writes.
+  samples:
+    name: samples
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up JDK 17
+        uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        with:
+          gradle-version: '9.9.0'
+
+      - name: Download flatc
+        run: |
+          curl -sL -o flatc.zip https://github.com/google/flatbuffers/releases/download/v${FLATC_VERSION}/Linux.flatc.binary.g++-13.zip
+          unzip -o flatc.zip -d /tmp/flatc-bin
+          chmod +x /tmp/flatc-bin/flatc
+
+      - name: Install the Maven modules
+        run: mvn -B -q install -DskipTests -Dinvoker.skip -Djacoco.skip -Dspotbugs.skip -Djapicmp.skip
+
+      - name: Build and check the sample
+        run: samples/verify.sh --this-checkout
+        env:
+          FLATC_PATH: /tmp/flatc-bin/flatc

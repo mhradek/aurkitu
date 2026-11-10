@@ -129,6 +129,8 @@
 
 Then compile it with `flatc` for the languages you need: see [Compiling schemas with flatc](#compiling-schemas-with-flatc).
 
+For a complete project to copy or run, see [`samples/`](samples/README.md): a small game model that builds with Maven or Gradle, its schema, and how each model element maps to it. The Maven plugin's [`kitchen-sink`](aurkitu-maven-plugin/src/it/kitchen-sink) test project uses every feature, with its schema in [`expected/kitchen.fbs`](aurkitu-maven-plugin/src/it/kitchen-sink/expected/kitchen.fbs).
+
 ---
 
 ## Maven plugin
@@ -810,6 +812,8 @@ It also runs unit tests ([ProjectBuilder](https://docs.gradle.org/current/javado
 
 Each `verify.groovy` compares the generated schema with `expected/*.fbs` and, when `FLATC_PATH` points to a `flatc` binary, compiles it with `flatc --cpp --java`. Without `FLATC_PATH` that step is skipped locally; in CI (`CI=true`) it fails the build instead. If you change the output on purpose, update the expected file in the same commit. Use `-Dinvoker.skip` to skip these tests.
 
+The [sample](samples/README.md) is checked the same way: `samples/verify.sh --this-checkout` (after `mvn install`) builds it with Maven and with Gradle against the current code and compares both schemas with `samples/game/expected/game.fbs`. CI runs it in the `samples` job.
+
 CI (`.github/workflows/main.yml`) downloads the official `flatc` binary (version in `FLATC_VERSION`), puts it on `PATH` and sets `FLATC_PATH`, so the end-to-end projects and the `FlatcValidationTest` unit test compile generated schemas with it.
 
 ### Coverage
@@ -857,7 +861,7 @@ slsa-verifier verify-artifact aurkitu-maven-plugin-<version>.jar \
 
 Releases up to 1.1.1 were built before reproducible builds, so they get no provenance. The workflow can also be run manually with a tag, e.g. to add assets to an older release.
 
-Before tagging a release, set `project.build.outputTimestamp` in the parent POM to the release date (any fixed value works; the date documents when it was cut).
+Before tagging a release, set `project.build.outputTimestamp` in the parent POM to the release date (any fixed value works; the date documents when it was cut), and set the sample's `aurkituVersion` (in `samples/game/pom.xml` and `samples/game/gradle.properties`) to the version being released, so the sample uses it once it is out.
 
 After a release, move the POMs to the next `-SNAPSHOT` version and set `japicmp.baseline` to the version just released. The build enforces this: with the project version equal to the baseline, japicmp would compare the annotations with themselves.
 
