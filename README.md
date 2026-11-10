@@ -106,6 +106,17 @@ The plugin adds the `generateFlatBuffersSchema` task, which `assemble` (and so `
 
 Every [configuration option](#configuration-options) has the same name and default in the `aurkitu { }` block, except that `outputDirectory` defaults to `build/aurkitu/schemas` and `schemaName` is optional, defaulting to the project's name. The task is cacheable and works with the configuration cache: it runs again only when the classes or the options change.
 
+Every option can also be set with a Gradle property of the same name as the Maven plugin's user property, on the command line or in `gradle.properties`: `gradle build -Paurkitu.validate=false`, `-Paurkitu.outputDir=schemas`, or `-Paurkitu.specifiedPackages=com.a,com.b` for a list. As in Maven, a value set in the build script wins over the property.
+
+To write several schemas from one project, register more tasks of the plugin's type. Each takes its options from `aurkitu { }` unless it sets its own, scans the same classes, writes to `build/aurkitu/<task name>` and runs with `assemble`:
+
+```kotlin
+tasks.register<io.github.mhradek.aurkitu.gradle.GenerateFlatBuffersSchema>("generateEventsSchema") {
+    schemaName = "events"
+    specifiedPackages = listOf("com.example.events")
+}
+```
+
 To feed the schema to another task, such as one running `flatc`, use the task's output:
 
 ```kotlin
