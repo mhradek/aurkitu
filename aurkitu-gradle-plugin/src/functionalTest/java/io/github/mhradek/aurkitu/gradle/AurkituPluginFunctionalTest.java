@@ -7,6 +7,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -18,6 +20,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /** The plugin in real Gradle builds (TestKit), on the Maven plugin's end-to-end test projects where they apply. */
 class AurkituPluginFunctionalTest {
@@ -30,31 +33,43 @@ class AurkituPluginFunctionalTest {
     @TempDir
     Path project;
 
-    /** Same sources and options as the Maven kitchen-sink project: the schema must be the same, byte for byte. */
-    @Test
-    void kitchenSinkSchemaMatchesTheMavenPlugin() throws IOException {
-        copyTree(IT_DIR.resolve("kitchen-sink/src"), project.resolve("src"));
-        settings("kitchen-sink");
-        build("""
-                aurkitu {
-                    schemaName = 'kitchen'
-                    schemaNamespace = 'com.example.kitchensink'
-                    specifiedPackages = ['com.example.kitchensink']
-                    fileIdentifier = 'KTCH'
-                    fileExtension = 'ktch'
-                    includes = ['shared.fbs']
-                    failOnValidationIssues = true
-                    optionalScalars = true
-                    snakeCaseAcronyms = true
-                    typedMapKeys = true
-                }
-                """);
+    /**
+     * Every single-project Maven end-to-end project in {@code aurkitu-maven-plugin/src/it}, built with Gradle using
+     * the plugin configuration of its POM: it must succeed or fail as the Maven build does, and write the same
+     * schema byte for byte. A new Maven project there is covered here automatically.
+     */
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("mavenProjects")
+    void mavenEndToEndProjectBehavesTheSame(String name) throws Exception {
+        Path maven = IT_DIR.resolve(name);
+        MavenProject it = MavenProject.read(maven);
+        assumeTrue(it.runnable(), name + " needs " + it.requiredEnv() + ", which is not set");
+        copyTree(maven.resolve("src"), project.resolve("src"));
+        settings(name);
+        build("aurkitu {\n" + it.groovyConfiguration() + "\n}\n");
 
-        BuildResult result = run("assemble");
+        BuildResult result = it.expectFailure() ? runner(TASK).buildAndFail() : run(TASK);
 
-        assertEquals(TaskOutcome.SUCCESS, result.task(TASK).getOutcome());
-        assertEquals(normalise(Files.readString(IT_DIR.resolve("kitchen-sink/expected/kitchen.fbs"))),
-                normalise(Files.readString(project.resolve("build/aurkitu/schemas/kitchen.fbs"))));
+        if (it.expectFailure()) {
+            assertEquals(TaskOutcome.FAILED, result.task(TASK).getOutcome());
+            assertTrue(result.getOutput().contains("Schema validation failed with"), result.getOutput());
+        } else {
+            assertEquals(TaskOutcome.SUCCESS, result.task(TASK).getOutcome());
+        }
+        Path expected = maven.resolve("expected/" + it.schemaName() + ".fbs");
+        if (Files.exists(expected)) {
+            assertEquals(normalise(Files.readString(expected)),
+                    normalise(Files.readString(project.resolve("build/aurkitu/schemas/" + it.schemaName() + ".fbs"))));
+        }
+    }
+
+    static Stream<String> mavenProjects() throws IOException {
+        try (Stream<Path> dirs = Files.list(IT_DIR)) {
+            List<String> names = dirs.filter(d -> Files.isDirectory(d.resolve("src")) && Files.exists(d.resolve("pom.xml")))
+                    .map(d -> d.getFileName().toString()).sorted().toList();
+            assertTrue(names.contains("kitchen-sink"), "found the Maven projects in " + IT_DIR + ": " + names);
+            return names.stream();
+        }
     }
 
     /** Annotated classes in another project of the build are found through the compile classpath. */
@@ -120,24 +135,6 @@ class AurkituPluginFunctionalTest {
         assertEquals(TaskOutcome.SUCCESS, first.task(TASK).getOutcome());
         BuildResult second = run("--configuration-cache", TASK);
         assertTrue(second.getOutput().contains("Reusing configuration cache"), second.getOutput());
-    }
-
-    @Test
-    void validationIssuesFailTheBuildWhenAskedTo() throws IOException {
-        copyTree(IT_DIR.resolve("fail-on-validation/src"), project.resolve("src"));
-        settings("failing");
-        build("""
-                aurkitu {
-                    schemaName = 'failing'
-                    failOnValidationIssues = true
-                }
-                """);
-
-        BuildResult result = runner(TASK).buildAndFail();
-
-        assertEquals(TaskOutcome.FAILED, result.task(TASK).getOutcome());
-        assertTrue(result.getOutput().contains("Schema validation failed with"), result.getOutput());
-        assertTrue(Files.exists(project.resolve("build/aurkitu/schemas/failing.fbs")), "the schema is written either way");
     }
 
     @Test
