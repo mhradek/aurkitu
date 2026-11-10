@@ -35,11 +35,14 @@ tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"
 }
 
-val functionalTest: SourceSet by sourceSets.creating
+val functionalTest: SourceSet = sourceSets.create("functionalTest")
 
 dependencies {
     implementation("io.github.mhradek:aurkitu-core:$reactorVersion")
 
+    // The unit tests use the Gradle API (ProjectBuilder) at run time. Since Gradle 9, java-gradle-plugin no longer
+    // puts it on the test runtime classpath; Gradle 8 did, so the tests passed there and failed to load on 9.
+    testImplementation(gradleApi())
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     "functionalTestImplementation"("org.junit.jupiter:junit-jupiter:5.10.2")
