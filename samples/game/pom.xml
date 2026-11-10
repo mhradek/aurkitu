@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The sample game models, built with Maven: mvn package writes target/aurkitu/schemas/game.fbs. -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.example</groupId>
+    <artifactId>game</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+    <properties>
+        <maven.compiler.release>17</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- The Aurkitu release to use. samples/verify.sh overrides it to build against this checkout. -->
+        <aurkituVersion>1.4.0</aurkituVersion>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.github.mhradek</groupId>
+            <artifactId>aurkitu-annotations</artifactId>
+            <version>${aurkituVersion}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>io.github.mhradek</groupId>
+                <artifactId>aurkitu-maven-plugin</artifactId>
+                <version>${aurkituVersion}</version>
+                <configuration>
+                    <schemaName>game</schemaName>
+                    <schemaNamespace>com.example.game.fb</schemaNamespace>
+                    <specifiedPackages>
+                        <specifiedPackage>com.example.game</specifiedPackage>
+                    </specifiedPackages>
+                    <fileIdentifier>GAME</fileIdentifier>
+                    <failOnValidationIssues>true</failOnValidationIssues>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>build-schema</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

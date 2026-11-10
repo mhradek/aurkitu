@@ -6,6 +6,12 @@ changes to expect when upgrading. Versions follow [Semantic Versioning](https://
 
 ## [Unreleased]
 
+### Added
+
+- `samples/`: a small game model that builds with Maven or Gradle, the schema it produces, a table of how each
+  model element maps to the schema, and how to generate code with `flatc`. CI builds it with both build tools
+  against the current code and checks the schema, so the sample stays accurate.
+
 ## [1.4.0] - 2026-11-10
 
 ### Added

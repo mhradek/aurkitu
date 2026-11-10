@@ -1,0 +1,64 @@
+// Aurkitu 1.4.0 automatically generated FlatBuffer schema
+namespace com.example.game.fb;
+
+file_identifier "GAME";
+
+union Event {
+  LevelUp,
+  ItemFound,
+}
+
+enum Rarity : ubyte {
+  COMMON = 1,
+  RARE = 5,
+  LEGENDARY = 10,
+}
+
+enum Status : byte {
+  OFFLINE,
+  ONLINE,
+  /// Playing a match right now.
+  IN_MATCH,
+}
+
+struct Vec3 {
+  x:float;
+  y:float;
+  z:float;
+}
+
+table Item {
+  name:string (required);
+  quantity:int;
+  rarity:Rarity = COMMON;
+}
+
+table ItemFound {
+  item:Item;
+}
+
+table LevelUp {
+  new_level:int;
+}
+
+/// A player and what a client shows about them.
+table Player {
+  id:long;
+  display_name:string (required);
+  /// Starts at 1.
+  level:int = 1;
+  status:Status;
+  position:Vec3;
+  inventory:[Item];
+  /// Free-form counters, e.g. "wins".
+  stats:[MapValueSet_Player_stats];
+  /// What happened to the player most recently.
+  last_event:Event;
+}
+
+table MapValueSet_Player_stats {
+  key:string;
+  value:int;
+}
+
+root_type Player;
