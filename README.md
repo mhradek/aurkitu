@@ -676,7 +676,12 @@ mvn -B install -DskipTests -Dinvoker.skip
 cd aurkitu-gradle-plugin && gradle build
 ```
 
-Its version is read from the parent POM. `gradle build` runs functional tests ([TestKit](https://docs.gradle.org/current/userguide/test_kit.html)): real Gradle builds that apply the plugin, including the Maven end-to-end projects `kitchen-sink`, `dependency-models` and `fail-on-validation`, whose schemas must match the Maven plugin's byte for byte. CI runs them with Gradle 8.14 and 9.9.
+Its version is read from the parent POM. `gradle build` runs functional tests ([TestKit](https://docs.gradle.org/current/userguide/test_kit.html)), real Gradle builds that apply the plugin:
+
+- **Every Maven end-to-end project** in `aurkitu-maven-plugin/src/it`, built with Gradle from its POM's plugin configuration: it must succeed or fail as the Maven build does, and write the same schema byte for byte. A new Maven project there is covered automatically.
+- **Option parity**: every `build-schema` parameter, read from the Maven plugin's descriptor, must be an `aurkitu { }` option with the same name and default, and the other way round.
+- **The plugin as published**: it is published to a local repository and resolved by id and version, as from the Gradle Plugin Portal, so a published POM that does not resolve fails the build.
+- Up-to-date checks, the configuration cache, `flatc`, and a build without a Java plugin. CI runs them with Gradle 8.14 and 9.9.
 
 `verify` runs the unit tests, then the end-to-end tests in `aurkitu-maven-plugin/src/it`. Each directory there is a real consumer project, built with [maven-invoker-plugin](https://maven.apache.org/plugins/maven-invoker-plugin/) against the freshly built plugin:
 

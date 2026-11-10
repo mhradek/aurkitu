@@ -6,6 +6,12 @@ changes to expect when upgrading. Versions follow [Semantic Versioning](https://
 
 ## [Unreleased]
 
+### Fixed
+
+- An enum with `@FlatBufferEnumTypeField` values, compiled for a newer Java than the one running the build (e.g. a
+  Gradle toolchain newer than Gradle's own JVM), was written with implicit values (`0, 1, ...`) instead of its own,
+  reported only as a validation comment. The build now fails, naming both Java versions and how to fix it.
+
 ### Changed
 
 - Gradle plugin: declares configuration-cache support on the Gradle Plugin Portal.

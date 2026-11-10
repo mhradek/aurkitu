@@ -109,8 +109,14 @@ final class EnumReader {
     /** Reads the value field of every constant; null if the class cannot be loaded or the field is not integral. */
     @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
     private static List<Value> readValues(ClassInfo classInfo, String fieldName, ScalarKind underlying) {
-        Class<?> enumClass = classInfo.loadClass(true);
-        if (enumClass == null) {
+        Class<?> enumClass;
+        try {
+            enumClass = classInfo.loadClass();
+        } catch (IllegalArgumentException | LinkageError e) {
+            if (causedBy(e, UnsupportedClassVersionError.class)) {
+                throw newerJava(classInfo);
+            }
+            log.debug("Could not load {}", classInfo.getName(), e);
             return null;
         }
         try {
@@ -129,6 +135,30 @@ final class EnumReader {
             log.debug("Could not read enum values of {}", classInfo.getName(), e);
             return null;
         }
+    }
+
+    /**
+     * The values are in the enum's constructor calls, so the class must be loaded, which a JVM older than the
+     * class cannot do. Falling back to implicit values would silently give the constants other numbers than the
+     * model's, so this fails the build instead.
+     */
+    private static SchemaGenerationException newerJava(ClassInfo classInfo) {
+        int classJava = classInfo.getClassfileMajorVersion() - 44;
+        int buildJava = Runtime.version().feature();
+        return new SchemaGenerationException("Cannot read the @FlatBufferEnumTypeField values of " + classInfo.getName()
+                + ": it is compiled for Java " + classJava + ", but the build runs on Java " + buildJava
+                + ". Run the build on Java " + classJava + " or later (Maven: run mvn with that JDK; Gradle: run Gradle"
+                + " with it, e.g. org.gradle.java.home in gradle.properties), or compile the models for Java "
+                + buildJava + ".");
+    }
+
+    private static boolean causedBy(Throwable e, Class<? extends Throwable> type) {
+        for (Throwable t = e; t != null; t = t.getCause()) {
+            if (type.isInstance(t)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

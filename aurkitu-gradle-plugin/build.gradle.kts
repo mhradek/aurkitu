@@ -64,6 +64,17 @@ gradlePlugin {
     }
 }
 
+// The plugin as published (with its marker and POM), for the test that resolves it by id and version.
+val functionalTestRepo = layout.buildDirectory.dir("functional-test-repo")
+publishing {
+    repositories {
+        maven {
+            name = "functionalTest"
+            url = uri(functionalTestRepo)
+        }
+    }
+}
+
 val functionalTestTask = tasks.register<Test>("functionalTest") {
     description = "Runs the plugin in real builds (Gradle TestKit)."
     group = "verification"
@@ -74,6 +85,12 @@ val functionalTestTask = tasks.register<Test>("functionalTest") {
     systemProperty("aurkitu.version", reactorVersion)
     systemProperty("maven.repo.local", System.getProperty("maven.repo.local")
         ?: "${System.getProperty("user.home")}/.m2/repository")
+    // The Maven plugin's descriptor, whose parameters the Gradle options must match.
+    val mavenRepo = System.getProperty("maven.repo.local") ?: "${System.getProperty("user.home")}/.m2/repository"
+    systemProperty("aurkitu.mavenPluginJar",
+        "$mavenRepo/io/github/mhradek/aurkitu-maven-plugin/$reactorVersion/aurkitu-maven-plugin-$reactorVersion.jar")
+    dependsOn("publishAllPublicationsToFunctionalTestRepository")
+    systemProperty("aurkitu.pluginRepo", functionalTestRepo.get().asFile.absolutePath)
     // The Maven plugin's end-to-end test projects: the Gradle plugin must write the same schemas.
     systemProperty("aurkitu.itDir", file("../aurkitu-maven-plugin/src/it").absolutePath)
     inputs.dir("../aurkitu-maven-plugin/src/it")
