@@ -14,6 +14,8 @@ val pom = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(file("
 val reactorVersion: String = pom.documentElement.childNodes.let { nodes ->
     (0 until nodes.length).map(nodes::item).first { it.nodeName == "version" }.textContent.trim()
 }
+// The same JUnit as the Maven modules (junit.version in the parent POM), so the two builds cannot drift apart.
+val junitVersion: String = pom.getElementsByTagName("junit.version").item(0).textContent.trim()
 
 group = "io.github.mhradek"
 version = reactorVersion
@@ -45,9 +47,9 @@ dependencies {
     // The unit tests use the Gradle API (ProjectBuilder) at run time. Since Gradle 9, java-gradle-plugin no longer
     // puts it on the test runtime classpath; Gradle 8 did, so the tests passed there and failed to load on 9.
     testImplementation(gradleApi())
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
+    testImplementation("org.junit.jupiter:junit-jupiter:$junitVersion")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-    "functionalTestImplementation"("org.junit.jupiter:junit-jupiter:5.10.2")
+    "functionalTestImplementation"("org.junit.jupiter:junit-jupiter:$junitVersion")
     "functionalTestRuntimeOnly"("org.junit.platform:junit-platform-launcher")
 }
 
