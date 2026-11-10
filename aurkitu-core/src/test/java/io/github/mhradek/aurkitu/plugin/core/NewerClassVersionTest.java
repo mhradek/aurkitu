@@ -79,16 +79,58 @@ class NewerClassVersionTest {
         assertTrue(schema.contains("enum Mood : byte {\n  HAPPY,\n  SAD,\n}"), schema);
     }
 
-    private Path compile(String source) throws Exception {
+    /**
+     * Any other reason the class cannot be loaded (here, an interface missing from the classpath) is not about the
+     * build's Java version: it stays a validation issue, with implicit values, as before.
+     */
+    @Test
+    void otherLoadFailuresStayAValidationIssue() throws Exception {
+        Path classes = compile("""
+                package newer;
+
+                import io.github.mhradek.aurkitu.annotations.FlatBufferEnum;
+                import io.github.mhradek.aurkitu.annotations.FlatBufferEnumTypeField;
+
+                @FlatBufferEnum
+                public enum Size implements Measured {
+                    BIG(2), SMALL(1);
+
+                    @FlatBufferEnumTypeField
+                    private final int units;
+
+                    Size(int units) {
+                        this.units = units;
+                    }
+                }
+                """, """
+                package newer;
+
+                public interface Measured {}
+                """);
+        Files.delete(classes.resolve("newer/Measured.class"));
+
+        SchemaGenerator.Config config = new SchemaGenerator.Config(List.of("newer"), true, true, null, List.of(),
+                true, false, true, false, false, null, List.of(classes.toString()), false);
+        new SchemaGenerator(config).generate("newer", "newer.fb", tempDir.toFile());
+
+        String schema = Files.readString(tempDir.resolve("newer.fbs"));
+        assertTrue(schema.contains("enum Size : byte {\n  BIG,\n  SMALL,\n}"), schema);
+        assertTrue(schema.contains("// - Enum Size: could not read @FlatBufferEnumTypeField units; values are implicit"), schema);
+    }
+
+    private Path compile(String... sources) throws Exception {
         Path src = Files.createDirectories(tempDir.resolve("src/newer"));
-        String name = source.substring(source.indexOf("enum ") + 5).split("[ {]")[0];
-        Path file = Files.writeString(src.resolve(name + ".java"), source);
+        List<String> args = new java.util.ArrayList<>();
         Path out = Files.createDirectories(tempDir.resolve("classes"));
-        JavaCompiler javac = ToolProvider.getSystemJavaCompiler();
         String annotations = new File(io.github.mhradek.aurkitu.annotations.FlatBufferEnum.class
                 .getProtectionDomain().getCodeSource().getLocation().toURI()).getPath();
-        int result = javac.run(null, null, null, "-d", out.toString(), "-cp", annotations, file.toString());
-        assertEquals(0, result, "compiles");
+        args.addAll(List.of("-d", out.toString(), "-cp", annotations));
+        for (String source : sources) {
+            String name = source.replaceAll("(?s).*?public (?:enum|interface) (\\w+).*", "$1");
+            args.add(Files.writeString(src.resolve(name + ".java"), source).toString());
+        }
+        JavaCompiler javac = ToolProvider.getSystemJavaCompiler();
+        assertEquals(0, javac.run(null, null, null, args.toArray(new String[0])), "compiles");
         return out;
     }
 
