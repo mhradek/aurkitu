@@ -6,6 +6,14 @@ changes to expect when upgrading. Versions follow [Semantic Versioning](https://
 
 ## [Unreleased]
 
+### Added
+
+- Gradle plugin: every option can be set with a Gradle property named as the Maven plugin's user property
+  (`-Paurkitu.validate=false`, or in `gradle.properties`); a value in the build script wins, as in Maven.
+- Gradle plugin: several schemas from one project. Any `GenerateFlatBuffersSchema` task the build registers takes
+  its options from `aurkitu { }` unless it sets its own, scans the main classes, writes to
+  `build/aurkitu/<task name>` and runs with `assemble`.
+
 ### Fixed
 
 - An enum with `@FlatBufferEnumTypeField` values, compiled for a newer Java than the one running the build (e.g. a
@@ -15,7 +23,9 @@ changes to expect when upgrading. Versions follow [Semantic Versioning](https://
 ### Changed
 
 - Gradle plugin: declares configuration-cache support on the Gradle Plugin Portal.
-- Build: the Gradle plugin is built and published with Gradle 9.9; it is still tested with 8.14 and 9.9.
+- Build: the Gradle plugin is built and published with Gradle 9.9; it is tested with 8.14 and 9.9, and with
+  Gradle 9.9 on Java 17, 21 and 25. Its unit tests have the same 80% per-class coverage gate as the Maven modules,
+  and functional tests cover the build cache (including a relocated checkout) and Kotlin JVM projects.
 - Release: the Gradle plugin is built and tested before anything is deployed to Maven Central, and is published
   in its own job. Missing Gradle Plugin Portal keys fail the release instead of skipping the Gradle plugin.
 

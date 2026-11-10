@@ -5,6 +5,7 @@ import org.gradle.plugin.compatibility.compatibility
 
 plugins {
     `java-gradle-plugin`
+    jacoco
     id("com.gradle.plugin-publish") version "2.2.1"
 }
 
@@ -39,6 +40,8 @@ val functionalTest: SourceSet by sourceSets.creating
 dependencies {
     implementation("io.github.mhradek:aurkitu-core:$reactorVersion")
 
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     "functionalTestImplementation"("org.junit.jupiter:junit-jupiter:5.10.2")
     "functionalTestRuntimeOnly"("org.junit.platform:junit-platform-launcher")
 }
@@ -106,4 +109,39 @@ tasks.check { dependsOn(functionalTestTask) }
 // As in the Maven build: the getters' Javadoc is in the extension, not repeated on every method.
 tasks.javadoc {
     (options as StandardJavadocDocletOptions).addStringOption("Xdoclint:none", "-quiet")
+}
+
+// Unit tests (ProjectBuilder: the plugin's wiring and the task's action, in this JVM) and their coverage gate:
+// at least 80% of lines and branches in every class, as for the Maven modules. The functional tests run in
+// separate Gradle processes, which JaCoCo here does not see.
+tasks.test {
+    useJUnitPlatform()
+}
+jacoco {
+    toolVersion = "0.8.16"
+}
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required = true
+    }
+}
+tasks.jacocoTestCoverageVerification {
+    dependsOn(tasks.test)
+    violationRules {
+        rule {
+            element = "CLASS"
+            limit {
+                counter = "LINE"
+                minimum = "0.80".toBigDecimal()
+            }
+            limit {
+                counter = "BRANCH"
+                minimum = "0.80".toBigDecimal()
+            }
+        }
+    }
+}
+tasks.check {
+    dependsOn(tasks.jacocoTestCoverageVerification)
 }

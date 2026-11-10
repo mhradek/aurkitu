@@ -29,6 +29,8 @@ class AurkituPluginFunctionalTest {
     private static final Path IT_DIR = Path.of(System.getProperty("aurkitu.itDir"));
     private static final String LOCAL_REPO = Path.of(System.getProperty("maven.repo.local")).toUri().toString();
     private static final String TASK = ":generateFlatBuffersSchema";
+    /** The Kotlin Gradle plugin version the Kotlin project test uses. */
+    private static final String KOTLIN_VERSION = "2.4.21";
 
     @TempDir
     Path project;
@@ -127,6 +129,151 @@ class AurkituPluginFunctionalTest {
         assertTrue(Files.readString(project.resolve("build/aurkitu/schemas/people.fbs")).contains("age:int;"));
     }
 
+    /**
+     * Options from Gradle properties, named as the Maven plugin's user properties ({@code -Daurkitu.validate=false}
+     * there, {@code -Paurkitu.validate=false} here), on the command line or in gradle.properties. As in Maven, a
+     * value set in the build script wins.
+     */
+    @Test
+    void gradlePropertiesSetOptionsAndTheBuildScriptWins() throws IOException {
+        peopleSources();
+        Files.writeString(project.resolve("src/main/java/com/example/Badge.java"), """
+                package com.example;
+
+                import io.github.mhradek.aurkitu.annotations.FlatBufferTable;
+
+                @FlatBufferTable
+                public class Badge {
+                    private String displayName;
+                }
+                """);
+        Files.writeString(project.resolve("gradle.properties"), "aurkitu.snakeCaseFields=false\n");
+        build("""
+                aurkitu {
+                    schemaNamespace = 'from.script'
+                }
+                """);
+
+        run(TASK, "-Paurkitu.schemaName=fromProperty", "-Paurkitu.schemaNamespace=from.property",
+                "-Paurkitu.specifiedPackages=com.example, com.nothing", "-Paurkitu.outputDir=schemas",
+                "-Paurkitu.generateVersion=true");
+
+        String schema = Files.readString(project.resolve("schemas/fromProperty.fbs"));
+        assertTrue(schema.contains("namespace from.script;"), "the build script wins over -P:\n" + schema);
+        assertTrue(schema.contains("// @version:"), "generateVersion from -P:\n" + schema);
+        assertTrue(schema.contains("table Person {"), "specifiedPackages from -P:\n" + schema);
+        assertTrue(schema.contains("displayName:string;"), "snakeCaseFields=false from gradle.properties:\n" + schema);
+    }
+
+    /**
+     * More than one schema from one project: every GenerateFlatBuffersSchema task takes its options from
+     * aurkitu { } unless it sets its own, scans the main classes, writes to its own directory and runs with assemble.
+     */
+    @Test
+    void aProjectCanWriteSeveralSchemas() throws IOException {
+        simpleProject("");
+        Path eventSources = Files.createDirectories(project.resolve("src/main/java/com/example/events"));
+        Files.writeString(eventSources.resolve("Clicked.java"), """
+                package com.example.events;
+
+                import io.github.mhradek.aurkitu.annotations.FlatBufferTable;
+
+                @FlatBufferTable(rootType = true)
+                public class Clicked {
+                    private long atMillis;
+                }
+                """);
+        Files.writeString(project.resolve("build.gradle"), Files.readString(project.resolve("build.gradle")) + """
+                tasks.register('generateEventsSchema', io.github.mhradek.aurkitu.gradle.GenerateFlatBuffersSchema) {
+                    schemaName = 'events'
+                    specifiedPackages = ['com.example.events']
+                }
+                """);
+
+        BuildResult result = run("assemble");
+
+        assertEquals(TaskOutcome.SUCCESS, result.task(TASK).getOutcome());
+        assertEquals(TaskOutcome.SUCCESS, result.task(":generateEventsSchema").getOutcome());
+        String events = Files.readString(project.resolve("build/aurkitu/generateEventsSchema/events.fbs"));
+        assertTrue(events.contains("namespace com.example.fb;"), "namespace from aurkitu { }:\n" + events);
+        assertTrue(events.contains("table Clicked {\n  at_millis:long;\n}"), events);
+        assertFalse(events.contains("table Person"), "only its own packages:\n" + events);
+        assertTrue(Files.readString(project.resolve("build/aurkitu/schemas/people.fbs")).contains("table Person"));
+    }
+
+    /**
+     * The task is cacheable: after clean, and in a copy of the project at another path (a CI checkout, a colleague's
+     * machine), the schema comes from the build cache instead of being generated again.
+     */
+    @Test
+    void theSchemaComesFromTheBuildCacheAfterCleanAndInAnotherCheckout(@TempDir Path elsewhere) throws IOException {
+        Path cache = elsewhere.resolve("build-cache");
+        Path first = project.resolve("first");
+        Files.createDirectories(first);
+        withProject(first, () -> {
+            simpleProject("");
+            useBuildCache(cache);
+        });
+
+        assertEquals(TaskOutcome.SUCCESS, runIn(first, "--build-cache", TASK).task(TASK).getOutcome());
+        runIn(first, "clean");
+        assertEquals(TaskOutcome.FROM_CACHE, runIn(first, "--build-cache", TASK).task(TASK).getOutcome());
+
+        Path second = elsewhere.resolve("second-checkout");
+        copyTree(first.resolve("src"), second.resolve("src"));
+        Files.copy(first.resolve("settings.gradle"), second.resolve("settings.gradle"));
+        Files.copy(first.resolve("build.gradle"), second.resolve("build.gradle"));
+        BuildResult relocated = runIn(second, "--build-cache", TASK);
+        assertEquals(TaskOutcome.FROM_CACHE, relocated.task(TASK).getOutcome(), "relocatable: the path does not matter");
+        assertEquals(Files.readString(first.resolve("build/aurkitu/schemas/people.fbs")),
+                Files.readString(second.resolve("build/aurkitu/schemas/people.fbs")));
+    }
+
+    /** A Kotlin project: its classes (data classes, nullable types) are scanned like Java ones. */
+    @Test
+    void kotlinJvmProjectsWork() throws IOException {
+        String mirror = System.getProperty("aurkitu.centralMirror");
+        Files.writeString(project.resolve("settings.gradle"), """
+                pluginManagement {
+                    repositories {
+                        %s
+                        gradlePluginPortal()
+                    }
+                }
+                rootProject.name = 'kotlin-models'
+                """.formatted(mirror == null ? "" : "maven { url = '" + mirror + "' }"));
+        Files.writeString(project.resolve("build.gradle"), """
+                plugins {
+                    id 'org.jetbrains.kotlin.jvm' version '%s'
+                    id 'io.github.mhradek.aurkitu'
+                }
+                %s
+                dependencies {
+                    implementation 'io.github.mhradek:aurkitu-annotations:%s'
+                }
+                aurkitu {
+                    schemaNamespace = 'com.example.fb'
+                    specifiedPackages = ['com.example']
+                }
+                """.formatted(KOTLIN_VERSION, repositories(), VERSION));
+        Path source = Files.createDirectories(project.resolve("src/main/kotlin/com/example"));
+        Files.writeString(source.resolve("Order.kt"), """
+                package com.example
+
+                import io.github.mhradek.aurkitu.annotations.FlatBufferTable
+
+                @FlatBufferTable(rootType = true)
+                data class Order(val orderId: Long, val note: String?)
+                """);
+
+        BuildResult result = run("assemble");
+
+        assertEquals(TaskOutcome.SUCCESS, result.task(TASK).getOutcome());
+        String schema = Files.readString(project.resolve("build/aurkitu/schemas/kotlin-models.fbs"));
+        assertTrue(schema.contains("table Order {\n  order_id:long;\n  note:string;\n}"), schema);
+        assertTrue(schema.contains("root_type Order;"), schema);
+    }
+
     @Test
     void worksWithTheConfigurationCache() throws IOException {
         simpleProject("");
@@ -176,6 +323,19 @@ class AurkituPluginFunctionalTest {
     // --- helpers ---
 
     private void simpleProject(String extraConfiguration) throws IOException {
+        peopleSources();
+        build("""
+                aurkitu {
+                    schemaName = 'people'
+                    schemaNamespace = 'com.example.fb'
+                    specifiedPackages = ['com.example']
+                    %s
+                }
+                """.formatted(extraConfiguration));
+    }
+
+    /** The people project's settings and model classes, without a build script. */
+    private void peopleSources() throws IOException {
         settings("people");
         Path source = Files.createDirectories(project.resolve("src/main/java/com/example"));
         Files.writeString(source.resolve("Person.java"), """
@@ -197,14 +357,39 @@ class AurkituPluginFunctionalTest {
                 @FlatBufferEnum
                 public enum Mood { HAPPY, SAD }
                 """);
-        build("""
-                aurkitu {
-                    schemaName = 'people'
-                    schemaNamespace = 'com.example.fb'
-                    specifiedPackages = ['com.example']
-                    %s
+    }
+
+    private void useBuildCache(Path cache) throws IOException {
+        Files.writeString(project.resolve("settings.gradle"), Files.readString(project.resolve("settings.gradle")) + """
+                buildCache {
+                    local {
+                        directory = new File('%s')
+                    }
                 }
-                """.formatted(extraConfiguration));
+                """.formatted(cache.toString().replace("\\", "/")));
+    }
+
+    /** Runs {@code setup} with {@link #project} pointing at {@code dir}, so the helpers write there. */
+    private void withProject(Path dir, IoAction setup) throws IOException {
+        Path original = project;
+        project = dir;
+        try {
+            setup.run();
+        } finally {
+            project = original;
+        }
+    }
+
+    private BuildResult runIn(Path dir, String... arguments) {
+        List<String> args = new ArrayList<>(Arrays.asList(arguments));
+        args.add("--stacktrace");
+        return GradleRunner.create().withProjectDir(dir.toFile()).withPluginClasspath().withArguments(args)
+                .forwardOutput().build();
+    }
+
+    @FunctionalInterface
+    private interface IoAction {
+        void run() throws IOException;
     }
 
     private void settings(String name) throws IOException {
