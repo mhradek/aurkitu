@@ -18,21 +18,30 @@
 
 **Aurkitu** (Basque for “to find”) generates FlatBuffers IDL (`.fbs`) schemas from annotated Java models. This keeps your server-side models as the single source of truth — especially useful when models carry storage annotations (e.g. DynamoDB) that must remain authoritative.
 
+```mermaid
+flowchart LR
+    A["Java / Kotlin models<br/>@FlatBufferTable, @FlatBufferEnum, …"] --> B["Aurkitu<br/>Maven or Gradle plugin"]
+    B -- "scans, validates, writes" --> C["user.fbs<br/>FlatBuffers schema"]
+    C --> D["flatc"]
+    D --> E["Client code<br/>C#, Swift, TypeScript, Go, Rust, …"]
+```
+
 - **Maven or Gradle**: a [Maven plugin](#maven-plugin) and a [Gradle plugin](#gradle-plugin) with the same options, built on the same generator, so both write the same schema byte for byte.
 - **The FlatBuffers schema language**: tables, structs, enums (including `bit_flags`), unions, maps, inheritance, field ids and attributes, optional scalars, RPC services, namespaces, includes and documentation comments.
 - **Schemas that compile**: [validation](#validation) of the rules `flatc` enforces, tested against `flatc` itself, with an optional check by `flatc` in the build.
 - **Your models as they are**: classes of any visibility, in your project or in a dependency, scanned from the compile classpath. Java 17 or later; Kotlin JVM classes work too.
 - **Any client language**: `flatc` turns the schema into code for [C#, Swift, TypeScript, Go, Rust and more](#using-the-schema-from-other-languages), so clients share your Java models.
 
-> **Upgrading from 1.1.x?** Field names with consecutive capitals change (`userID` is now `user_id`); see [What's new in 1.2.0](#whats-new-in-120).
->
-> **Upgrading from 1.1.0?** Non-public classes are now scanned; see [What's new in 1.1.1](#whats-new-in-111).
->
-> **Upgrading from 1.0.1?** See [What's new in 1.1.0](#whats-new-in-110) for the output changes to expect.
->
-> **Upgrading from 1.0.0?** 1.0.0 scanned the plugin's own classpath instead of your project's, so it generated an empty schema in real builds. See [What's new in 1.0.1](#whats-new-in-101).
->
-> **Upgrading from 0.0.x?** See [Migration from 0.0.x](#migration-from-00x).
+<details>
+<summary><strong>Upgrading from an earlier version?</strong></summary>
+
+- **From 1.1.x:** Field names with consecutive capitals change (`userID` is now `user_id`); see [What's new in 1.2.0](#whats-new-in-120).
+- **From 1.1.0:** Non-public classes are now scanned; see [What's new in 1.1.1](#whats-new-in-111).
+- **From 1.0.1:** See [What's new in 1.1.0](#whats-new-in-110) for the output changes to expect.
+- **From 1.0.0:** 1.0.0 scanned the plugin's own classpath instead of your project's, so it generated an empty schema in real builds. See [What's new in 1.0.1](#whats-new-in-101).
+- **From 0.0.x:** See [Migration from 0.0.x](#migration-from-00x).
+
+</details>
 
 ---
 
