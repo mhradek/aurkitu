@@ -18,6 +18,14 @@
 
 **Aurkitu** (Basque for “to find”) generates FlatBuffers IDL (`.fbs`) schemas from annotated Java models. This keeps your server-side models as the single source of truth — especially useful when models carry storage annotations (e.g. DynamoDB) that must remain authoritative.
 
+```mermaid
+flowchart LR
+    A["Java / Kotlin models<br/>@FlatBufferTable, @FlatBufferEnum, …"] --> B["Aurkitu<br/>Maven or Gradle plugin"]
+    B -- "scans, validates, writes" --> C["user.fbs<br/>FlatBuffers schema"]
+    C --> D["flatc"]
+    D --> E["Client code<br/>C#, Swift, TypeScript, Go, Rust, …"]
+```
+
 - **Maven or Gradle**: a [Maven plugin](#maven-plugin) and a [Gradle plugin](#gradle-plugin) with the same options, built on the same generator, so both write the same schema byte for byte.
 - **The FlatBuffers schema language**: tables, structs, enums (including `bit_flags`), unions, maps, inheritance, field ids and attributes, optional scalars, RPC services, namespaces, includes and documentation comments.
 - **Schemas that compile**: [validation](#validation) of the rules `flatc` enforces, tested against `flatc` itself, with an optional check by `flatc` in the build.
