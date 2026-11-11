@@ -35,6 +35,8 @@ flowchart LR
 <details>
 <summary><strong>Upgrading from an earlier version?</strong></summary>
 
+- **From 1.3.0:** No output changes. One fix can now fail a build that passed before: an enum with `@FlatBufferEnumTypeField` values, compiled for a newer Java than the build's JVM, used to be written with implicit values and now stops the build with an explanation. See [What's new in 1.4.0](#whats-new-in-140) and [Troubleshooting](#troubleshooting).
+- **From 1.2.0:** No output changes. The generator moved into the new `aurkitu-core` artifact; the Maven plugin's parameters are unchanged, but code calling `SchemaGenerator.Config` directly no longer passes a `MavenProject`. See [What's new in 1.3.0](#whats-new-in-130).
 - **From 1.1.x:** Field names with consecutive capitals change (`userID` is now `user_id`); see [What's new in 1.2.0](#whats-new-in-120).
 - **From 1.1.0:** Non-public classes are now scanned; see [What's new in 1.1.1](#whats-new-in-111).
 - **From 1.0.1:** See [What's new in 1.1.0](#whats-new-in-110) for the output changes to expect.
