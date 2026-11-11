@@ -1,9 +1,13 @@
 name: Publish
 
+# Pushing a release tag (e.g. 1.5.0; tags have no "v" prefix) starts the release. This workflow deploys to Maven
+# Central and the Gradle Plugin Portal; release-assets.yml, started by the same push, builds the GitHub release
+# as a draft and publishes it once everything is attached, so it works with immutable releases.
 on:
   workflow_dispatch:
-  release:
-    types: [published]
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+*'
 
 # Read-only by default; nothing here writes to the repository.
 permissions:
@@ -38,7 +42,7 @@ jobs:
           server-id: central
           server-username: MAVEN_USERNAME
           server-password: MAVEN_PASSWORD
-      # Makes re-runs safe: e.g. creating the GitHub release after a manual publish of the same tag.
+      # Makes re-runs safe: e.g. pushing the tag after a manual publish of the same version.
       - name: Check whether this version is already on Maven Central
         id: central
         run: |

@@ -6,6 +6,12 @@ changes to expect when upgrading. Versions follow [Semantic Versioning](https://
 
 ## [Unreleased]
 
+### Changed
+
+- Release: pushing the version's tag starts a release, instead of publishing a GitHub release. The GitHub release
+  is created as a draft (notes from this file), gets its artifacts, signatures and SLSA provenance, and is
+  published last, so the repository can use immutable releases.
+
 ### Added
 
 - `samples/`: a small game model that builds with Maven or Gradle, the schema it produces, a table of how each

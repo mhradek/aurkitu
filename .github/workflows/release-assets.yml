@@ -1,5 +1,7 @@
-# Attaches each release's artifacts and their signatures (the .asc files published to Maven Central) to the
-# GitHub release, so users (and OpenSSF Scorecard) can verify the release from GitHub too.
+# Builds the GitHub release for a tag: creates it as a draft (notes from CHANGELOG.md), attaches the artifacts and
+# their signatures (the .asc files published to Maven Central), so users (and OpenSSF Scorecard) can verify the
+# release from GitHub too, and publishes it only once everything is attached. Nothing is added after publishing,
+# so this works with immutable releases (Settings > General > Releases), which lock a release's assets and tag.
 #
 # It also rebuilds the release tag here and compares the result with Maven Central, byte for byte (the build
 # is reproducible). For the files that match, it attaches SLSA build provenance (<tag>.intoto.jsonl): a signed
@@ -7,13 +9,16 @@
 # reproducible builds (1.1.1 and earlier) do not match, so they get no provenance.
 name: Release assets
 
+# Started by the same tag push as publish.yml, it waits for that deploy on Maven Central. A manual run finishes a
+# release whose run failed, or adds assets to an older release published before releases were made immutable.
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+*'
   workflow_dispatch:
     inputs:
       tag:
-        description: Release tag to attach artifacts to (e.g. 1.1.0); it must already be on Maven Central
+        description: Release tag to build the release for (e.g. 1.5.0); it must already be on Maven Central
         required: true
 
 permissions:
@@ -28,9 +33,28 @@ jobs:
     outputs:
       subjects: ${{ steps.reproduce.outputs.subjects }}
     env:
-      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+      TAG: ${{ inputs.tag || github.ref_name }}
       GH_TOKEN: ${{ github.token }}
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.TAG }}
+          path: source
+          persist-credentials: false
+
+      # A draft can still change, so the assets go on it before it is published. A release that already exists is
+      # kept as it is, notes included: e.g. a draft written by hand before pushing the tag, or an older release.
+      - name: Create the draft release
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "The release ${TAG} already exists"; exit 0
+          fi
+          awk -v heading="## [${TAG}]" 'index($0, heading) == 1 { found = 1; next } found && /^## \[/ { exit } found' \
+            source/CHANGELOG.md > notes.md
+          if [ -s notes.md ]; then notes=(--notes-file notes.md); else notes=(--generate-notes); fi
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft --verify-tag --title "$TAG" "${notes[@]}"
+
       # The artifacts come from Maven Central, so they are exactly what users download, already signed.
       # A release published right after the deploy can take a while to appear there: wait up to an hour.
       - name: Wait for the release on Maven Central
@@ -82,11 +106,6 @@ jobs:
       - name: Attach to the GitHub release
         run: gh release upload "$TAG" assets/* --clobber --repo "$GITHUB_REPOSITORY"
 
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ env.TAG }}
-          path: source
-          persist-credentials: false
       - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
         with:
           java-version: '17'
@@ -123,8 +142,9 @@ jobs:
             echo "subjects=$(cd assets && sha256sum "${matched[@]}" | base64 -w0)" >> "$GITHUB_OUTPUT"
           fi
 
-  # SLSA level 3 provenance for the reproduced files, attached to the release. The generator must be
-  # referenced by tag (it verifies its own identity), which Scorecard accepts as pinned.
+  # SLSA level 3 provenance for the reproduced files. The generator must be referenced by tag (it verifies its own
+  # identity), which Scorecard accepts as pinned. It keeps the provenance as a workflow artifact; the publish job
+  # attaches it, since the generator's own upload does not find draft releases reliably.
   provenance:
     needs: attach
     if: needs.attach.outputs.subjects != ''
@@ -135,6 +155,36 @@ jobs:
     uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.1.0
     with:
       base64-subjects: ${{ needs.attach.outputs.subjects }}
-      upload-assets: true
-      upload-tag-name: ${{ github.event.release.tag_name || inputs.tag }}
-      provenance-name: aurkitu-${{ github.event.release.tag_name || inputs.tag }}.intoto.jsonl
+      upload-assets: false
+      provenance-name: aurkitu-${{ inputs.tag || github.ref_name }}.intoto.jsonl
+
+  # Attaches the provenance and publishes the draft, the last change to the release. Runs when there was nothing
+  # to prove (no provenance job) too, but not when the provenance failed: the draft then waits for a re-run.
+  publish:
+    needs: [attach, provenance]
+    if: ${{ !cancelled() && needs.attach.result == 'success' && needs.provenance.result != 'failure' }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: write
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+      PROVENANCE: ${{ needs.provenance.outputs.provenance-name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Attach the provenance
+        if: needs.provenance.result == 'success'
+        run: |
+          set -euo pipefail
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --name "$PROVENANCE" --dir provenance
+          gh release upload "$TAG" provenance/* --clobber --repo "$GITHUB_REPOSITORY"
+
+      - name: Publish the release
+        run: |
+          set -euo pipefail
+          if [ "$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)" = "true" ]; then
+            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false
+            echo "Published ${TAG}"
+          else
+            echo "${TAG} was already published"
+          fi
