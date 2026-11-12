@@ -63,7 +63,7 @@ class PluginParityAndPublishingTest {
                             .collectEntries { m ->
                                 def value = m.invoke(aurkitu).getOrNull()
                                 if (value instanceof org.gradle.api.file.Directory) {
-                                    value = project.projectDir.toPath().relativize(value.asFile.toPath()).toString()
+                                    value = project.projectDir.toPath().relativize(value.asFile.toPath()).toString().replace('\\\\', '/')
                                 } else if (value instanceof List) {
                                     value = value.join(',')
                                 }
