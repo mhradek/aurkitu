@@ -851,6 +851,7 @@ Codacy's quality-grade badge comes from its static analysis and is independent o
 | Mutation testing ([pitest](https://pitest.org/)) | weekly (`.github/workflows/mutation.yml`), or `mvn -Ppitest -pl aurkitu-core test-compile org.pitest:pitest-maven:mutationCoverage` | Changes the generator's code in small ways and checks a test fails each time. The run fails below 90% of mutants killed; the report is attached to the run |
 | Reproducible builds | every build | `project.build.outputTimestamp` fixes the timestamps in the jars, so building the same commit twice gives byte-identical artifacts |
 | Java 17, 21 and 25 | CI | The Maven build and every test run on each, and so does the Gradle plugin on Gradle 9.9 (plus Gradle 8.14 on Java 17), so newer JDKs keep working |
+| Linux, macOS and Windows | CI | The Maven build with every test and end-to-end project, the Gradle plugin and the sample also run on macOS and Windows (Java 17), so path, line-ending and shell differences fail CI rather than a contributor's build. `.gitattributes` checks text files out with LF line endings everywhere |
 | [CodeQL](https://codeql.github.com/) | CI and weekly | GitHub's security and quality analysis; findings appear under Security → Code scanning |
 | [OpenSSF Scorecard](https://scorecard.dev/) | weekly and on push | Scores the repository's security practices (the Scorecard badge) |
 | Dependabot | weekly | Opens grouped PRs for Maven, the Gradle plugin's build and GitHub Actions. ClassGraph major versions are skipped (6.0 removed APIs the plugin uses) |

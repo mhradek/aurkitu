@@ -1,0 +1,6 @@
+# Text files are checked out with LF line endings on every OS, Windows included: generated schemas are compared
+# byte for byte with the expected .fbs files, and shell scripts with CRLF endings do not run.
+* text=auto eol=lf
+
+*.png binary
+*.jar binary

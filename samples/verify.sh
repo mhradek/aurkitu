@@ -9,16 +9,31 @@
 set -euo pipefail
 
 root=$(cd "$(dirname "$0")/.." && pwd)
-maven_args=()
-gradle_args=()
+cd "$root/samples/game"
+
+# The release checklist bumps the sample's version in both build files; they must agree.
+maven_version=$(sed -n 's:.*<aurkituVersion>\(.*\)</aurkituVersion>.*:\1:p' pom.xml)
+gradle_version=$(sed -n 's/^aurkituVersion=//p' gradle.properties)
+if [ "$maven_version" != "$gradle_version" ]; then
+    echo "aurkituVersion differs: $maven_version in pom.xml, $gradle_version in gradle.properties"
+    exit 1
+fi
+
+# The version is always passed, so neither argument list is ever empty: bash 3.2 (macOS's /bin/bash) treats an
+# empty "${array[@]}" as an unbound variable under set -u.
 if [ "${1:-}" = "--this-checkout" ]; then
     version=$(cd "$root" && mvn -B -q help:evaluate -Dexpression=project.version -DforceStdout)
     echo "Building the sample against this checkout ($version)"
     maven_args=("-DaurkituVersion=$version")
-    gradle_args=("-PaurkituVersion=$version" --include-build "$root/aurkitu-gradle-plugin")
+    # Relative, so it also works from Git Bash on Windows, where an absolute /c/... path means nothing to Java.
+    gradle_args=("-PaurkituVersion=$version" --include-build ../../aurkitu-gradle-plugin)
+else
+    version=$gradle_version
+    echo "Building the sample against the released Aurkitu $version"
+    maven_args=("-DaurkituVersion=$version")
+    gradle_args=("-PaurkituVersion=$version")
 fi
 
-cd "$root/samples/game"
 mvn -B -q clean package "${maven_args[@]}"
 gradle -q clean build "${gradle_args[@]}"
 
