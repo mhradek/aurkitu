@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
@@ -29,12 +30,12 @@ class AurkituPluginTest {
     }
 
     @Test
-    void defaultsMatchTheMavenPluginExceptWhereGradleDiffers() {
+    void defaultsMatchTheMavenPluginExceptWhereGradleDiffers() throws IOException {
         AurkituExtension aurkitu = project(true).getExtensions().getByType(AurkituExtension.class);
 
         assertEquals("models", aurkitu.getSchemaName().get(), "the project's name");
         assertEquals("generated.flatbuffers", aurkitu.getSchemaNamespace().get());
-        assertEquals(new File(dir.toFile(), "build/aurkitu/schemas"), aurkitu.getOutputDirectory().get().getAsFile());
+        assertEquals(new File(dir.toRealPath().toFile(), "build/aurkitu/schemas"), aurkitu.getOutputDirectory().get().getAsFile());
         assertEquals(List.of(), aurkitu.getSpecifiedPackages().get());
         assertEquals(List.of(), aurkitu.getIncludes().get());
         assertTrue(aurkitu.getValidate().get());
@@ -70,15 +71,15 @@ class AurkituPluginTest {
     }
 
     @Test
-    void assembleRunsEverySchemaTaskAndEachWritesToItsOwnDirectory() {
+    void assembleRunsEverySchemaTaskAndEachWritesToItsOwnDirectory() throws IOException {
         Project project = project(true);
         project.getTasks().register("generateEventsSchema", GenerateFlatBuffersSchema.class,
                 t -> t.setDescription("Events"));
         GenerateFlatBuffersSchema main = schemaTask(project, AurkituPlugin.TASK_NAME);
         GenerateFlatBuffersSchema events = schemaTask(project, "generateEventsSchema");
 
-        assertEquals(new File(dir.toFile(), "build/aurkitu/schemas"), main.getOutputDirectory().get().getAsFile());
-        assertEquals(new File(dir.toFile(), "build/aurkitu/generateEventsSchema"), events.getOutputDirectory().get().getAsFile());
+        assertEquals(new File(dir.toRealPath().toFile(), "build/aurkitu/schemas"), main.getOutputDirectory().get().getAsFile());
+        assertEquals(new File(dir.toRealPath().toFile(), "build/aurkitu/generateEventsSchema"), events.getOutputDirectory().get().getAsFile());
         assertEquals("Events", events.getDescription(), "a description the build sets is kept");
         assertFalse(events.getClasspath().isEmpty(), "scans the main classes too");
 
