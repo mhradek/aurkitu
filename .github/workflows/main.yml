@@ -169,3 +169,62 @@ jobs:
         run: samples/verify.sh --this-checkout
         env:
           FLATC_PATH: /tmp/flatc-bin/flatc
+
+  # The same build on macOS and Windows, so platform differences (paths, line endings, shells) show up in CI rather
+  # than on a contributor's machine: the Maven build with every test and end-to-end project, the Gradle plugin,
+  # and the sample. Coverage is uploaded from Linux only.
+  other-os:
+    name: build (${{ matrix.name }}, Java 17)
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: macOS, os: macos-latest, flatc: Mac.flatc.binary.zip }
+          - { name: Windows, os: windows-latest, flatc: Windows.flatc.binary.zip }
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up JDK 17
+        uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        with:
+          gradle-version: '9.9.0'
+
+      # FLATC_PATH is for Java, so on Windows it is a Windows path (C:\...), not Git Bash's /c/...
+      - name: Download flatc
+        run: |
+          curl -sL -o flatc.zip "https://github.com/google/flatbuffers/releases/download/v${FLATC_VERSION}/${{ matrix.flatc }}"
+          unzip -o flatc.zip -d "$RUNNER_TEMP/flatc-bin"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            flatc=$(cygpath -w "$RUNNER_TEMP/flatc-bin/flatc.exe")
+          else
+            chmod +x "$RUNNER_TEMP/flatc-bin/flatc"
+            flatc="$RUNNER_TEMP/flatc-bin/flatc"
+          fi
+          "$RUNNER_TEMP/flatc-bin/flatc" --version
+          echo "FLATC_PATH=$flatc" >> "$GITHUB_ENV"
+
+      # install, not verify: the Gradle plugin and the sample build against these modules.
+      - name: Build with Maven
+        run: mvn -B install
+
+      - name: Build and test the Gradle plugin
+        working-directory: aurkitu-gradle-plugin
+        run: gradle build
+
+      # On macOS, with /bin/bash: bash 3.2, which macOS ships, not a newer bash the runner may also have.
+      - name: Build and check the sample
+        run: |
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            /bin/bash --version | head -1
+            /bin/bash samples/verify.sh --this-checkout
+          else
+            samples/verify.sh --this-checkout
+          fi

@@ -1,5 +1,6 @@
 package io.github.mhradek.aurkitu.plugin;
 
+import io.github.mhradek.aurkitu.plugin.core.FakeFlatc;
 import io.github.mhradek.aurkitu.plugin.core.SchemaGenerationException;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -37,10 +38,9 @@ class AurkituMojoExecutionTest {
     }
 
     @Test
-    @DisabledOnOs(OS.WINDOWS)
     void flatcIsRunOnTheSchemaAsABinarySchemaCompile() throws Exception {
         Path args = tempDir.resolve("args.txt");
-        Path flatc = script("flatc-ok", "echo \"$@\" > '" + args + "'\nexit 0\n");
+        Path flatc = FakeFlatc.recordingArguments(tempDir, args);
 
         mojo(flatc.toString()).execute();
 
@@ -52,9 +52,8 @@ class AurkituMojoExecutionTest {
     }
 
     @Test
-    @DisabledOnOs(OS.WINDOWS)
     void flatcRejectionFailsWithItsOutput() throws Exception {
-        Path flatc = script("flatc-reject", "echo 'error: something is wrong'\nexit 1\n");
+        Path flatc = FakeFlatc.rejecting(tempDir, "error: something is wrong");
 
         MojoExecutionException e = assertThrows(MojoExecutionException.class, () -> mojo(flatc.toString()).execute());
         assertTrue(e.getMessage().contains("flatc validation failed for models.fbs"), e.getMessage());
@@ -125,13 +124,12 @@ class AurkituMojoExecutionTest {
             "true,false,true,none", "true,false,true,blank", "true,false,true,script",
             "true,true,false,none", "true,true,false,blank", "true,true,false,script",
             "true,true,true,none", "true,true,true,blank", "true,true,true,script"})
-    @DisabledOnOs(OS.WINDOWS)
     void validationFailureAndFlatcInteract(boolean validate, boolean failOnIssues, boolean cache, String flatc) throws Exception {
         Path ran = tempDir.resolve("flatc-ran");
         String path = switch (flatc) {
             case "none" -> null;
             case "blank" -> " ";
-            default -> script("flatc-record", "touch '" + ran + "'\nexit 0\n").toString();
+            default -> FakeFlatc.touching(tempDir, ran).toString();
         };
         for (int run = 1; run <= 2; run++) { // the second run finds an unchanged schema
             Files.deleteIfExists(ran);

@@ -5,13 +5,12 @@ import org.gradle.api.GradleException;
 import org.gradle.api.Project;
 import org.gradle.testfixtures.ProjectBuilder;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledOnOs;
-import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 
 import javax.tools.JavaCompiler;
 import javax.tools.ToolProvider;
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -71,11 +70,8 @@ class GenerateFlatBuffersSchemaTest {
     }
 
     @Test
-    @DisabledOnOs(OS.WINDOWS)
     void flatcRunsWhenValidatingAndItsRejectionFailsTheTask() throws Exception {
-        Path flatc = dir.resolve("flatc");
-        Files.writeString(flatc, "#!/bin/sh\necho 'error: rejected'\nexit 1\n");
-        assertTrue(flatc.toFile().setExecutable(true));
+        Path flatc = rejectingFlatc(dir, "error: rejected");
         Path classes = compile("""
                 package demo;
 
@@ -126,5 +122,18 @@ class GenerateFlatBuffersSchemaTest {
         JavaCompiler javac = ToolProvider.getSystemJavaCompiler();
         assertEquals(0, javac.run(null, null, null, "-d", out.toString(), "-cp", annotations, file.toString()), "compiles");
         return out;
+    }
+
+    /**
+     * A stand-in for flatc that prints {@code message} and fails: a shell script, or on Windows a {@code .cmd} file,
+     * which Java runs the same way, so the test runs on every OS.
+     */
+    static Path rejectingFlatc(Path dir, String message) throws IOException {
+        if (System.getProperty("os.name").toLowerCase(java.util.Locale.ROOT).startsWith("windows")) {
+            return Files.writeString(dir.resolve("flatc.cmd"), "@echo off\r\necho " + message + "\r\nexit /b 1\r\n");
+        }
+        Path flatc = Files.writeString(dir.resolve("flatc"), "#!/bin/sh\necho '" + message + "'\nexit 1\n");
+        assertTrue(flatc.toFile().setExecutable(true));
+        return flatc;
     }
 }

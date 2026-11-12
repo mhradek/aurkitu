@@ -65,6 +65,7 @@ The README's "Building Aurkitu" section describes each check.
 ## Pull requests
 
 Keep a pull request to one change. CI runs the Maven build on Java 17, 21 and 25, the Gradle plugin on Gradle
-8.14 and 9.9, CodeQL, Codacy and the coverage reports; all of it must pass. Note user-visible changes in `CHANGELOG.md` under "Unreleased".
+8.14 and 9.9, the whole build again on macOS and Windows, the sample, CodeQL, Codacy and the coverage reports;
+all of it must pass. Shell scripts must also run on macOS's bash 3.2 (CI runs the sample's with `/bin/bash`). Note user-visible changes in `CHANGELOG.md` under "Unreleased".
 
 By contributing, you agree that your contributions are licensed under the project's [MIT license](LICENSE.md).

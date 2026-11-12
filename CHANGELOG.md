@@ -12,8 +12,15 @@ changes to expect when upgrading. Versions follow [Semantic Versioning](https://
   is created as a draft (notes from this file), gets its artifacts, signatures and SLSA provenance, and is
   published last, so the repository can use immutable releases.
 
+### Fixed
+
+- `samples/verify.sh` failed on macOS's own bash 3.2 when run without `--this-checkout` (an empty argument list
+  under `set -u`), and its Gradle `--include-build` path did not work from Git Bash on Windows.
+
 ### Added
 
+- Build: CI also runs the Maven build, the Gradle plugin and the sample on macOS and Windows. A `.gitattributes`
+  checks text files out with LF line endings on every OS, so expected schemas and shell scripts work on Windows.
 - `samples/`: a small game model that builds with Maven or Gradle, the schema it produces, a table of how each
   model element maps to the schema, and how to generate code with `flatc`. CI builds it with both build tools
   against the current code and checks the schema, so the sample stays accurate.

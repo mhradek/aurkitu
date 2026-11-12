@@ -24,10 +24,9 @@ class FlatcTest {
     }
 
     @Test
-    @DisabledOnOs(OS.WINDOWS)
     void flatcIsRunOnTheSchemaAsABinarySchemaCompile() throws Exception {
         Path args = tempDir.resolve("args.txt");
-        Path flatc = script("flatc-ok", "echo \"$@\" > '" + args + "'\nexit 0\n");
+        Path flatc = FakeFlatc.recordingArguments(tempDir, args);
         Path schema = schema();
 
         Flatc.validate(flatc.toString(), schema.toFile());
@@ -40,9 +39,8 @@ class FlatcTest {
     }
 
     @Test
-    @DisabledOnOs(OS.WINDOWS)
     void rejectionFailsWithFlatcsOutput() throws Exception {
-        Path flatc = script("flatc-reject", "echo 'error: something is wrong'\nexit 1\n");
+        Path flatc = FakeFlatc.rejecting(tempDir, "error: something is wrong");
 
         SchemaGenerationException e = assertThrows(SchemaGenerationException.class,
                 () -> Flatc.validate(flatc.toString(), schema().toFile()));
