@@ -4,8 +4,6 @@ import org.gradle.testkit.runner.BuildResult;
 import org.gradle.testkit.runner.GradleRunner;
 import org.gradle.testkit.runner.TaskOutcome;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledOnOs;
-import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -285,12 +283,10 @@ class AurkituPluginFunctionalTest {
     }
 
     @Test
-    @DisabledOnOs(OS.WINDOWS)
     void flatcRejectionFailsTheBuild() throws IOException {
-        Path flatc = project.resolve("fake-flatc");
-        Files.writeString(flatc, "#!/bin/sh\necho 'error: something is wrong'\nexit 1\n");
-        assertTrue(flatc.toFile().setExecutable(true));
-        simpleProject("flatcPath = '" + flatc + "'");
+        Path flatc = rejectingFlatc(project, "error: something is wrong");
+        // A Groovy string: Windows backslashes must be escaped.
+        simpleProject("flatcPath = '" + flatc.toString().replace("\\", "\\\\") + "'");
 
         BuildResult result = runner(TASK).buildAndFail();
 
@@ -454,5 +450,18 @@ class AurkituPluginFunctionalTest {
                 }
             });
         }
+    }
+
+    /**
+     * A stand-in for flatc that prints {@code message} and fails: a shell script, or on Windows a {@code .cmd} file,
+     * which Java runs the same way, so the test runs on every OS.
+     */
+    private static Path rejectingFlatc(Path dir, String message) throws IOException {
+        if (System.getProperty("os.name").toLowerCase(java.util.Locale.ROOT).startsWith("windows")) {
+            return Files.writeString(dir.resolve("fake-flatc.cmd"), "@echo off\r\necho " + message + "\r\nexit /b 1\r\n");
+        }
+        Path flatc = Files.writeString(dir.resolve("fake-flatc"), "#!/bin/sh\necho '" + message + "'\nexit 1\n");
+        assertTrue(flatc.toFile().setExecutable(true));
+        return flatc;
     }
 }
